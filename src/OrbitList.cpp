@@ -391,7 +391,7 @@ std::vector<std::vector<LatticeSite>> OrbitList::getAllColumnsFromSites(const st
     return p_equal;
 }
 
-///First construct  then returns true if rows_sort exists in taken_rows
+///First construct then returns true if rows_sort exists in taken_rows
 bool OrbitList::isRowsTaken(const std::unordered_set<std::vector<int>, VectorHash> &taken_rows, std::vector<int> rows) const
 {
     //sort
