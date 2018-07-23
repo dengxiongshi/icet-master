@@ -676,95 +676,107 @@ PYBIND11_MODULE(_icet, m)
     py::class_<OrbitList>(m, "OrbitList")
         .def(py::init<>())
         .def(py::init<const std::vector<NeighborList> &, const Structure &>(),
+             py::arg("neighbor_lists"),
+             py::arg("structure"),
              R"pbdoc(
-             Initializes an OrbitList instance from a list of neighbor lists
-             and a structure.
+                 Initializes an OrbitList instance from a many-body neighbor
+                 list and an atomic structure.
 
-             Parameters
-             ----------
-             neighborg_lists : list of NeighborList objects
-                list of neighbor list for the atomic configuration under different cutoffs.
-             structure : icet Structure object
-                primitive atomic structure
-        )pbdoc",
-             py::arg("neigbor_lists"),
-             py::arg("structure"))
+                 Parameters
+                 ----------
+                 neighbor_lists : list of NeighborList objects
+                     list of neighbor-list for the atomic configuration under
+                     different cutoffs.
+                 structure : icet Structure object
+                     primitive atomic structure
+             )pbdoc")
         .def(py::init<const Structure &,
                       const std::vector<std::vector<LatticeSite>> &,
                       const std::vector<NeighborList> &>(),
-             R"pbdoc(
-             Constructs an OrbitList object from a permutation matrix with
-             LatticeSite type entries and a Structure instance.
-
-             Parameters
-             ----------
-             permutation_matrix : vector of vector of LatticeSite objects
-                permutation matrix with lattice sites
-             structure : icet Structure object
-                 primitive atomic structure
-        )pbdoc",
              py::arg("structure"),
              py::arg("permutation_matrix"),
-             py::arg("neighbor_lists"))
+             py::arg("neighbor_lists"),
+             R"pbdoc(
+                 Constructs an OrbitList object from a permutation matrix, 
+                 a structure and a neighbor-list.
+
+                 Parameters
+                 ----------
+                 permutation_matrix : vector of vector of LatticeSite objects
+                     permutation matrix with lattice-site type entries
+                 structure : icet Structure object
+                     primitive atomic structure
+             )pbdoc")
         .def("add_orbit", &OrbitList::addOrbit, py::arg("orbit"),
              R"pbdoc(
-                Add an Orbit object to the OrbitList.
+                 Adds an Orbit object to OrbitList.
              
-                Parameters
-                ----------
-                orbit: Orbit object
-                    orbit to be added
+                 Parameters
+                 ----------
+                 orbit : Orbit object
+                     orbit to be added
              )pbdoc")
         .def("get_number_of_NClusters", &OrbitList::getNumberOfNClusters,
+             py::arg("n_sites"),
              R"pbdoc(
-                 Returns the number of orbits which are made up of N bodies.
+                 Returns the number of orbits which are made up of certain
+                 number of atomic sites.
 
+                 Parameters
+                 ----------
+                 n_sites : int
+                     number of atomic sites that composed the orbit
                  Returns
                  -------
                  int
-                    number of orbits
+                     number of orbits
              )pbdoc")
         .def("get_orbit", &OrbitList::getOrbit, py::arg("index"),
              R"pbdoc(
-                Returns a copy of the orbit at the position index in OrbitList.
+                 Returns a copy of the orbit at certain position in OrbitList.
 
-                Parameters
-                ----------
-                index : int
-                    position of the orbit in the OrbitList
+                 Parameters
+                 ----------
+                 index : int
+                     position of the orbit in the internal list of OrbitList
              )pbdoc")
         .def("clear", &OrbitList::clear,
-             "Clears the OrbitList")
+             "Clears the orbit list")
         .def("sort", &OrbitList::sort,
              "Sort the orbits by orbit comparison")
         .def("find_orbit", (int(OrbitList::*)(const Cluster &) const) &OrbitList::findOrbit,
              py::arg("cluster"),
              R"pbdoc(
-                Return the index of the orbit with the given representative cluster.
+                 Returns the position of the orbit with the given representative cluster.
 
-                Parameters
-                ----------
-                cluster : Cluster object
-                    representative cluster of orbit which index will be returned
+                 Parameters
+                 ----------
+                 cluster : Cluster object
+                     representative cluster of orbit which position is returned
+                 Returns
+                 -------
+                 int
+                     position of the orbit in the internal list of OrbitList
              )pbdoc")
-        .def("take_rows", 
-             &OrbitList::takeRows, 
+        .def("take_rows",
+             &OrbitList::takeRows,
              py::arg("taken_rows"),
              py::arg("rows"),
-              R"pbdoc(
-                  Add row to the list of taken rows in the permutation matrix.
+             R"pbdoc(
+                 Adds row to the list of taken rows in the permutation matrix.
 
-                  Parameters
-                  ----------
-                  row : list of int
+                 Parameters
+                 ----------
+                 row : list of int
                      row of permutation matrix 
-              )pbdoc")
+             )pbdoc")
         .def("is_row_taken",
              &OrbitList::isRowsTaken,
              py::arg("taken_rows"),
              py::arg("row"),
              R"pbdoc(
-                 Check if the given row of the permutation matrix has been used for constructing an orbit.
+                 Check if the given row of the permutation matrix has been used
+                 for constructing an orbit.
 
                  Parameters
                  ----------
@@ -783,32 +795,35 @@ PYBIND11_MODULE(_icet, m)
 
                  Parameters
                  ----------
-                 lattice_sites: list of LatticeSite objects
+                 lattice_sites : list of LatticeSite objects
                     sites to be translated
-                 Return
-                 ------
+                 sortit : bool
+                    if True, sort the translated sites
+                 Returns
+                 -------
                  list of LatticeSite objects
                     translated sites
              )pbdoc")
         .def_property_readonly("orbits", &OrbitList::getOrbitList,
-                               "Returns the list of orbits")
-        .def_property_readonly("get_primitive_structure", &OrbitList::getPrimitiveStructure,
-                               "Returns the primitive structure used for constructing the OrbitList")
+                               "Returns the internal list of orbits")
+        .def("get_primitive_structure",
+             &OrbitList::getPrimitiveStructure,
+             "Returns the primitive structure used for constructing the OrbitList")
         .def("__len__", &OrbitList::size,
              "Returns the total number of orbits counted in the OrbitList instance")
         .def("print", &OrbitList::print, py::arg("verbosity") = 0)
         .def("get_matches_in_pm", &OrbitList::getMatchesInPM,
              R"pbdoc(
-                Returns first set of sites that exists in column1 of permutation matrix
+                 Returns first set of sites that exists in column1 of permutation matrix
 
-                Parameters
-                ----------
-                translated_sites : list of list of lattice sites.
+                 Parameters
+                 ----------
+                 translated_sites : list of list of LatticeSite objects.
 
-                Returns 
-                -------
-                matched_sites : list of tuple of list of lattice sites and corresponding
-                index in column1.
+                 Returns 
+                 -------
+                 matched_sites : list of tuple of list of lattice sites and corresponding
+                 index in column1.
              )pbdoc")
         // .def("get_supercell_orbit_list", &OrbitList::getSupercellOrbitList)
         ;

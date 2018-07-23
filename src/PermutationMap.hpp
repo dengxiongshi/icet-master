@@ -27,7 +27,7 @@ class PermutationMap
         symprec = 1e-7;
     }
 
-    ///Build the permutationmap usng the input positions
+    ///Build the permutationmap using the input positions
     void build(const Eigen::Matrix<double, Dynamic, 3, RowMajor> &positions);
 
     std::vector<std::vector<Vector3d>> getPermutedPositions() const

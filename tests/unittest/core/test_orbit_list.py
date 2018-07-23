@@ -18,27 +18,27 @@ class TestOrbitList(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestOrbitList, self).__init__(*args, **kwargs)
         self.cutoffs = [4.2]
-        self.atoms = bulk('Ag', 'sc', a=4.09)
+        self.atoms = bulk('Ag', 'sc', a=4.1)
 
-        # representative clusters for testing
-        structure = Structure.from_atoms(self.atoms)
-        # for singlet
+        # representative clusters for testing (singlet and pair)
+        self.structure = Structure.from_atoms(self.atoms)
+
         self.cluster_singlet = Cluster(
-            structure, [LatticeSite(0, [0, 0, 0])])
-        # for pair
-        lattice_sites = [LatticeSite(0, [i, 0, 0]) for i in range(3)]
+            self.structure, [LatticeSite(0, [0, 0, 0])])
+
+        lattice_sites = [LatticeSite(0, [i, 0, 0]) for i in range(2)]
         self.cluster_pair = Cluster(
-            structure, [lattice_sites[0], lattice_sites[1]], True)
+            self.structure, [lattice_sites[0], lattice_sites[1]], True)
 
     def setUp(self):
         """Instantiate class before each test."""
-        # @todo: this can be a single line of code
+        # permutation map
         permutation_matrix, self.prim_structure, _ = \
             permutation_matrix_from_atoms(self.atoms, self.cutoffs[0])
         self.pm_lattice_sites = \
             get_lattice_site_permutation_matrix(self.prim_structure,
                                                 permutation_matrix)
-        # @todo: check if the same neighborlist is returned from PermutationMap
+        # neighbor-lists
         self.neighbor_lists = get_neighbor_lists(
             self.prim_structure, self.cutoffs)
 
@@ -66,19 +66,19 @@ class TestOrbitList(unittest.TestCase):
         self.assertEqual(len(self.orbit_list), 3)
 
     def test_get_number_of_NClusters(self):
-        """Test that only a pair is counted in the orbit list."""
-        NPairs = self.orbit_list.get_number_of_NClusters(2)
-        self.assertEqual(NPairs, 1)
+        """Test counting orbits by number of bodies."""
+        n_singlets = self.orbit_list.get_number_of_NClusters(1)
+        self.assertEqual(n_singlets, 1)
+        n_pairs = self.orbit_list.get_number_of_NClusters(2)
+        self.assertEqual(n_pairs, 1)
 
     def test_get_orbit(self):
-        """Test function returns the number of orbits of a given order."""
-        # get singlet
-        orbit = self.orbit_list.get_orbit(0)
-        self.assertEqual(orbit.order, 1)
-        # get pair
-        orbit = self.orbit_list.get_orbit(1)
-        self.assertEqual(orbit.order, 2)
-        # check higher order raises an error
+        """Test a copy of orbit is returned for a given index."""
+        # singlet
+        self.assertEqual(self.orbit_list.get_orbit(0).order, 1)
+        # pair
+        self.assertEqual(self.orbit_list.get_orbit(1).order, 2)
+        # check there is not more listed orbits
         with self.assertRaises(IndexError):
             self.orbit_list.get_orbit(3)
 
@@ -89,7 +89,7 @@ class TestOrbitList(unittest.TestCase):
             self.orbit_list.get_orbit(0)
 
     def test_sort(self):
-        """Test orbits in orbit list are sorted."""
+        """Test sort functionality."""
         self.orbit_list.sort()
         for i in range(len(self.orbit_list) - 1):
             self.assertLess(
@@ -99,67 +99,47 @@ class TestOrbitList(unittest.TestCase):
         """
         Test orbit index is retuned from the given representative cluster.
         """
-        # @todo: test a non-representative cluster returns -1
         self.assertEqual(
             self.orbit_list.find_orbit(self.cluster_singlet), 0)
         self.assertEqual(
             self.orbit_list.find_orbit(self.cluster_pair), 1)
+        non_repr = Cluster(
+            self.structure, [LatticeSite(0, [0, 0, 0]),
+                             LatticeSite(0, [1, 1, 1])])
+        self.assertEqual(
+            self.orbit_list.find_orbit(non_repr), -1)
 
-    def test_is_row_taken(self):
+    def test_rows_taken(self):
         """Test functionality."""
         taken_rows = set()
         row_indices = tuple([0, 1, 2])
-        self.assertFalse(self.orbit_list.is_row_taken(
-            taken_rows, row_indices))
+        self.assertFalse(
+            self.orbit_list.is_row_taken(taken_rows, row_indices))
 
         taken_rows = set([row_indices])
-        self.assertTrue(self.orbit_list.is_row_taken(
-            taken_rows, row_indices))
+        self.assertTrue(
+            self.orbit_list.is_row_taken(taken_rows, row_indices))
 
-    def test_get_orbit_list(self):
-        """Test a list of orbits is returned from this function."""
-        orbit_list = self.orbit_list.get_orbit_list()
+    def test_orbits(self):
+        """Test orbits property corresponds to the expected list of orbits."""
         # clusters for testing
         repr_clusters = [self.cluster_singlet, self.cluster_pair]
 
-        for k, orbit in enumerate(orbit_list):
+        for k, orbit in enumerate(self.orbit_list.orbits):
             with self.subTest(orbit=orbit):
                 self.assertEqual(orbit.get_representative_cluster(),
                                  repr_clusters[k])
 
-    @unittest.expectedFailure
     def test_get_primitive_structure(self):
-        """
-        Test get primitive structure functionality.
-
-        Todo
-        ----
-        Test fails
-        """
+        """Test get primitive structure functionality."""
+        prim_structure = self.orbit_list.get_primitive_structure()
         self.assertEqual(
-            self.orbit_list.get_primitive_structure(), self.prim_structure)
+            prim_structure.positions.tolist(),
+            self.prim_structure.positions.tolist())
 
     def test_len(self):
         """Test len of orbit list."""
         self.assertEqual(len(self.orbit_list), 2)
-
-    def test_get_supercell_orbit_list(self):
-        """
-        Test orbit list is returned for the given supercell
-
-        Todo
-        ----
-        Test fails for an actual supercell of the testing structure
-        """
-        atoms_supercell = self.atoms.copy()
-        orbit_list_super = \
-            self.orbit_list.get_supercell_orbit_list(atoms_supercell)
-        orbit_list_super.sort()
-        self.orbit_list.sort()
-        for k in range(len(orbit_list_super)):
-            orbit_super = orbit_list_super.get_orbit(k)
-            orbit = self.orbit_list.get_orbit(k)
-            self.assertEqual(orbit, orbit_super)
 
     def test_create_orbit_list(self):
         """
@@ -174,36 +154,80 @@ class TestOrbitList(unittest.TestCase):
             self.assertEqual(orbit, orbit_)
 
     def test_equivalent_sites_size(self):
-        """
-        Test that all the equivalent sites have the same radius.
-        """
-        atoms = bulk("Al")
-        cutoffs = [10, 10]
-        orbit_list = create_orbit_list(atoms, cutoffs)
-        for orbit in orbit_list.orbits:
+        """Test that all the equivalent sites have the same radius."""
+        for orbit in self.orbit_list.orbits:
             size = orbit.radius
             for eq_sites in orbit.equivalent_sites:
-                structure = Structure.from_atoms(atoms)
-                cluster = Cluster(structure, eq_sites, True)
+                cluster = Cluster(self.structure, eq_sites, True)
                 self.assertAlmostEqual(
                     cluster.radius, size, places=5)
 
-    #@unittest.expectedFailure
-    def test_allowed_permutations(self):
+    def test_translate_to_unitcell(self):
         """
-        Test allowed permutations of orbit.
+        Test the get all translated sites functionality.
+        """
+        # no offset site should get itself as translated
+        sites = [LatticeSite(0, [0, 0, 0])]
+        target = [[LatticeSite(0, [0, 0, 0])]]
+        self.assertListEqual(
+            self.orbit_list.get_sites_translated_to_unit_cell(sites, False),
+            sorted(target))
 
-        Todo
-        ----
-        Test fails
-        """
-        atoms = bulk("Al")
-        cutoffs = [10, 10]
-        orbit_list = create_orbit_list(atoms, cutoffs)
-        for orbit in orbit_list.orbits:
+        # test a singlet site with offset
+        sites = [LatticeSite(3, [0, 0, -1])]
+        target = [[LatticeSite(3, [0, 0, 0])],
+                  [LatticeSite(3, [0, 0, -1])]]
+        self.assertListEqual(
+            self.orbit_list.get_sites_translated_to_unit_cell(sites, False),
+            sorted(target))
+
+        # does it break when the offset is floats?
+        sites = [LatticeSite(0, [0.0, 0.0, 0.0])]
+        target = [[LatticeSite(0, [0.0, 0.0, 0.0])]]
+        self.assertListEqual(
+            self.orbit_list.get_sites_translated_to_unit_cell(sites, False),
+            sorted(target))
+
+        # float test continued
+        sites = [LatticeSite(0, [1.0, 0.0, 0.0])]
+        target = [[LatticeSite(0, [1.0, 0.0, 0.0])],
+                  [LatticeSite(0, [0.0, 0.0, 0.0])]]
+        self.assertListEqual(
+            self.orbit_list.get_sites_translated_to_unit_cell(sites, False),
+            sorted(target))
+
+        # test two sites with floats
+        sites = [LatticeSite(0, [1.0, 0.0, 0.0]),
+                 LatticeSite(0, [0.0, 0.0, 0.0])]
+        target = [[LatticeSite(0, [1.0, 0.0, 0.0]),
+                   LatticeSite(0, [0.0, 0.0, 0.0])],
+                  [LatticeSite(0, [0.0, 0.0, 0.0]),
+                   LatticeSite(0, [-1.0, 0.0, 0.0])]]
+        self.assertListEqual(
+            self.orbit_list.get_sites_translated_to_unit_cell(sites, False),
+            sorted(target))
+
+        # test sites where none is inside unit cell
+        sites = [LatticeSite(0, [1.0, 2.0, -1.0]),
+                 LatticeSite(2, [2.0, 0.0, 0.0])]
+
+        target = [sites,
+                  [LatticeSite(0, [0.0, 0.0, 0.0]),
+                   LatticeSite(2, [1.0, -2.0, 1.0])],
+                  [LatticeSite(0, [-1.0, 2.0, -1.0]),
+                   LatticeSite(2, [0.0, 0.0, 0.0])]]
+        self.assertListEqual(
+            self.orbit_list.get_sites_translated_to_unit_cell(sites, False),
+            sorted(target))
+
+    @unittest.expectedFailure
+    def test_allowed_permutations(self):
+        """Test allowed permutations of orbit."""
+        for orbit in self.orbit_list.orbits:
             rep_sites = orbit.representative_sites
-            translated_sites = orbit_list.get_sites_translated_to_unit_cell(
-                rep_sites, False)
+            translated_sites = \
+                self.orbit_list.get_sites_translated_to_unit_cell(
+                    rep_sites, False)
             permutations = orbit.allowed_permutations
             for perm in permutations:
                 perm_sites = get_permutation(rep_sites, perm)

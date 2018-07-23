@@ -138,7 +138,7 @@ OrbitList::OrbitList(const Structure &structure, const std::vector<std::vector<L
                 std::sort(lat_nbrs_copy.begin(), lat_nbrs_copy.end());
                 if (lat_nbrs_copy != lat_nbrs)
                 {
-                    throw std::runtime_error("Original sites is not sorted");
+                    throw std::runtime_error("Original sites are not sorted");
                 }
                 std::vector<std::vector<LatticeSite>> translatedSites = getSitesTranslatedToUnitcell(lat_nbrs, false);
                 int missedSites = 0;

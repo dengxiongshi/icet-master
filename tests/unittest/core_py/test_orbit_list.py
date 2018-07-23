@@ -1,15 +1,14 @@
 #!/usr/bin/env Python3
-
-
 import unittest
 
 from icet.core_py.orbit_list import OrbitList
 from icet.core_py.lattice_site import LatticeSite
 from icet.core_py.permutation_matrix import PermutationMatrix
+
 # from icet.core.orbit_list import create_orbit_list
 from ase.build import bulk
 # from icet import Structure
-from icet import ClusterSpace
+# from icet import ClusterSpace
 from ase.build import fcc111
 
 
@@ -29,9 +28,6 @@ class TestOrbitList(unittest.TestCase):
         """
         self.orbit_list = OrbitList(self.atoms, self.cutoffs)
         # self._structure = Structure.from_atoms(self.atoms)
-
-        self.cluster_space_cpp = ClusterSpace(
-            self.atoms, self.cutoffs, ["Al", "H"])
 
     def test_init(self):
         """

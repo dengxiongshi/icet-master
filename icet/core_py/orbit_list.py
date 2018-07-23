@@ -107,7 +107,7 @@ class OrbitList(object):
 
     def is_new_orbit(self, sites):
         """
-        Checks if these sites has been added into
+        Checks if these sites have been added into
         an orbit already.
         """
         if len(sites) == 0:
