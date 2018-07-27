@@ -178,7 +178,7 @@ class TestOrbitList(unittest.TestCase):
         target = [[LatticeSite(3, [0, 0, 0])],
                   [LatticeSite(3, [0, 0, -1])]]
         self.assertListEqual(
-            self.orbit_list.get_sites_translated_to_unit_cell(sites, False),
+            self.orbit_list.get_sites_translated_to_unit_cell(sites, True),
             sorted(target))
 
         # does it break when the offset is floats?
@@ -205,7 +205,7 @@ class TestOrbitList(unittest.TestCase):
                    LatticeSite(0, [-1.0, 0.0, 0.0])]]
         self.assertListEqual(
             self.orbit_list.get_sites_translated_to_unit_cell(sites, False),
-            sorted(target))
+            target)
 
         # test sites where none is inside unit cell
         sites = [LatticeSite(0, [1.0, 2.0, -1.0]),
@@ -232,6 +232,18 @@ class TestOrbitList(unittest.TestCase):
             for perm in permutations:
                 perm_sites = get_permutation(rep_sites, perm)
                 self.assertIn(perm_sites, translated_sites)
+
+    def test_get_matches_in_pm(self):
+        """Test functionality."""
+        pass
+
+    def test_find_rows_from_col1(self):
+        """Test functionality."""
+        pass
+
+    def test_add_permutation_matrix_columns(self):
+        """Test functionality."""
+        pass
 
     def test_orbit_list_non_pbc(self):
         """
