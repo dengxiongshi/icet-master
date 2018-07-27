@@ -3,7 +3,7 @@
 /**
     This will use the neighbor_list to combine all possible neighbors up to the given order.
     The output will be: std::vector<std::pair<originalNeighbors, manyNeigbhors>>
-    the many body neigbhors can be retrieved by doing:
+    the many body neighbors can be retrieved by doing:
     for (const auto nbr : many_bodyNeighborIndices)
     {
         std::vector<std::pair<int,Vector3d>> neighbors = nbr.first; // this are the first orignal neighbors

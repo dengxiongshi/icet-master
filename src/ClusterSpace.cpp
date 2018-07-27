@@ -193,7 +193,7 @@ ClusterCounts ClusterSpace::getNativeClusters(const Structure &structure) const
 }
 
 /**
-  @details This method return the multi-component vector permutations for each
+  @details This method returns the multi-component vector permutations for each
   multi-component vector.
 
   Example 1: Given multi-component vectors [0, 0], [0, 1] and [1, 1]
