@@ -228,34 +228,28 @@ OrbitList::OrbitList(const Structure &structure, const std::vector<std::vector<L
 //     std::sort(indices.begin(),indices.end());
 //     auto find = taken_rows.find(indices);
 //     return find != taken_rows.end();
-
 // }
 
 /**
-    Add permutation stuff to orbits
+Adds permutation information, i.e. allowed permutation and  to orbits.
 
-    steps:
+In the following, we walk you through step by step for each orbit:
 
-    For each orbit:
-
-    1. Take representative sites
-    2. Find the rows these sites belong to (also find the unit cell offsets equivalent sites??)
-    3. Get all columns for these rows, i.e the sites that are directly equivalent, call these p_equal.
-    4. Construct all possible permutations for the representative sites, call these p_all
-    5. Construct the intersect of p_equal and p_all, call this p_allowed_permutations.
-    6. Get the indice version of p_allowed_permutations and these are then the allowed permutations for this orbit.
-    7. take the sites in the orbit:
-        site exist in p_all?:
-            those sites are then related to representative_sites through the permutation
+1. Take representative sites
+2. Find the rows these sites belong to (also find the unit cell offsets equivalent sites??)
+3. Get all columns for these rows, i.e the sites that are directly equivalent, call these p_equal.
+4. Construct all possible permutations for the representative sites, call these p_all
+5. Construct the intersect of p_equal and p_all, call this p_allowed_permutations.
+6. Get the indice version of p_allowed_permutations and these are then the allowed permutations for this orbit.
+7. take the sites in the orbit:
+    site exist in p_all?:
+        those sites are then related to representative_sites through the permutation
+    else:
+        loop over permutations of the sites:
+        does the permutation exist in p_all?:
+            that permutation is then related to rep_sites through that permutation
         else:
-           loop over permutations of the sites:
-              does the permutation exist in p_all?:
-                 that permutation is then related to rep_sites through that permutation
-              else:
-                 continue
-
-
-
+            continue
 */
 void OrbitList::addPermutationInformationToOrbits(const std::vector<LatticeSite> &col1, const std::vector<std::vector<LatticeSite>> &permutation_matrix)
 {
@@ -314,16 +308,16 @@ void OrbitList::addPermutationInformationToOrbits(const std::vector<LatticeSite>
                         failedLoops++;
                         if (failedLoops == translatedRepresentativeSites.size())
                         {
-                            throw std::runtime_error("Error: did not find any integer permutation from allowed permutation to any translated representative site ");
+                            throw std::runtime_error("Not allowed permutation found to any translated representative site");
                         }
                         continue;
                     }
                 }
             }
         }
-
         // std::cout << i << "/" << size() << " | " << representativeSites_i.size() << " " << std::endl;
-        // Step 7
+        
+        // Step seven: Add a brief description here
         const auto orbitSites = _orbitList[i].getEquivalentSites();
         std::unordered_set<std::vector<LatticeSite>> p_equal_set;
         p_equal_set.insert(all_translated_p_equal.begin(), all_translated_p_equal.end());
@@ -380,7 +374,7 @@ void OrbitList::addPermutationInformationToOrbits(const std::vector<LatticeSite>
                         //     }
                         //     std::cout << "-=-=-=-=-=-=-=" << std::endl;
                         // }
-                        std::string errMSG = "Error: did not find a permutation of the orbit sites to the permutations of the representative sites";
+                        std::string errMSG = "did not find a permutation of the orbit sites to the permutations of the representative sites";
                         throw std::runtime_error(errMSG);
                     }
                 }
@@ -636,7 +630,7 @@ neighbors from all columns of permutation matrix. The appended site corresponds
 to a found match in colum1 of permuted sites. Even if a matched lattice site 
 is not added, a record of its row index is saved in a set called taken_rows.
 
-@param lattice_neighbor vector of NeighborList objects
+@param lattice_neighbors vector of NeighborList objects
 @param taken_rows set of integers indicating row indices of the permutation matrix
 @param lat_nbrs unused vector of lattice sites (to be removed)
 @param pm_rows set of index of the permutation matrix rows to be considered

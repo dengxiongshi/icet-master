@@ -744,7 +744,15 @@ PYBIND11_MODULE(_icet, m)
              "Clears the orbit list")
         .def("sort", &OrbitList::sort,
              "Sort the orbits by orbit comparison")
-        .def("find_orbit", (int(OrbitList::*)(const Cluster &) const) &OrbitList::findOrbit,
+        .def_property_readonly("orbits", &OrbitList::getOrbitList,
+                               "Returns the internal list of orbits")
+        .def("get_primitive_structure",
+             &OrbitList::getPrimitiveStructure,
+             "Returns the primitive structure used for constructing the OrbitList")
+        .def("__len__", &OrbitList::size,
+             "Returns the total number of orbits counted in the OrbitList instance")
+        .def("print", &OrbitList::print, py::arg("verbosity") = 0)
+        .def("_find_orbit", (int(OrbitList::*)(const Cluster &) const) &OrbitList::findOrbit,
              py::arg("cluster"),
              R"pbdoc(
                  Returns the position of the orbit with the given representative cluster.
@@ -758,7 +766,7 @@ PYBIND11_MODULE(_icet, m)
                  int
                      position of the orbit in the internal list of OrbitList
              )pbdoc")
-        .def("take_rows",
+        .def("_take_rows",
              &OrbitList::takeRows,
              py::arg("taken_rows"),
              py::arg("rows"),
@@ -770,7 +778,7 @@ PYBIND11_MODULE(_icet, m)
                  row : list of int
                      row of permutation matrix 
              )pbdoc")
-        .def("is_row_taken",
+        .def("_is_row_taken",
              &OrbitList::isRowsTaken,
              py::arg("taken_rows"),
              py::arg("row"),
@@ -786,7 +794,7 @@ PYBIND11_MODULE(_icet, m)
                  -------
                     boolean
              )pbdoc")
-        .def("get_sites_translated_to_unit_cell",
+        .def("_get_sites_translated_to_unit_cell",
              &OrbitList::getSitesTranslatedToUnitcell,
              py::arg("lattice_sites"),
              py::arg("sortit"),
@@ -804,15 +812,7 @@ PYBIND11_MODULE(_icet, m)
                  list of LatticeSite objects
                     translated sites
              )pbdoc")
-        .def_property_readonly("orbits", &OrbitList::getOrbitList,
-                               "Returns the internal list of orbits")
-        .def("get_primitive_structure",
-             &OrbitList::getPrimitiveStructure,
-             "Returns the primitive structure used for constructing the OrbitList")
-        .def("__len__", &OrbitList::size,
-             "Returns the total number of orbits counted in the OrbitList instance")
-        .def("print", &OrbitList::print, py::arg("verbosity") = 0)
-        .def("get_matches_in_pm", &OrbitList::getMatchesInPM,
+        .def("_get_matches_in_pm", &OrbitList::getMatchesInPM,
              R"pbdoc(
                  Returns first set of sites that exists in column1 of permutation matrix
 
@@ -824,6 +824,33 @@ PYBIND11_MODULE(_icet, m)
                  -------
                  matched_sites : list of tuple of list of lattice sites and corresponding
                  index in column1.
+             )pbdoc")
+        .def("_get_column1_from_pm", &OrbitList::getColumn1FromPM,
+             py::arg("permutation_matrix"),
+             py::arg("sortit"),
+             R"pbdoc(
+                 Returns the first column of the permutation matrix.
+
+                 Parameters
+                 ----------
+                 permutation_matrix : list of list of LatticeSite objects.
+                 sortit : boolean
+                    if True, sort the output list. Default to False. 
+             )pbdoc")
+        .def("_find_rows_from_col1", &OrbitList::findRowsFromCol1,
+             py::arg("column1"),
+             py::arg("lattice_neighbors"),
+             py::arg("sortit"),
+             R"pbdoc(
+                 Searches for lattice neighbors in column1 of permutation
+                 matrix and returns the corresponding rows.
+
+                 Parameters
+                 ----------
+                 column1 : list of LaticeSite objects.
+                 lattice_neighbors : list of LatticeSite objects.
+                 sortit : boolean
+                    if True, sort the output list. Deafult to True.
              )pbdoc")
         // .def("get_supercell_orbit_list", &OrbitList::getSupercellOrbitList)
         ;
