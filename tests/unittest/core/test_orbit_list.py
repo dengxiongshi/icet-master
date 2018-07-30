@@ -95,31 +95,6 @@ class TestOrbitList(unittest.TestCase):
             self.assertLess(
                 self.orbit_list.get_orbit(i), self.orbit_list.get_orbit(i + 1))
 
-    def test_find_orbit(self):
-        """
-        Test orbit index is retuned from the given representative cluster.
-        """
-        self.assertEqual(
-            self.orbit_list.find_orbit(self.cluster_singlet), 0)
-        self.assertEqual(
-            self.orbit_list.find_orbit(self.cluster_pair), 1)
-        non_repr = Cluster(
-            self.structure, [LatticeSite(0, [0, 0, 0]),
-                             LatticeSite(0, [1, 1, 1])])
-        self.assertEqual(
-            self.orbit_list.find_orbit(non_repr), -1)
-
-    def test_rows_taken(self):
-        """Test functionality."""
-        taken_rows = set()
-        row_indices = tuple([0, 1, 2])
-        self.assertFalse(
-            self.orbit_list.is_row_taken(taken_rows, row_indices))
-
-        taken_rows = set([row_indices])
-        self.assertTrue(
-            self.orbit_list.is_row_taken(taken_rows, row_indices))
-
     def test_orbits(self):
         """Test orbits property corresponds to the expected list of orbits."""
         # clusters for testing
@@ -153,6 +128,29 @@ class TestOrbitList(unittest.TestCase):
             # check all orbits in both lists are equal
             self.assertEqual(orbit, orbit_)
 
+    def test_find_orbit(self):
+        """Test orbit index is retuned from the given repr. cluster."""
+        self.assertEqual(
+            self.orbit_list._find_orbit(self.cluster_singlet), 0)
+        self.assertEqual(
+            self.orbit_list._find_orbit(self.cluster_pair), 1)
+        non_repr = Cluster(
+            self.structure, [LatticeSite(0, [0, 0, 0]),
+                             LatticeSite(0, [1, 1, 1])])
+        self.assertEqual(
+            self.orbit_list._find_orbit(non_repr), -1)
+
+    def test_rows_taken(self):
+        """Test functionality."""
+        taken_rows = set()
+        row_indices = tuple([0, 1, 2])
+        self.assertFalse(
+            self.orbit_list._is_row_taken(taken_rows, row_indices))
+
+        taken_rows = set([row_indices])
+        self.assertTrue(
+            self.orbit_list._is_row_taken(taken_rows, row_indices))
+
     def test_equivalent_sites_size(self):
         """Test that all the equivalent sites have the same radius."""
         for orbit in self.orbit_list.orbits:
@@ -163,14 +161,12 @@ class TestOrbitList(unittest.TestCase):
                     cluster.radius, size, places=5)
 
     def test_translate_to_unitcell(self):
-        """
-        Test the get all translated sites functionality.
-        """
+        """Test the get all translated sites functionality."""
         # no offset site should get itself as translated
         sites = [LatticeSite(0, [0, 0, 0])]
         target = [[LatticeSite(0, [0, 0, 0])]]
         self.assertListEqual(
-            self.orbit_list.get_sites_translated_to_unit_cell(sites, False),
+            self.orbit_list._get_sites_translated_to_unit_cell(sites, False),
             sorted(target))
 
         # test a singlet site with offset
@@ -178,14 +174,14 @@ class TestOrbitList(unittest.TestCase):
         target = [[LatticeSite(3, [0, 0, 0])],
                   [LatticeSite(3, [0, 0, -1])]]
         self.assertListEqual(
-            self.orbit_list.get_sites_translated_to_unit_cell(sites, True),
+            self.orbit_list._get_sites_translated_to_unit_cell(sites, False),
             sorted(target))
 
         # does it break when the offset is floats?
         sites = [LatticeSite(0, [0.0, 0.0, 0.0])]
         target = [[LatticeSite(0, [0.0, 0.0, 0.0])]]
         self.assertListEqual(
-            self.orbit_list.get_sites_translated_to_unit_cell(sites, False),
+            self.orbit_list._get_sites_translated_to_unit_cell(sites, False),
             sorted(target))
 
         # float test continued
@@ -193,19 +189,19 @@ class TestOrbitList(unittest.TestCase):
         target = [[LatticeSite(0, [1.0, 0.0, 0.0])],
                   [LatticeSite(0, [0.0, 0.0, 0.0])]]
         self.assertListEqual(
-            self.orbit_list.get_sites_translated_to_unit_cell(sites, False),
+            self.orbit_list._get_sites_translated_to_unit_cell(sites, False),
             sorted(target))
 
-        # test two sites with floats
+        # test two sites with floats and sort the output
         sites = [LatticeSite(0, [1.0, 0.0, 0.0]),
                  LatticeSite(0, [0.0, 0.0, 0.0])]
         target = [[LatticeSite(0, [1.0, 0.0, 0.0]),
                    LatticeSite(0, [0.0, 0.0, 0.0])],
-                  [LatticeSite(0, [0.0, 0.0, 0.0]),
-                   LatticeSite(0, [-1.0, 0.0, 0.0])]]
+                  [LatticeSite(0, [-1.0, 0.0, 0.0]),
+                   LatticeSite(0, [0.0, 0.0, 0.0])]]
         self.assertListEqual(
-            self.orbit_list.get_sites_translated_to_unit_cell(sites, False),
-            target)
+            self.orbit_list._get_sites_translated_to_unit_cell(sites, True),
+            sorted(target))
 
         # test sites where none is inside unit cell
         sites = [LatticeSite(0, [1.0, 2.0, -1.0]),
@@ -217,7 +213,7 @@ class TestOrbitList(unittest.TestCase):
                   [LatticeSite(0, [-1.0, 2.0, -1.0]),
                    LatticeSite(2, [0.0, 0.0, 0.0])]]
         self.assertListEqual(
-            self.orbit_list.get_sites_translated_to_unit_cell(sites, False),
+            self.orbit_list._get_sites_translated_to_unit_cell(sites, False),
             sorted(target))
 
     @unittest.expectedFailure
@@ -226,24 +222,49 @@ class TestOrbitList(unittest.TestCase):
         for orbit in self.orbit_list.orbits:
             rep_sites = orbit.representative_sites
             translated_sites = \
-                self.orbit_list.get_sites_translated_to_unit_cell(
+                self.orbit_list._get_sites_translated_to_unit_cell(
                     rep_sites, False)
             permutations = orbit.allowed_permutations
             for perm in permutations:
                 perm_sites = get_permutation(rep_sites, perm)
                 self.assertIn(perm_sites, translated_sites)
 
-    def test_get_matches_in_pm(self):
+    def test_get_colum1_from_pm(self):
         """Test functionality."""
-        pass
+        target = [LatticeSite(0, [0., 0., 0.]),
+                  LatticeSite(0, [-1., 0., 0.]),
+                  LatticeSite(0, [0., -1., 0.]),
+                  LatticeSite(0, [0., 0., -1.]),
+                  LatticeSite(0, [0., 0., 1.]),
+                  LatticeSite(0, [0., 1., 0.]),
+                  LatticeSite(0, [1., 0., 0.])]
+        retval = \
+            self.orbit_list._get_column1_from_pm(self.pm_lattice_sites, False)
+        self.assertEqual(retval, target)
+
+        retval = \
+            self.orbit_list._get_column1_from_pm(self.pm_lattice_sites, True)
+        self.assertEqual(retval, sorted(target))
 
     def test_find_rows_from_col1(self):
         """Test functionality."""
-        pass
+        column1 = \
+            self.orbit_list._get_column1_from_pm(self.pm_lattice_sites, False)
+        sites = [LatticeSite(0, [1.0, 0.0, 0.0]),
+                 LatticeSite(0, [0.0, 0.0, 0.0])]
+        rows = self.orbit_list._find_rows_from_col1(column1, sites, False)
+        self.assertTrue(rows, [[0, 1], [6, 0]])
 
-    def test_add_permutation_matrix_columns(self):
+    def test_get_matches_in_pm(self):
         """Test functionality."""
-        pass
+        sites = [LatticeSite(0, [1.0, 0.0, 0.0]),
+                 LatticeSite(0, [0.0, 0.0, 0.0])]
+        translated_sites = \
+            self.orbit_list._get_sites_translated_to_unit_cell(sites, False)
+        matches = self.orbit_list._get_matches_in_pm(translated_sites)
+        sites, rows = zip(*matches)
+        self.assertEqual(list(sites), sorted(translated_sites))
+        self.assertEqual(list(rows), [[0, 1], [6, 0]])
 
     def test_orbit_list_non_pbc(self):
         """
