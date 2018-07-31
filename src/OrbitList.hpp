@@ -113,10 +113,10 @@ class OrbitList
                                      const std::vector<std::vector<LatticeSite>> &permutation_matrix, const std::vector<LatticeSite> &col1, bool) const;
     
     /// Returns the first column of the permutation matrix.
-    std::vector<LatticeSite> getColumn1FromPM(const std::vector<std::vector<LatticeSite>> &, bool sortIt = false) const;
+    std::vector<LatticeSite> getColumn1FromPM(const std::vector<std::vector<LatticeSite>> &, bool sortIt) const;
     
     /// Searches for lattice neighbors in the first column of the permutation matrix and returns the row index. 
-    std::vector<int> findRowsFromCol1(const std::vector<LatticeSite> &col1, const std::vector<LatticeSite> &latNbrs, bool sortit = true) const;
+    std::vector<int> findRowsFromCol1(const std::vector<LatticeSite> &col1, const std::vector<LatticeSite> &latNbrs, bool sortit = false) const;
 
     /// Checks that at least one of the lattice sites is inside the unit cell.
     bool validatedCluster(const std::vector<LatticeSite> &) const;
@@ -137,7 +137,7 @@ class OrbitList
     /// Iterates over all the lattice sites and creates for each iteration a set of translated sites.
     std::vector<std::vector<LatticeSite>> getSitesTranslatedToUnitcell(const std::vector<LatticeSite> &, bool sortit) const;
 
-    /// Returns the first set of translated sites that exists in the first column of permutation matrix.
+    /// Returns a set of translated sites that exists in the first column of permutation matrix.
     std::vector<std::pair<std::vector<LatticeSite>, std::vector<int>>> getMatchesInPM(const std::vector<std::vector<LatticeSite>> &) const;
 
     /// Maps a given lattice site to supercell structure.

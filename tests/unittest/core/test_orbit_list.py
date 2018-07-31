@@ -253,7 +253,10 @@ class TestOrbitList(unittest.TestCase):
         sites = [LatticeSite(0, [1.0, 0.0, 0.0]),
                  LatticeSite(0, [0.0, 0.0, 0.0])]
         rows = self.orbit_list._find_rows_from_col1(column1, sites, False)
-        self.assertTrue(rows, [[0, 1], [6, 0]])
+        self.assertEqual(rows, [6, 0])
+        # sort it
+        rows = self.orbit_list._find_rows_from_col1(column1, sites, True)
+        self.assertEqual(rows, [0, 6])
 
     def test_get_matches_in_pm(self):
         """Test functionality."""
@@ -264,7 +267,23 @@ class TestOrbitList(unittest.TestCase):
         matches = self.orbit_list._get_matches_in_pm(translated_sites)
         sites, rows = zip(*matches)
         self.assertEqual(list(sites), sorted(translated_sites))
-        self.assertEqual(list(rows), [[0, 1], [6, 0]])
+        self.assertEqual(list(rows), [[0, 1], [0, 6]])
+
+    def test_add_permutation_matrix_columns(self):
+        """Test functionality."""
+        lattice_neighbors = [[x.get_neighbors(0) for x in self.neighbor_lists]]
+
+        sites = [LatticeSite(0, [1.0, 0.0, 0.0]),
+                 LatticeSite(0, [0.0, 0.0, 0.0])]
+        rows = [[1, 2], [2, 4], [2, 3]]
+        taken_rows = set(tuple(i) for i in rows)
+        pm_rows = [0, 1]
+        column1 = \
+            self.orbit_list._get_column1_from_pm(self.pm_lattice_sites, False)
+
+        self.orbit_list._add_permutation_matrix_columns(
+            lattice_neighbors, taken_rows, sites, pm_rows,
+            self.pm_lattice_sites, column1, True)
 
     def test_orbit_list_non_pbc(self):
         """

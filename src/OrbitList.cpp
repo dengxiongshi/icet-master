@@ -2,7 +2,7 @@
 
 /**
 @todo Think about adding a string tag here to keep track of different orbit lists.
-@todo Commented out lines of code may rot even if they are used for debugging. Those lines should be cleaned up. 
+@todo Commented out lines of code may rot even if they are used for debugging. Those lines should be cleaned up.
 */
 OrbitList::OrbitList()
 {
@@ -191,7 +191,7 @@ OrbitList::OrbitList(const Structure &structure, const std::vector<std::vector<L
             if (mbnl_pair.second.size() == 0)
             {
                 std::vector<LatticeSite> lat_nbrs = mbnl_pair.first;
-                auto pm_rows = findRowsFromCol1(col1, lat_nbrs);
+                auto pm_rows = findRowsFromCol1(col1, lat_nbrs, false);
                 // auto find = taken_rows.find(pm_rows);
                 // if (find == taken_rows.end())
                 if (!isRowsTaken(taken_rows, pm_rows))
@@ -625,8 +625,8 @@ void OrbitList::addOrbitFromPM(const Structure &structure, const std::vector<std
     _orbitList.back().sortOrbit();
 }
 /**
-@details This function appends at most one lattice site per column to the lattice
-neighbors from all columns of permutation matrix. The appended site corresponds
+@details This function appends a set of lattice site per column to the lattice
+neighbors from all columns of the permutation matrix. The added sites correspond
 to a found match in colum1 of permuted sites. Even if a matched lattice site 
 is not added, a record of its row index is saved in a set called taken_rows.
 
@@ -636,14 +636,14 @@ is not added, a record of its row index is saved in a set called taken_rows.
 @param pm_rows set of index of the permutation matrix rows to be considered
 @param permutation_matrix permutation matrix
 @param col1 first column of the permutation matrix
-@param add if true, add lattice sites from permutation matrix (default true)
+@param addIt if true, add lattice sites from permutation matrix (default true)
 
 @todo lat_nbrs argument seems to be not used here.
 @todo Boolean parameter *add* is only used for debugging.
 */
 void OrbitList::addPermutationMatrixColumns(
     std::vector<std::vector<std::vector<LatticeSite>>> &lattice_neighbors, std::unordered_set<std::vector<int>, VectorHash> &taken_rows, const std::vector<LatticeSite> &lat_nbrs, const std::vector<int> &pm_rows,
-    const std::vector<std::vector<LatticeSite>> &permutation_matrix, const std::vector<LatticeSite> &col1, bool add) const
+    const std::vector<std::vector<LatticeSite>> &permutation_matrix, const std::vector<LatticeSite> &col1, bool addIt) const
 {
 
     std::vector<std::vector<LatticeSite>> columnLatticeSites;
@@ -657,7 +657,7 @@ void OrbitList::addPermutationMatrixColumns(
             indistinctLatNbrs.push_back(permutation_matrix[row][column]);
         }
 
-        auto translatedEquivalentSites = getSitesTranslatedToUnitcell(indistinctLatNbrs, false);
+        auto translatedEquivalentSites = getSitesTranslatedToUnitcell(indistinctLatNbrs, true);
 
         auto sites_index_pair = getMatchesInPM(translatedEquivalentSites);
         // for (int i = 1; i < sites_index_pair.size(); i++)
@@ -680,7 +680,7 @@ void OrbitList::addPermutationMatrixColumns(
                 // if (find == taken_rows.end())
                 if (!isRowsTaken(taken_rows, sites_index_pair[i].second))
                 {
-                    if (add && findOnlyOne && validatedCluster(sites_index_pair[i].first))
+                    if (addIt && findOnlyOne && validatedCluster(sites_index_pair[i].first))
                     {
                         columnLatticeSites.push_back(sites_index_pair[0].first);
                         findOnlyOne = false;
@@ -726,7 +726,7 @@ std::vector<std::pair<std::vector<LatticeSite>, std::vector<int>>> OrbitList::ge
     {
         try
         {
-            perm_matrix_rows = findRowsFromCol1(_column1, sites, false);
+            perm_matrix_rows = findRowsFromCol1(_column1, sites, true);
         }
         catch (const std::runtime_error)
         {
@@ -795,7 +795,7 @@ std::vector<int> OrbitList::findRowsFromCol1(const std::vector<LatticeSite> &col
                 //latNbrp.print();
             //}
             //  latNbr.print();
-            throw std::runtime_error("lattice neigbhor is not found in column1 in function findRowsFromCol1");
+            throw std::runtime_error("The input lattice neigbhors is not found in column1 in function findRowsFromCol1");
         }
         else
         {
