@@ -188,7 +188,7 @@ class OrbitList
     /// Adds the permutation information to the orbits.
     void addPermutationInformationToOrbits(const std::vector<LatticeSite> &, const std::vector<std::vector<LatticeSite>> &);
 
-    /// Returns all columns from the given rows in permutation matrix.
+    /// Returns the lattice sites in all the columns for the given rows of the permutation matrix.
     std::vector<std::vector<LatticeSite>> getAllColumnsFromRow(const std::vector<int> &, const std::vector<std::vector<LatticeSite>> &, bool, bool sortIt=true ) const;
 
     /// Checks if rows of the permutation matrix have been taken.

@@ -10,9 +10,10 @@ OrbitList::OrbitList()
 }
 
 /**
-@details Constructs an OrbitList object from a many body neighbor-list and a primitive structure.
-@param neighbor_lists list of NeighborList objects.
-@param structure primitive atomic structure.
+@details Constructs an OrbitList object from a primitive structure and
+many body neighbor-list.
+@param neighbor_lists a list with pairs of lattice neighbors
+@param structure a primitive atomic structure
 */
 OrbitList::OrbitList(const std::vector<NeighborList> &neighbor_lists, const Structure &structure)
 {
@@ -55,12 +56,14 @@ OrbitList::OrbitList(const std::vector<NeighborList> &neighbor_lists, const Stru
 }
 
 /**
-@details Adds a cluster to orbit list. If cluster exists, then add sites. 
-Otherwise a new orbit is created from the cluster and appended to orbit list.
-@param cluster a Cluster object.
-@param sites equivalent sites.
-@param clusterIndexMap
-@todo Complete the description for the parameters.
+@details This function adds a cluster to the orbit list and creates a new orbit
+from the cluster in case an orbit with the input cluster is not found. If the 
+input cluster already exists in the orbit list, then just adds the sites to 
+the orbit as equivalent sites.
+
+@param cluster a cluster object
+@param sites equivalent sites
+@param clusterIndexMap a map containing a representative cluster and an orbit index pairs.
 */
 void OrbitList::addClusterToOrbitList(const Cluster &cluster, const std::vector<LatticeSite> &sites, std::unordered_map<Cluster, int> &clusterIndexMap)
 {
@@ -80,9 +83,10 @@ void OrbitList::addClusterToOrbitList(const Cluster &cluster, const std::vector<
 }
 
 /**
-@details Returns the index in the orbit list of the orbit for which the
-input cluster is the representative cluster. If orbit is not found, returns -1.
-@param cluster a Cluster object.
+@details Returns the location, i.e. the index, in the internal orbit list of an
+orbit which its representative cluster is equal to the input cluster.
+If not orbit not found, returns -1.
+@param cluster an icet cluster object.
 */
 int OrbitList::findOrbit(const Cluster &cluster) const
 {
@@ -97,10 +101,10 @@ int OrbitList::findOrbit(const Cluster &cluster) const
 }
 
 /**
-@details Returns the index in the orbit list of the orbit for which the
-input cluster is listed in the cluster index map. If orbit is not found, returns -1.
-@param cluster an icet Cluster object
-@param clusterIndexMap
+@details Returns the location of a given cluster in the cluster index map.
+If cluster does not exists, returns -1. 
+@param cluster an icet cluster object
+@param clusterIndexMap a map containing a representative cluster and an orbit index pairs.
 */
 int OrbitList::findOrbit(const Cluster &cluster, const std::unordered_map<Cluster, int> &clusterIndexMap) const
 {
@@ -118,10 +122,12 @@ int OrbitList::findOrbit(const Cluster &cluster, const std::unordered_map<Cluste
 /**
 @details This constructor creates an OrbitList object from a primitive.
 structure, a permutation matrix, and a many body neighbor-list.
-@param structure primitive atomic structure.
-@param permutation_matrix permutation matrix.
-@param neighbor_lists list of NeighborList objects.
-@todo This constructor needs a more detailed step-by-step description.
+
+@param structure a primitive atomic structure.
+@param permutation_matrix an icet permutation matrix with LatticeSite format entries.
+@param neighbor_lists a list with pairs of lattice neighbors.
+
+@todo This constructor needs a step-by-step description.
 */
 OrbitList::OrbitList(const Structure &structure, const std::vector<std::vector<LatticeSite>> &permutation_matrix, const std::vector<NeighborList> &neighbor_lists)
 {
@@ -170,7 +176,7 @@ OrbitList::OrbitList(const Structure &structure, const std::vector<std::vector<L
                 std::sort(lat_nbrs_copy.begin(), lat_nbrs_copy.end());
                 if (lat_nbrs_copy != lat_nbrs)
                 {
-                    throw std::runtime_error("lattice neighbors sites are not sorted");
+                    throw std::runtime_error("lattice sites from many body neighbor-list are not sorted");
                 }
 
                 // Translated lattice neighbors sites to unitcell.
@@ -179,7 +185,7 @@ OrbitList::OrbitList(const Structure &structure, const std::vector<std::vector<L
                 /// @todo This seems to be unnecessary.
                 int missedSites = 0;
 
-                // Add permuted sites to the input lattice neighbors.
+                // Add permuted sites from the permutation matrix to the lattice neighbors.
                 auto sites_index_pair = getMatchesInPM(translatedSites);
                 if (!isRowsTaken(taken_rows, sites_index_pair[0].second))
                 {
@@ -213,6 +219,7 @@ OrbitList::OrbitList(const Structure &structure, const std::vector<std::vector<L
     // 
     /// @todo Rename this function
     addPermutationInformationToOrbits(col1, permutation_matrix);
+
     bool debug = true;
 
     if (debug)
@@ -222,18 +229,11 @@ OrbitList::OrbitList(const Structure &structure, const std::vector<std::vector<L
     }
 }
 
-// /// Check if the indices, when sorted, exits in taken_rows
-// bool OrbitList::isRowsTaken(const std::vector<int> indices, const std::unordered_set<std::vector<int>, VectorHash> &taken_rows) const
-// {
-//     std::sort(indices.begin(),indices.end());
-//     auto find = taken_rows.find(indices);
-//     return find != taken_rows.end();
-// }
-
 /**
-Adds permutation information, i.e. allowed permutation and  to orbits.
+Adds permutation information to each orbit, i.e. the permutation-to-representative
+and the allowed permutations. 
 
-In the following, we walk you through step by step for each orbit:
+In the following, we iterate over each orbit:
 
 1. Take representative sites
 2. Find the rows these sites belong to (also find the unit cell offsets equivalent sites??)
@@ -275,7 +275,7 @@ void OrbitList::addPermutationInformationToOrbits(const std::vector<LatticeSite>
 
         std::sort(all_translated_p_equal.begin(), all_translated_p_equal.end());
 
-        // Step four: Construct all possible permutations for the representative sites
+        // Step four: Construct all possible permutations for the translated sites
         std::vector<std::vector<LatticeSite>> p_all_with_translated_equivalent;
         for (auto translated_rep_sites : translatedRepresentativeSites)
         {
@@ -317,7 +317,7 @@ void OrbitList::addPermutationInformationToOrbits(const std::vector<LatticeSite>
         }
         // std::cout << i << "/" << size() << " | " << representativeSites_i.size() << " " << std::endl;
         
-        // Step seven: Add a brief description here
+        // Step seven: Find the permutation to representative sites
         const auto orbitSites = _orbitList[i].getEquivalentSites();
         std::unordered_set<std::vector<LatticeSite>> p_equal_set;
         p_equal_set.insert(all_translated_p_equal.begin(), all_translated_p_equal.end());
@@ -364,7 +364,6 @@ void OrbitList::addPermutationInformationToOrbits(const std::vector<LatticeSite>
                     }
                     if (onePermPair == translatedPermutationsOfSites.back())
                     {
-
                         // std::cout << "Target sites " << std::endl;
                         // for (auto latNbrs : p_equal_set)
                         // {
@@ -425,7 +424,6 @@ std::vector<std::vector<LatticeSite>> OrbitList::getAllColumnsFromSites(const st
 bool OrbitList::isRowsTaken(const std::unordered_set<std::vector<int>, VectorHash> &taken_rows, std::vector<int> rows) const
 {
     std::sort(rows.begin(), rows.end());
-
     const auto find = taken_rows.find(rows);
     if (find == taken_rows.end())
     {
@@ -445,16 +443,16 @@ void OrbitList::takeRows(std::unordered_set<std::vector<int>, VectorHash> &taken
 }
 
 /**
-@details Returns all columns from the given rows in permutation matrix.
+@details Returns the lattice sites in all the columns for the given rows
+in the permutation matrix.
 
-@param rows set of row indices .
-@param permutation_matrix permutation matrix
+@param rows set of row indices to be considered.
+@param permutation_matrix an icet permutation matrix with LatticeSite format entries
 @param includeTranslatedSites if true, it will also include the equivalent sites found
-from the rows by moving each site into the unitcell
+in the rows by moving each site into the unitcell
 */
 std::vector<std::vector<LatticeSite>> OrbitList::getAllColumnsFromRow(const std::vector<int> &rows, const std::vector<std::vector<LatticeSite>> &permutation_matrix, bool includeTranslatedSites, bool sortIt) const
 {
-
     std::vector<std::vector<LatticeSite>> allColumns;
 
     for (size_t column = 0; column < permutation_matrix[0].size(); column++)
@@ -490,8 +488,8 @@ set of crystal symmetries given by spglib.
 An added requirement is that if the primitive structure has non-pbc in a given direction
 then this function should not give rise to any sites in that direction.
 
-@param latticeNeighbors vector of lattice sites. 
-@param sortIt if true, sort the sites in the translated sites.  
+@param latticeNeighbors a list of lattice neighbors. 
+@param sortIt if true, sort the equivalent sites.  
 */
 std::vector<std::vector<LatticeSite>> OrbitList::getSitesTranslatedToUnitcell(const std::vector<LatticeSite> &latticeNeighbors, bool sortIt) const
 {
@@ -630,16 +628,17 @@ neighbors from all columns of the permutation matrix. The added sites correspond
 to a found match in colum1 of permuted sites. Even if a matched lattice site 
 is not added, a record of its row index is saved in a set called taken_rows.
 
-@param lattice_neighbors vector of NeighborList objects
-@param taken_rows set of integers indicating row indices of the permutation matrix
+@param lattice_neighbors list of lattice neighbors
+@param taken_rows a set with unique list of row indices of the permutation matrix that
+have been considered so far to build the orbit list.
 @param lat_nbrs unused vector of lattice sites (to be removed)
-@param pm_rows set of index of the permutation matrix rows to be considered
-@param permutation_matrix permutation matrix
+@param pm_rows the list of row index of the permutation matrix rows to be considered
+@param permutation_matrix an icet permutation matrix with LatticeSite format entries
 @param col1 first column of the permutation matrix
 @param addIt if true, add lattice sites from permutation matrix (default true)
 
 @todo lat_nbrs argument seems to be not used here.
-@todo Boolean parameter *add* is only used for debugging.
+@todo Boolean parameter *addIt* is only used for debugging.
 */
 void OrbitList::addPermutationMatrixColumns(
     std::vector<std::vector<std::vector<LatticeSite>>> &lattice_neighbors, std::unordered_set<std::vector<int>, VectorHash> &taken_rows, const std::vector<LatticeSite> &lat_nbrs, const std::vector<int> &pm_rows,
@@ -657,8 +656,10 @@ void OrbitList::addPermutationMatrixColumns(
             indistinctLatNbrs.push_back(permutation_matrix[row][column]);
         }
 
+        /// @todo Equivalent sites a must be sorted here.
         auto translatedEquivalentSites = getSitesTranslatedToUnitcell(indistinctLatNbrs, true);
-
+        
+        /// @todo Matched sites must be sorted here
         auto sites_index_pair = getMatchesInPM(translatedEquivalentSites);
         // for (int i = 1; i < sites_index_pair.size(); i++)
         // {
@@ -711,12 +712,12 @@ void OrbitList::addPermutationMatrixColumns(
 }
 
 /**
-@details This function looks for a set of elements in the column1 that matches the input translated sites.
+@details This function looks for a set of elements in the column1 that matches the input equivalent sites.
 When a match is found, returns a pair with the matched sites and their row indexes.
 
-@param translatedSites vector of LatticeSite objects
+@param translatedSites equivalent sites
 
-@todo Current name seems not obvious when one is actually matching againts column1.
+@todo Current name seems not obvious when one is actually matching against column1.
 */
 std::vector<std::pair<std::vector<LatticeSite>, std::vector<int>>> OrbitList::getMatchesInPM(const std::vector<std::vector<LatticeSite>> &translatedSites) const
 {
@@ -732,7 +733,7 @@ std::vector<std::pair<std::vector<LatticeSite>, std::vector<int>>> OrbitList::ge
         {
             continue;
         }
-        //no error here indicating we found matching rows in col1
+        // No error here indicates a matching rows in column1 is found
         matchedSites.push_back(std::make_pair(sites, perm_matrix_rows));
     }
     if (matchedSites.size() > 0)
@@ -741,9 +742,7 @@ std::vector<std::pair<std::vector<LatticeSite>, std::vector<int>>> OrbitList::ge
     }
     else
     {
-        //we found no matching rows in permutation matrix, this should not happen so we throw an error
-
-        //first print some debug info
+        // If no matching rows are found, throw an error
         std::cout << "number of translated sites: " << translatedSites.size() << std::endl;
         std::cout << "sites: " << std::endl;
         for (auto latnbrs : translatedSites)
@@ -754,12 +753,12 @@ std::vector<std::pair<std::vector<LatticeSite>, std::vector<int>>> OrbitList::ge
             }
             std::cout << " ========= " << std::endl;
         }
-        std::cout << "col1:" << std::endl;
+        std::cout << "column1:" << std::endl;
         for (auto row : _column1)
         {
             row.print();
         }
-        throw std::runtime_error("Did not find any of the translated sites in col1 of permutation matrix in function getFirstMatchInPM in orbit list");
+        throw std::runtime_error("No translated sites found in colum1 of permutation matrix in getFirstMatchInPM");
     }
 }
 
@@ -795,7 +794,7 @@ std::vector<int> OrbitList::findRowsFromCol1(const std::vector<LatticeSite> &col
                 //latNbrp.print();
             //}
             //  latNbr.print();
-            throw std::runtime_error("The input lattice neigbhors is not found in column1 in function findRowsFromCol1");
+            throw std::runtime_error("None of the input lattice neigbhors is found in column1 while calling findRowsFromCol1 function");
         }
         else
         {
@@ -812,8 +811,9 @@ std::vector<int> OrbitList::findRowsFromCol1(const std::vector<LatticeSite> &col
 
 /**
 @details This function returns the first column of the permutation matrix.
-@param permutation_matrix permutation matrix
-@param sortIt if true it will sort column1 (default true)
+
+@param permutation_matrix an icet permutation matrix with LatticeSite format entries 
+@param sortIt if true it will sort the returned column1 (default true)
 */
 std::vector<LatticeSite> OrbitList::getColumn1FromPM(const std::vector<std::vector<LatticeSite>> &permutation_matrix, bool sortIt) const
 {
@@ -833,10 +833,10 @@ std::vector<LatticeSite> OrbitList::getColumn1FromPM(const std::vector<std::vect
 /**
 @details Returns a supercell orbit by translating and mapping an orbit to the supercell structure.
 
-@param superCell a supercell atomic structure.
-@param cellOffset the offset you translate the orbit with.
-@param orbitIndex index of the orbit.
-@param primToSuperMap maps primitive lattice neighbors to lattice neighbors in the supercell.
+@param superCell a supercell atomic structure
+@param cellOffset the offset you translate the orbit with
+@param orbitIndex index of the orbit
+@param primToSuperMap maps primitive lattice neighbors to lattice neighbors in the supercell
 */
 Orbit OrbitList::getSuperCellOrbit(const Structure &superCell, const Vector3d &cellOffset, const unsigned int orbitIndex, std::unordered_map<LatticeSite, LatticeSite> &primToSuperMap) const
 {

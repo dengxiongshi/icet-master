@@ -852,14 +852,6 @@ PYBIND11_MODULE(_icet, m)
                  sortit : boolean
                     if True, sort the output list. Deafult to True.
              )pbdoc")
-        .def("_add_permutation_matrix_columns", &OrbitList::addPermutationMatrixColumns,
-             py::arg("lattice_neighbors"),
-             py::arg("taken_rows"),
-             py::arg("lat_nbrs"),
-             py::arg("pm_rows"),
-             py::arg("permutation_matrix"),
-             py::arg("column1"),
-             py::arg("addit"))
         // .def("get_supercell_orbit_list", &OrbitList::getSupercellOrbitList)
         ;
 
