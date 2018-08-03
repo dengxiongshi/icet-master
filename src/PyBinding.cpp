@@ -679,14 +679,13 @@ PYBIND11_MODULE(_icet, m)
              py::arg("neighbor_lists"),
              py::arg("structure"),
              R"pbdoc(
-                 Initializes an OrbitList instance from a many-body neighbor
-                 list and an atomic structure.
+                 Initializes an OrbitList instance from a list of
+                 lattice neighbors and a primitive structure.
 
                  Parameters
                  ----------
                  neighbor_lists : list of NeighborList objects
-                     list of neighbor-list for the atomic configuration under
-                     different cutoffs.
+                     list of lattice neighbors
                  structure : icet Structure object
                      primitive atomic structure
              )pbdoc")
@@ -698,18 +697,20 @@ PYBIND11_MODULE(_icet, m)
              py::arg("neighbor_lists"),
              R"pbdoc(
                  Constructs an OrbitList object from a permutation matrix, 
-                 a structure and a neighbor-list.
+                 a structure and a list of lattice neighbors
 
                  Parameters
                  ----------
-                 permutation_matrix : vector of vector of LatticeSite objects
-                     permutation matrix with lattice-site type entries
+                 permutation_matrix : list of list of LatticeSite objects
+                     permutation matrix with lattice site format entries
                  structure : icet Structure object
                      primitive atomic structure
+                 neighbor_lists : list of NeighborList object
+                    list of lattice neighbors
              )pbdoc")
         .def("add_orbit", &OrbitList::addOrbit, py::arg("orbit"),
              R"pbdoc(
-                 Adds an Orbit object to OrbitList.
+                 Adds an orbit to OrbitList.
              
                  Parameters
                  ----------
@@ -733,12 +734,12 @@ PYBIND11_MODULE(_icet, m)
              )pbdoc")
         .def("get_orbit", &OrbitList::getOrbit, py::arg("index"),
              R"pbdoc(
-                 Returns a copy of the orbit at certain position in OrbitList.
+                 Returns a copy of an existing orbit in OrbitList.
 
                  Parameters
                  ----------
                  index : int
-                     position of the orbit in the internal list of OrbitList
+                     position of the orbit in the internal orbit list.
              )pbdoc")
         .def("clear", &OrbitList::clear,
              "Clears the orbit list")
@@ -755,12 +756,13 @@ PYBIND11_MODULE(_icet, m)
         .def("_find_orbit", (int(OrbitList::*)(const Cluster &) const) &OrbitList::findOrbit,
              py::arg("cluster"),
              R"pbdoc(
-                 Returns the position of the orbit with the given representative cluster.
+                 Returns the position of a orbit which representative cluster is
+                 equal to the provided cluster.
 
                  Parameters
                  ----------
-                 cluster : Cluster object
-                     representative cluster of orbit which position is returned
+                 cluster : an icet Cluster object
+                     a cluster object used to search for an orbit 
                  Returns
                  -------
                  int
@@ -771,12 +773,12 @@ PYBIND11_MODULE(_icet, m)
              py::arg("taken_rows"),
              py::arg("rows"),
              R"pbdoc(
-                 Adds row to the list of taken rows in the permutation matrix.
+                 Adds list of row indices of the permutation matrix to be considered.
 
                  Parameters
                  ----------
                  row : list of int
-                     row of permutation matrix 
+                     row indices of permutation matrix 
              )pbdoc")
         .def("_is_row_taken",
              &OrbitList::isRowsTaken,

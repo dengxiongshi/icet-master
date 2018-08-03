@@ -144,7 +144,7 @@ class TestOrbitList(unittest.TestCase):
             self.orbit_list._find_orbit(non_repr), -1)
 
     def test_rows_taken(self):
-        """Test functionality."""
+        """Test that rows are taken."""
         taken_rows = set()
         row_indices = tuple([0, 1, 2])
         self.assertFalse(
@@ -250,7 +250,8 @@ class TestOrbitList(unittest.TestCase):
                  LatticeSite(0, [0.0, 0.0, 0.0])]
         rows = self.orbit_list._find_rows_from_col1(column1, sites, False)
         self.assertEqual(rows, [6, 0])
-        # sort the rows
+
+        # sort the returned rows
         rows = self.orbit_list._find_rows_from_col1(column1, sites, True)
         self.assertEqual(rows, [0, 6])
 
