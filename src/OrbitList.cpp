@@ -145,7 +145,8 @@ OrbitList::OrbitList(const Structure &structure, const std::vector<std::vector<L
     bool saveBothWays = false;
     ManyBodyNeighborList mbnl = ManyBodyNeighborList();
 
-    /// list of rows indices of the permutation matrix used to construct the orbit list.
+    
+     //if e.g. [0,1,2] exists in taken_rows then these three rows (including columns) have been accounted for their respective orbits have been created.
     std::unordered_set<std::vector<int>, VectorHash> taken_rows;
 
     // Get the first column of the permutation matrix which contains all the original (non-permuted) lattice sites.
@@ -179,10 +180,10 @@ OrbitList::OrbitList(const Structure &structure, const std::vector<std::vector<L
                     throw std::runtime_error("Lattice neighbors from many-body-neighbor-list are not sorted in OrbitList::OrbitList");
                 }
 
-                // Get all ways these sites can be translated so at least one atom is inside the unit cell
+                // Get all the ways these sites can be translated so at least one atom is inside the unit cell
                 std::vector<std::vector<LatticeSite>> translatedSites = getSitesTranslatedToUnitcell(lat_nbrs, false);
 
-                // Add permuted sites from permutation matrix to the lattice neighbors.
+                // Add sites from permutation matrix to the lattice neighbors.
                 auto sites_index_pair = getMatchesInPM(translatedSites);
                 if (!isRowsTaken(taken_rows, sites_index_pair[0].second))
                 {
