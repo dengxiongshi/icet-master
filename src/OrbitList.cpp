@@ -108,7 +108,7 @@ int OrbitList::findOrbit(const Cluster &cluster) const
 @details Returns the location of a given cluster in the cluster index map.
 If cluster does not exist, returns -1.
 
-@param cluster an icet cluster object
+@param cluster an icet cluster
 @param clusterIndexMap a map containing a representative cluster and an orbit index pairs
 */
 int OrbitList::findOrbit(const Cluster &cluster, const std::unordered_map<Cluster, int> &clusterIndexMap) const
@@ -125,12 +125,13 @@ int OrbitList::findOrbit(const Cluster &cluster, const std::unordered_map<Cluste
 }
 
 /**
-@details This constructor creates an OrbitList object from a primitive
-structure, a permutation matrix, and a list of neighbor-list.
+@details This constructor creates an OrbitList object from a structure, 
+a permutation matrix, and a vector of neighbor lists.
 
-@param structure a primitive atomic structure.
+@param structure the structure which the orbitlist will be in reference to
 @param permutation_matrix an icet permutation matrix with LatticeSite format entries.
-@param neighbor_lists a list with pairs of lattice neighbors.
+@param neighbor_lists a vector of neighbor lists (NLs) where the ith NL
+    contains all the pair clusters within the cutoff for the i+2 order clusters
 
 @todo This constructor needs a step-by-step description.
 */
@@ -140,10 +141,7 @@ OrbitList::OrbitList(const Structure &structure, const std::vector<std::vector<L
     _permutation_matrix = permutation_matrix;
     std::vector<std::vector<std::vector<LatticeSite>>> lattice_neighbors;
 
-    /// @todo This seems to be unnecessary.
-    std::vector<std::pair<std::vector<LatticeSite>, std::vector<LatticeSite>>> many_bodyNeighborIndices;
-
-    // Set up a many body neighbor-list.
+    // Set up a many body neighbor list.
     bool saveBothWays = false;
     ManyBodyNeighborList mbnl = ManyBodyNeighborList();
 
@@ -154,15 +152,14 @@ OrbitList::OrbitList(const Structure &structure, const std::vector<std::vector<L
     std::vector<LatticeSite> col1 = getColumn1FromPM(permutation_matrix, false);
     _column1 = col1;
 
-    // Check all elements in column1 are uniques.
-    /// @todo Uniqueness of these elements can be verified during the implementation of permutation matrix.
+    //  assert that all elements in column1 are unique.
     std::set<LatticeSite> col1_uniques(col1.begin(), col1.end());
     if (col1.size() != col1_uniques.size())
     {
         std::string errMSG = "Found duplicates in column1 of permutation matrix " + std::to_string(col1.size()) + " != " + std::to_string(col1_uniques.size());
         throw std::runtime_error(errMSG);
     }
-    // Loop over the lattice neighbors.
+    // Loop over the neighbor lists.
     for (size_t index = 0; index < neighbor_lists[0].size(); index++)
     {
         // Build a many body neighbor-list for each lattice neighbor.
@@ -182,11 +179,8 @@ OrbitList::OrbitList(const Structure &structure, const std::vector<std::vector<L
                     throw std::runtime_error("Lattice neighbors from many-body-neighbor-list are not sorted in OrbitList::OrbitList");
                 }
 
-                // Translated lattice neighbors sites to unitcell.
+                // Get all ways these sites can be translated so at least one atom is inside the unit cell
                 std::vector<std::vector<LatticeSite>> translatedSites = getSitesTranslatedToUnitcell(lat_nbrs, false);
-
-                /// @todo This seems to be unnecessary.
-                int missedSites = 0;
 
                 // Add permuted sites from permutation matrix to the lattice neighbors.
                 auto sites_index_pair = getMatchesInPM(translatedSites);
@@ -497,7 +491,6 @@ then this function should not give rise to any sites in that direction.
 std::vector<std::vector<LatticeSite>> OrbitList::getSitesTranslatedToUnitcell(const std::vector<LatticeSite> &latticeNeighbors, bool sortIt) const
 {
 
-    // Check that pbc is currently respected
     if (!isSitesPBCCorrect(latticeNeighbors))
     {
         throw std::runtime_error("A lattice neighbor with a repeated site in the unitcell direction with non-pbc has been passed to getSitesTranslatedToUnitCell function");
