@@ -62,9 +62,11 @@ representative cluster equal to the provided cluster is not found. If the
 orbit already exists, then just adds the sites to the orbit as equivalent
 sites.
 
-@param cluster an icet cluster object
+@param cluster an icet cluster
 @param sites equivalent sites
 @param clusterIndexMap a map containing a representative cluster and an orbit index pairs
+
+@todo remove this function
 */
 void OrbitList::addClusterToOrbitList(const Cluster &cluster, const std::vector<LatticeSite> &sites, std::unordered_map<Cluster, int> &clusterIndexMap)
 {
@@ -84,11 +86,11 @@ void OrbitList::addClusterToOrbitList(const Cluster &cluster, const std::vector<
 }
 
 /**
-@details Returns the location, i.e. the index, in the internal orbit list of an
-orbit which its representative cluster is equal to the input cluster.
-If no orbit is found, returns -1.
+@details Returns the index in the orbit list of the
+orbit who has a representative cluster equal to the input cluster.
+If no such orbit is found, return -1.
 
-@param cluster an icet cluster object
+@param cluster an icet cluster
 */
 int OrbitList::findOrbit(const Cluster &cluster) const
 {
@@ -104,7 +106,7 @@ int OrbitList::findOrbit(const Cluster &cluster) const
 
 /**
 @details Returns the location of a given cluster in the cluster index map.
-If cluster does not exists, returns -1.
+If cluster does not exist, returns -1.
 
 @param cluster an icet cluster object
 @param clusterIndexMap a map containing a representative cluster and an orbit index pairs
