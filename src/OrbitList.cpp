@@ -145,8 +145,7 @@ OrbitList::OrbitList(const Structure &structure, const std::vector<std::vector<L
     bool saveBothWays = false;
     ManyBodyNeighborList mbnl = ManyBodyNeighborList();
 
-    
-     //if e.g. [0,1,2] exists in taken_rows then these three rows (including columns) have been accounted for their respective orbits have been created.
+    //if e.g. [0,1,2] exists in taken_rows then these three rows (including columns) have been accounted for their respective orbits have been created.
     std::unordered_set<std::vector<int>, VectorHash> taken_rows;
 
     // Get the first column of the permutation matrix which contains all the original (non-permuted) lattice sites.
@@ -303,16 +302,14 @@ void OrbitList::addPermutationInformationToOrbits(const std::vector<LatticeSite>
                         failedLoops++;
                         if (failedLoops == translatedRepresentativeSites.size())
                         {
-                            throw std::runtime_error("Not allowed permutation found to any translated representative site");
+                            throw std::runtime_error("did not find any integer permutation from allowed permutation to any translated representative site");
                         }
                         continue;
                     }
                 }
             }
         }
-        // std::cout << i << "/" << size() << " | " << representativeSites_i.size() << " " << std::endl;
-
-        // Step seven: Find the permutation to representative sites
+        // Step seven: Find the permutations to representative sites
         const auto orbitSites = _orbitList[i].getEquivalentSites();
         std::unordered_set<std::vector<LatticeSite>> p_equal_set;
         p_equal_set.insert(all_translated_p_equal.begin(), all_translated_p_equal.end());
@@ -324,11 +321,6 @@ void OrbitList::addPermutationInformationToOrbits(const std::vector<LatticeSite>
         {
             if (p_equal_set.find(eqOrbitSites) == p_equal_set.end())
             {
-                // for (auto latNbr : eqOrbitSites)
-                // {
-                //     latNbr.print();
-                // }
-                // std::cout << "====" << std::endl;
                 //Did not find the orbit.eq_sites in p_equal meaning that this eq site does not have an allowed permutation
                 auto equivalently_translated_eqOrbitsites = getSitesTranslatedToUnitcell(eqOrbitSites, sortRows);
                 std::vector<std::pair<std::vector<LatticeSite>, std::vector<LatticeSite>>> translatedPermutationsOfSites;
@@ -339,16 +331,9 @@ void OrbitList::addPermutationInformationToOrbits(const std::vector<LatticeSite>
                     {
                         translatedPermutationsOfSites.push_back(std::make_pair(perm, eq_trans_eqOrbitsites));
                     }
-                    // translatedPermutationsOfSites.insert(translatedPermutationsOfSites.end(),allPermutationsOfSites_i.begin(), allPermutationsOfSites_i.end());
                 }
                 for (const auto &onePermPair : translatedPermutationsOfSites)
                 {
-                    // for (auto latNbr : onePermPair.first)
-                    // {
-                    //     std::cout << "\t";
-                    //     latNbr.print();
-                    // }
-                    // std::cout << "----" << std::endl;
 
                     const auto findOnePerm = p_equal_set.find(onePermPair.first);
                     if (findOnePerm != p_equal_set.end()) // one perm is one of the equivalent sites. This means that eqOrbitSites is associated to p_equal
@@ -359,15 +344,6 @@ void OrbitList::addPermutationInformationToOrbits(const std::vector<LatticeSite>
                     }
                     if (onePermPair == translatedPermutationsOfSites.back())
                     {
-                        // std::cout << "Target sites " << std::endl;
-                        // for (auto latNbrs : p_equal_set)
-                        // {
-                        //     for (auto latNbr : latNbrs)
-                        //     {
-                        //         latNbr.print();
-                        //     }
-                        //     std::cout << "-=-=-=-=-=-=-=" << std::endl;
-                        // }
                         std::string errMSG = "did not find a permutation of the orbit sites to the permutations of the representative sites";
                         throw std::runtime_error(errMSG);
                     }
@@ -388,22 +364,10 @@ void OrbitList::addPermutationInformationToOrbits(const std::vector<LatticeSite>
 
         _orbitList[i].setEquivalentSitesPermutations(sitePermutations);
         _orbitList[i].setAllowedSitesPermutations(allowedPermutations);
-        ///debug prints
-
-        // for (auto perm : allowedPermutations)
-        // {
-        //     for (auto i : perm)
-        //     {
-        //         std::cout << i << " ";
-        //     }
-        //     std::cout << " | ";
-        // }
-        // std::cout << std::endl;
-        //    std::cout<<representativeSites.size()<< " "<<p_all.size()<< " "<< p_equal.size()<< " " << p_allowed_permutations.size()<<std::endl;
     }
 }
 
-/// Finds the sites in the first column of permutation matrix, extracts and returns all columns along with their unit cell translated indistinguishable sites
+/// Will find `sites` in col1, extract the respective row along with their unit cell translated indistinguishable sites
 std::vector<std::vector<LatticeSite>> OrbitList::getAllColumnsFromSites(const std::vector<LatticeSite> &sites,
                                                                         const std::vector<LatticeSite> &col1,
                                                                         const std::vector<std::vector<LatticeSite>> &permutation_matrix) const
