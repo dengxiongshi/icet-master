@@ -2,7 +2,7 @@
 
 /**
 @todo Think about adding a string tag here to keep track of different orbit lists.
-@todo Commented out lines of code may rot even if they are used for debugging. Those lines should be cleaned up.
+@todo Clean up old commented code.
 */
 OrbitList::OrbitList()
 {
@@ -12,8 +12,9 @@ OrbitList::OrbitList()
 /**
 @details Constructs an OrbitList object from a structure and
 a vector of neighbor-list.
-@param neighbor_lists a list with pairs of lattice neighbors
-@param structure a primitive atomic structure
+@param neighbor_lists a vector of neighbor lists (NLs) where the ith NL
+    contains all the pair clusters within the cutoff for the i+2 order clusters
+@param structure the structure which the orbitlist will be in reference to
 */
 OrbitList::OrbitList(const std::vector<NeighborList> &neighbor_lists, const Structure &structure)
 {
