@@ -136,17 +136,17 @@ OrbitList::OrbitList(const Structure &structure, const std::vector<std::vector<L
     _primitiveStructure = structure;
     _permutation_matrix = permutation_matrix;
     std::vector<std::vector<std::vector<LatticeSite>>> lattice_neighbors;
-    
+
     /// @todo This seems to be unnecessary.
     std::vector<std::pair<std::vector<LatticeSite>, std::vector<LatticeSite>>> many_bodyNeighborIndices;
-    
+
     // Set up a many body neighbor-list.
     bool saveBothWays = false;
     ManyBodyNeighborList mbnl = ManyBodyNeighborList();
 
     /// list of rows indices of the permutation matrix used to construct the orbit list.
     std::unordered_set<std::vector<int>, VectorHash> taken_rows;
-    
+
     // Get the first column of the permutation matrix which contains all the original (non-permuted) lattice sites.
     std::vector<LatticeSite> col1 = getColumn1FromPM(permutation_matrix, false);
     _column1 = col1;
@@ -181,7 +181,7 @@ OrbitList::OrbitList(const Structure &structure, const std::vector<std::vector<L
 
                 // Translated lattice neighbors sites to unitcell.
                 std::vector<std::vector<LatticeSite>> translatedSites = getSitesTranslatedToUnitcell(lat_nbrs, false);
-                
+
                 /// @todo This seems to be unnecessary.
                 int missedSites = 0;
 
@@ -314,7 +314,7 @@ void OrbitList::addPermutationInformationToOrbits(const std::vector<LatticeSite>
             }
         }
         // std::cout << i << "/" << size() << " | " << representativeSites_i.size() << " " << std::endl;
-        
+
         // Step seven: Find the permutation to representative sites
         const auto orbitSites = _orbitList[i].getEquivalentSites();
         std::unordered_set<std::vector<LatticeSite>> p_equal_set;
@@ -657,7 +657,7 @@ void OrbitList::addPermutationMatrixColumns(
 
         /// @todo Output sites must be sorted here. Otherwise, cluster space test for ternary fails.
         auto translatedEquivalentSites = getSitesTranslatedToUnitcell(indistinctLatNbrs, true);
-        
+
         /// @todo Same here. Output must be sorted to prevent failure when testing ternary.
         auto sites_index_pair = getMatchesInPM(translatedEquivalentSites);
         // for (int i = 1; i < sites_index_pair.size(); i++)
