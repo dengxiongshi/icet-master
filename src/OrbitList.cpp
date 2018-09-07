@@ -210,7 +210,7 @@ OrbitList::OrbitList(const Structure &structure, const std::vector<std::vector<L
         std::sort(lattice_neighbors[i].begin(), lattice_neighbors[i].end());
     }
 
-    // Add orbit once permuted sites have been added to lattice neighbors.
+    // Add orbit once sites have been added to lattice neighbors.
     addOrbitsFromPM(structure, lattice_neighbors);
 
     // Add permutation information, i.e. allowed permutation and permutation-to-representative,
@@ -229,7 +229,7 @@ OrbitList::OrbitList(const Structure &structure, const std::vector<std::vector<L
 Adds permutation information to each orbit, i.e. the permutation-to-representative
 and the allowed permutations. 
 
-Loop over orbits:
+For each orbit:
 
 1. Take representative sites
 2. Find the rows these sites belong to (also find the unit cell offsets equivalent sites??)
@@ -242,8 +242,8 @@ Loop over orbits:
         those sites are then related to representative_sites through the permutation
     else:
         loop over permutations of the sites:
-        does the permutation exist in p_all?:
-            that permutation is then related to rep_sites through that permutation
+            does the permutation exist in p_all?:
+                that permutation is then related to rep_sites through that permutation
         else:
             continue
 */
@@ -270,7 +270,7 @@ void OrbitList::addPermutationInformationToOrbits(const std::vector<LatticeSite>
 
         std::sort(all_translated_p_equal.begin(), all_translated_p_equal.end());
 
-        // Step four: Construct all possible permutations for the translated sites
+        // Step four: Construct all possible permutations for the translated representative sites
         std::vector<std::vector<LatticeSite>> p_all_with_translated_equivalent;
         for (auto translated_rep_sites : translatedRepresentativeSites)
         {
