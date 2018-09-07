@@ -172,12 +172,12 @@ OrbitList::OrbitList(const Structure &structure, const std::vector<std::vector<L
                 std::vector<LatticeSite> lat_nbrs = mbnl_pair.first;
                 lat_nbrs.push_back(latnbr);
 
-                // Check that lattice neighbors are sorted in the vector.
+                // Check that lattice sites are sorted in the vector.
                 auto lat_nbrs_copy = lat_nbrs;
                 std::sort(lat_nbrs_copy.begin(), lat_nbrs_copy.end());
                 if (lat_nbrs_copy != lat_nbrs)
                 {
-                    throw std::runtime_error("Lattice neighbors from many-body-neighbor-list are not sorted in OrbitList::OrbitList");
+                    throw std::runtime_error("Lattice sites from many-body-neighbor-list are not sorted in OrbitList::OrbitList");
                 }
 
                 // Get all the ways these sites can be translated so at least one atom is inside the unit cell
@@ -191,14 +191,13 @@ OrbitList::OrbitList(const Structure &structure, const std::vector<std::vector<L
                 }
             }
 
-            // Add permuted sites for special singlet cases
+            // Add singlet sites
             if (mbnl_pair.second.size() == 0)
             {
                 std::vector<LatticeSite> lat_nbrs = mbnl_pair.first;
                 auto pm_rows = findRowsFromCol1(col1, lat_nbrs, false);
-                // auto find = taken_rows.find(pm_rows);
-                // if (find == taken_rows.end())
-                if (!isRowsTaken(taken_rows, pm_rows))
+                auto find = taken_rows.find(pm_rows);
+                if (find == taken_rows.end())
                 {
                     addPermutationMatrixColumns(lattice_neighbors, taken_rows, lat_nbrs, pm_rows, permutation_matrix, col1, true);
                 }
