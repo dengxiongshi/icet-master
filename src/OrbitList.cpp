@@ -10,8 +10,8 @@ OrbitList::OrbitList()
 }
 
 /**
-@details Constructs an OrbitList object from a primitive structure and
-a list of neighbor-list.
+@details Constructs an OrbitList object from a structure and
+a vector of neighbor-list.
 @param neighbor_lists a list with pairs of lattice neighbors
 @param structure a primitive atomic structure
 */
