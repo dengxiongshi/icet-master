@@ -39,7 +39,7 @@ class PairCountObserver(BaseObserver):
 
         self._structure = structure.copy()
         self._structure.wrap()
-        self._species = species
+        self._species = sorted(species)
 
         self._cluster_space = ClusterSpace(
             atoms=cluster_space.primitive_structure,
@@ -73,7 +73,7 @@ class PairCountObserver(BaseObserver):
         for k, orbit_index in enumerate(sorted(pair_orbit_indices)):
             orbit_df = df.loc[df['orbit_index'] == orbit_index]
             for i, row in orbit_df.iterrows():
-                if self._species[0] in row.decoration and self._species[1] in row.decoration:
+                if self._species == sorted(row.decoration):
                     pair_count += row.cluster_count
 
         return pair_count
