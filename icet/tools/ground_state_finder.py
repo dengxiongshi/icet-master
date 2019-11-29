@@ -19,6 +19,35 @@ except ImportError:
                       'required in order to use the ground state finder.')
 
 
+class GSCluster:
+
+    def __init__(self, sites, orbit_index, active=True):
+        self.sites = sites
+        self.orbit_index = orbit_index
+        self.active = active
+
+
+class GSClusters:
+
+    def __init__(self):
+        self.clusters = []
+
+    def add_cluster(self, sites, orbit_index, active):
+        self.clusters.append(GSCluster(sites, orbit_index, active))
+
+    def generate_active_clusters(self):
+        for cluster in self.clusters:
+            if cluster.active:
+                yield cluster
+
+    def get_number_of_clusters_per_orbit(self, orbit_index):
+        count = 0
+        for cluster in self.clusters:
+            if cluster.orbit_index == orbit_index:
+                count += 1
+        return count
+
+
 class GroundStateFinder:
     """
     This class provides functionality for determining the ground states
@@ -91,6 +120,7 @@ class GroundStateFinder:
         ground_state = gsf.get_ground_state({'Ag': 5})
         print('Ground state energy:', ce.predict(ground_state))
     """
+
     def __init__(self,
                  cluster_expansion: ClusterExpansion,
                  structure: Atoms,
@@ -133,12 +163,12 @@ class GroundStateFinder:
         full_orbit_list = lolg.generate_full_orbit_list()
 
         # Determine the number of active orbits
-        active_orbit_indices = self._get_active_orbit_indices(primitive_structure)
+        self.active_orbit_indices = self._get_active_orbit_indices(primitive_structure)
 
         # Transform the ECIs
         binary_ecis = transform_ECIs(primitive_structure,
                                      full_orbit_list,
-                                     active_orbit_indices,
+                                     self.active_orbit_indices,
                                      self._cluster_expansion.parameters)
         self._transformed_parameters = binary_ecis
 
@@ -183,15 +213,15 @@ class GroundStateFinder:
         # Spin variables (remapped) for all atoms in the structure
         xs = []
         site_to_active_index_map = {}
-        for i, sym in enumerate(structure.get_chemical_symbols()):
-            if sym in self._species:
-                site_to_active_index_map[i] = len(xs)
-                xs.append(model.add_var(name='atom_{}'.format(i),
+        for atom in structure:
+            if atom.symbol in self._species:
+                site_to_active_index_map[atom.index] = len(xs)
+                xs.append(model.add_var(name='atom_{}'.format(atom.index),
                                         var_type=BINARY))
         self.xs = xs
 
         ys = []
-        for i in range(len(self._cluster_to_orbit_map)):
+        for i, gs_cluster in enumerate(self.gs_clusters.clusters):
             ys.append(model.add_var(name='cluster_{}'.format(i),
                                     var_type=BINARY))
 
@@ -200,33 +230,24 @@ class GroundStateFinder:
 
         # The five constraints are entered
         # TODO: don't create cluster constraints for singlets
-        ycount = 0
-        for i, cluster in enumerate(self._cluster_to_sites_map):
-
+        constraint_count = 0
+        for i, cluster in enumerate(self.gs_clusters.clusters):
             # Test whether constraint can be binding
-            orbit = self._cluster_to_orbit_map[i]
-            ECI = self._transformed_parameters[orbit + 1]
-            if len(cluster) >= 2 and ECI > 0:  # no "downwards" pressure
-                continue
+            orbit_index = cluster.orbit_index
+            ECI = self._transformed_parameters[orbit_index + 1]
+            
+            if len(cluster.sites) < 2 or ECI < 0:  # no "downwards" pressure
+                for atom_index in cluster.sites:
+                    model.add_constr(ys[i] <= xs[site_to_active_index_map[atom_index]],
+                                     'Decoration -> cluster {}'.format(constraint_count))
+                    constraint_count += 1
 
-            for atom in cluster:
-                model.add_constr(ys[i] <= xs[site_to_active_index_map[atom]],
-                                 'Decoration -> cluster {}'.format(ycount))
-                ycount += 1
-
-        for i, cluster in enumerate(self._cluster_to_sites_map):
-
-            # Test whether constraint can be binding
-            orbit = self._cluster_to_orbit_map[i]
-            ECI = self._transformed_parameters[orbit + 1]
-            if len(cluster) >= 2 and ECI < 0:  # no "upwards" pressure
-                continue
-
-            model.add_constr(ys[i] >= 1 - len(cluster) +
-                             mip.xsum(xs[site_to_active_index_map[atom]]
-                             for atom in cluster),
-                             'Decoration -> cluster {}'.format(ycount))
-            ycount += 1
+            if len(cluster.sites) < 2 or ECI > 0:  # no "upwards" pressure
+                model.add_constr(ys[i] >= 1 - len(cluster.sites) +
+                                 mip.xsum(xs[site_to_active_index_map[site]]
+                                          for site in cluster.sites),
+                                 'Decoration -> cluster {}'.format(constraint_count))
+                constraint_count += 1
 
         # Set species constraint
         model.add_constr(mip.xsum(xs) == xcount, 'Species count')
@@ -253,17 +274,16 @@ class GroundStateFinder:
         full_orbit_list = lolg.generate_full_orbit_list()
 
         # Create maps of site indices and orbits for all clusters
-        cluster_to_sites_map = []
-        cluster_to_orbit_map = []
+        self.gs_clusters = GSClusters()
+
         orbit_counter = 0
-        for i in range(len(full_orbit_list)):
-            allowed_orbit = False
-            allowed_cluster = True
+        for i, old_orbit_index in enumerate(self.active_orbit_indices):
 
             equivalent_clusters = full_orbit_list.get_orbit(
-                i).get_equivalent_sites()
+                old_orbit_index).get_equivalent_sites()
 
             # Determine the sites and the orbit associated with each cluster
+            active = True
             for cluster in equivalent_clusters:
                 cluster_sites = []
 
@@ -272,30 +292,14 @@ class GroundStateFinder:
 
                     # Ensure that all sites in the cluster are occupied by allowed elements
                     if structure[site.index].symbol not in self._species:
-                        allowed_cluster = False
-                        break
+                        active = False
 
                     # Add the site to the list of sites for this cluster
                     cluster_sites.append(site.index)
 
-                if allowed_cluster:
-                    allowed_orbit = True
+                # Add the the list of sites and the orbit to the respective cluster maps
+                self.gs_clusters.add_cluster(cluster_sites, i, active=active)
 
-                    # Add the the list of sites and the orbit to the respective cluster maps
-                    cluster_to_sites_map.append(cluster_sites)
-                    cluster_to_orbit_map.append(orbit_counter)
-
-            if allowed_orbit:
-                orbit_counter += 1
-
-        # calculate the number of clusters per orbit
-        nclusters_per_orbit = [cluster_to_orbit_map.count(
-            i) for i in range(cluster_to_orbit_map[-1] + 1)]
-        nclusters_per_orbit = [1] + nclusters_per_orbit
-
-        self._cluster_to_sites_map = cluster_to_sites_map
-        self._cluster_to_orbit_map = cluster_to_orbit_map
-        self._nclusters_per_orbit = nclusters_per_orbit
 
     def _get_active_orbit_indices(self,  structure: Atoms) -> List[int]:
         """
@@ -343,14 +347,16 @@ class GroundStateFinder:
             list of cluster instance activities, (:math:`y_{{\\boldsymbol c}}`)
         """
 
-        E = [0.0 for _ in self._transformed_parameters]
-        for i in range(len(cluster_instance_activities)):
-            orbit = self._cluster_to_orbit_map[i]
-            E[orbit + 1] += cluster_instance_activities[i]
-        E[0] = 1
+        activity_sums = [0 for _ in self._transformed_parameters]
+        for i, cluster_instance_activity in enumerate(cluster_instance_activities):
+            orbit_index = self.gs_clusters.clusters[i].orbit_index
+            activity_sums[orbit_index + 1] += cluster_instance_activity
+        activity_sums[0] = 1
 
-        E = [E[orbit] * self._transformed_parameters[orbit] / self._nclusters_per_orbit[orbit]
-             for orbit in range(len(self._transformed_parameters))]
+        E = [activity_sums[0] * self._transformed_parameters[0]]
+        for i in range(len(self.active_orbit_indices)):
+            E.append(activity_sums[i + 1] * self._transformed_parameters[i + 1] /
+                     self.gs_clusters.get_number_of_clusters_per_orbit(i))
         return E
 
     def get_ground_state(self,
