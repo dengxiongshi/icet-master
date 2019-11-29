@@ -361,7 +361,6 @@ class GroundStateFinder:
 
         activity_sums = [0 for _ in self._transformed_parameters[1:]]
         for cluster in self.gs_clusters.clusters:
-            print(cluster.sites)
             orbit_index = cluster.orbit_index
             if cluster.active:
                 activity_sums[orbit_index] += cluster.model_var
@@ -373,8 +372,6 @@ class GroundStateFinder:
 
         E = [self._transformed_parameters[0]]
         for i in range(len(self.active_orbit_indices)):
-            print(self.gs_clusters.nclusters_per_orbit[i])
-            print(activity_sums[i])
             E.append(activity_sums[i] * self._transformed_parameters[i + 1] /
                      self.gs_clusters.nclusters_per_orbit[i])
         return E
