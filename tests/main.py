@@ -63,7 +63,7 @@ if __name__ == "__main__":
     integration_dir = os.path.join(main_dir, 'integration')
 
     # Collect tests
-    suite = unittest.TestLoader().discover(unittest_dir, pattern="*.py")
+    suite = unittest.TestLoader().discover(unittest_dir, pattern="*state_finder.py")
     find_script_tests(suite, integration_dir)
 
     # Run tests

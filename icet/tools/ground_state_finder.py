@@ -31,21 +31,22 @@ class GSClusters:
 
     def __init__(self):
         self.clusters = []
+        self.nclusters_per_orbit = {}
 
     def add_cluster(self, sites, orbit_index, active):
+        self.add_to_multiplicity(orbit_index)
         self.clusters.append(GSCluster(sites, orbit_index, active))
+
+    def add_to_multiplicity(self, orbit_index):
+        if orbit_index not in self.nclusters_per_orbit:
+            self.nclusters_per_orbit[orbit_index] = 1
+        else:
+            self.nclusters_per_orbit[orbit_index] += 1
 
     def generate_active_clusters(self):
         for cluster in self.clusters:
             if cluster.active:
                 yield cluster
-
-    def get_number_of_clusters_per_orbit(self, orbit_index):
-        count = 0
-        for cluster in self.clusters:
-            if cluster.orbit_index == orbit_index:
-                count += 1
-        return count
 
 
 class GroundStateFinder:
@@ -124,6 +125,7 @@ class GroundStateFinder:
     def __init__(self,
                  cluster_expansion: ClusterExpansion,
                  structure: Atoms,
+                 active_atom_indices=None,
                  solver_name: str = None,
                  verbose: bool = True) -> None:
         # Check that there is only one active sublattice
@@ -142,6 +144,11 @@ class GroundStateFinder:
             raise NotImplementedError('Only binaries are implemented '
                                       'as of yet.')
         self._species = species
+
+        if active_atom_indices is None:
+            self.active_atom_indices = [atom.index for atom in structure]
+        else:
+            self.active_atom_indices = active_atom_indices
 
         # Define cluster functions for elements
         species_map = cluster_space.species_maps[0]
@@ -214,36 +221,35 @@ class GroundStateFinder:
         xs = []
         site_to_active_index_map = {}
         for atom in structure:
-            if atom.symbol in self._species:
+            if atom.symbol in self._species and atom.index in self.active_atom_indices:
                 site_to_active_index_map[atom.index] = len(xs)
                 xs.append(model.add_var(name='atom_{}'.format(atom.index),
                                         var_type=BINARY))
         self.xs = xs
 
-        ys = []
-        for i, gs_cluster in enumerate(self.gs_clusters.clusters):
-            ys.append(model.add_var(name='cluster_{}'.format(i),
-                                    var_type=BINARY))
+        for i, cluster in enumerate(self.gs_clusters.generate_active_clusters()):
+            cluster.model_var = model.add_var(name='cluster_{}'.format(i),
+                                              var_type=BINARY)
 
         # The objective function is added to 'model' first
-        model.objective = mip.minimize(mip.xsum(self._get_total_energy(ys)))
+        model.objective = mip.minimize(mip.xsum(self._get_total_energy()))
 
         # The five constraints are entered
         # TODO: don't create cluster constraints for singlets
         constraint_count = 0
-        for i, cluster in enumerate(self.gs_clusters.clusters):
+        for i, cluster in enumerate(self.gs_clusters.generate_active_clusters()):
             # Test whether constraint can be binding
             orbit_index = cluster.orbit_index
             ECI = self._transformed_parameters[orbit_index + 1]
-            
+
             if len(cluster.sites) < 2 or ECI < 0:  # no "downwards" pressure
                 for atom_index in cluster.sites:
-                    model.add_constr(ys[i] <= xs[site_to_active_index_map[atom_index]],
+                    model.add_constr(cluster.model_var <= xs[site_to_active_index_map[atom_index]],
                                      'Decoration -> cluster {}'.format(constraint_count))
                     constraint_count += 1
 
             if len(cluster.sites) < 2 or ECI > 0:  # no "upwards" pressure
-                model.add_constr(ys[i] >= 1 - len(cluster.sites) +
+                model.add_constr(cluster.model_var >= 1 - len(cluster.sites) +
                                  mip.xsum(xs[site_to_active_index_map[site]]
                                           for site in cluster.sites),
                                  'Decoration -> cluster {}'.format(constraint_count))
@@ -283,23 +289,30 @@ class GroundStateFinder:
                 old_orbit_index).get_equivalent_sites()
 
             # Determine the sites and the orbit associated with each cluster
-            active = True
             for cluster in equivalent_clusters:
-                cluster_sites = []
 
                 # Go through all sites in the cluster
+                cluster_sites = []
+                active = True
                 for site in cluster:
 
                     # Ensure that all sites in the cluster are occupied by allowed elements
                     if structure[site.index].symbol not in self._species:
-                        active = False
+                        break
+
+                    if site.index not in self.active_atom_indices:
+                        if self._id_map[structure[site.index].symbol] == 0:
+                            self.gs_clusters.add_to_multiplicity(i)
+                            break
+                        else:
+                            active = False
 
                     # Add the site to the list of sites for this cluster
                     cluster_sites.append(site.index)
 
-                # Add the the list of sites and the orbit to the respective cluster maps
-                self.gs_clusters.add_cluster(cluster_sites, i, active=active)
-
+                else:
+                    # Add the the list of sites and the orbit to the respective cluster maps
+                    self.gs_clusters.add_cluster(cluster_sites, i, active=active)
 
     def _get_active_orbit_indices(self,  structure: Atoms) -> List[int]:
         """
@@ -326,8 +339,7 @@ class GroundStateFinder:
 
         return active_orbit_indices
 
-    def _get_total_energy(self, cluster_instance_activities: List[int]
-                          ) -> List[float]:
+    def _get_total_energy(self) -> List[float]:
         """
         Calculates the total energy using the expression based on binary
         variables
@@ -347,16 +359,24 @@ class GroundStateFinder:
             list of cluster instance activities, (:math:`y_{{\\boldsymbol c}}`)
         """
 
-        activity_sums = [0 for _ in self._transformed_parameters]
-        for i, cluster_instance_activity in enumerate(cluster_instance_activities):
-            orbit_index = self.gs_clusters.clusters[i].orbit_index
-            activity_sums[orbit_index + 1] += cluster_instance_activity
-        activity_sums[0] = 1
+        activity_sums = [0 for _ in self._transformed_parameters[1:]]
+        for cluster in self.gs_clusters.clusters:
+            print(cluster.sites)
+            orbit_index = cluster.orbit_index
+            if cluster.active:
+                activity_sums[orbit_index] += cluster.model_var
+            else:
+                activity_sums[orbit_index] += 1
+        #for i, cluster_instance_activity in enumerate(cluster_instance_activities):
+        #    orbit_index = self.gs_clusters.clusters[i].orbit_index
+        #    activity_sums[orbit_index + 1] += cluster_instance_activity
 
-        E = [activity_sums[0] * self._transformed_parameters[0]]
+        E = [self._transformed_parameters[0]]
         for i in range(len(self.active_orbit_indices)):
-            E.append(activity_sums[i + 1] * self._transformed_parameters[i + 1] /
-                     self.gs_clusters.get_number_of_clusters_per_orbit(i))
+            print(self.gs_clusters.nclusters_per_orbit[i])
+            print(activity_sums[i])
+            E.append(activity_sums[i] * self._transformed_parameters[i + 1] /
+                     self.gs_clusters.nclusters_per_orbit[i])
         return E
 
     def get_ground_state(self,
@@ -429,6 +449,11 @@ class GroundStateFinder:
 
         # Assert that the solution agrees with the prediction
         prediction = self._cluster_expansion.predict(gs)
+
+        from ase.io import write
+        write('out.xyz', gs)
+        print(model.objective_value, prediction)
+        print(gs)
         if model.solver_name.upper() in ['GUROBI', 'GRB']:
             assert abs(model.objective_value - prediction) < 1e-6
         elif model.solver_name.upper() == 'CBC':
