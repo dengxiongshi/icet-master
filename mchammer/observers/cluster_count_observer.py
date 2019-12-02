@@ -6,6 +6,7 @@ from _icet import ClusterCounts as _ClusterCounts
 from ase import Atoms
 from icet.core.cluster import Cluster
 from icet.core.local_orbit_list_generator import LocalOrbitListGenerator
+from icet.core.orbit import Orbit
 from icet.core.structure import Structure
 from mchammer.observers.base_observer import BaseObserver
 
@@ -50,7 +51,7 @@ class ClusterCountObserver(BaseObserver):
         self._full_orbit_list = local_orbit_list_generator.generate_full_orbit_list()
         self._cluster_counts_cpp = _ClusterCounts()
 
-        self._cluster_keys = []
+        self._cluster_keys = []  # type: List[Orbit]
         for i, orbit in enumerate(self._full_orbit_list.orbits):
             cluster = orbit.representative_cluster
             cluster.tag = i
@@ -64,7 +65,7 @@ class ClusterCountObserver(BaseObserver):
         for i, cluster in enumerate(self._cluster_keys):
             order = len(cluster)
             possible_occupations = self._cluster_space.get_possible_orbit_occupations(cluster.tag)
-            assert order == len(possible_occupations[0]), '{} is not {}, {}, {}'.format(
+            assert order == len(possible_occupations[0]), '{} is not {}, {}'.format(
                 order, len(possible_occupations[0]), possible_occupations)
 
             counts[cluster] = {occupation: 0 for occupation in possible_occupations}

@@ -1,3 +1,4 @@
+from typing import Union
 import pandas as pd
 import numpy as np
 import scipy
@@ -104,7 +105,7 @@ def get_error_estimate(data: np.ndarray, confidence: float = 0.95) -> float:
     return error_estimate
 
 
-def _estimate_correlation_length_from_acf(acf: np.ndarray) -> int:
+def _estimate_correlation_length_from_acf(acf: np.ndarray) -> Union[int, np.nan]:
     """ Estimates correlation length from acf. """
     for i, a in enumerate(acf):
         if a < np.exp(-2):
@@ -115,6 +116,6 @@ def _estimate_correlation_length_from_acf(acf: np.ndarray) -> int:
 def _estimate_error(data: np.ndarray, correlation_length: int,
                     confidence: float) -> float:
     """ Estimates error using correlation length. """
-    t_factor = scipy.stats.t.ppf((1 + confidence) / 2, len(data)-1)
-    error = t_factor * np.std(data) / np.sqrt(len(data) / correlation_length)
+    t_factor = scipy.stats.t.ppf((1 + confidence) / 2, len(data)-1)  # type: float
+    error = t_factor * np.std(data) / np.sqrt(len(data) / correlation_length)  # type: float
     return error
