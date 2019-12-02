@@ -295,6 +295,9 @@ class GroundStateFinder:
         orbit_counter = 0
         for i, old_orbit_index in enumerate(self.active_orbit_indices):
 
+            if abs(self._transformed_parameters[i + 1]) < 1e-9:
+                continue
+
             equivalent_clusters = full_orbit_list.get_orbit(
                 old_orbit_index).get_equivalent_sites()
 
@@ -382,6 +385,8 @@ class GroundStateFinder:
 
         E = [self._transformed_parameters[0]]
         for i in range(len(self.active_orbit_indices)):
+            if i not in self.gs_clusters.nclusters_per_orbit:
+                continue
             E.append(activity_sums[i] * self._transformed_parameters[i + 1] /
                      self.gs_clusters.nclusters_per_orbit[i])
         return E
