@@ -15,7 +15,7 @@ build_linux:
       - build
 
 
-standard_test:
+standard_tests:
   stage: test
   tags:
     - linux
@@ -70,7 +70,7 @@ pages:
   stage: deploy
   dependencies:
     - build_linux
-    - tests
+    - standard_tests
   script:
     # prepare homepage
     - mkdir -p public/dev
