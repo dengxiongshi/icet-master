@@ -244,14 +244,24 @@ class GroundStateFinder:
 
             if len(cluster.sites) < 2 or ECI < 0:  # no "downwards" pressure
                 for atom_index in cluster.sites:
-                    model.add_constr(cluster.model_var <= xs[site_to_active_index_map[atom_index]],
-                                     'Decoration -> cluster {}'.format(constraint_count))
-                    constraint_count += 1
+                    if atom_index in self.active_atom_indices:
+                        model.add_constr(cluster.model_var <= xs[site_to_active_index_map[atom_index]],
+                                         'Decoration -> cluster {}'.format(constraint_count))
+                        constraint_count += 1
 
             if len(cluster.sites) < 2 or ECI > 0:  # no "upwards" pressure
-                model.add_constr(cluster.model_var >= 1 - len(cluster.sites) +
-                                 mip.xsum(xs[site_to_active_index_map[site]]
-                                          for site in cluster.sites),
+                constr = 1 - len(cluster.sites)
+                to_xsum = []
+                for site in cluster.sites:
+                    if site in self.active_atom_indices:
+                        to_xsum.append(xs[site_to_active_index_map[site]])
+                    else:
+                        constr += 1
+                # model.add_constr(cluster.model_var >= 1 - len(cluster.sites) +
+                        # mip.xsum(xs[site_to_active_index_map[site]]
+                        #         for site in cluster.sites),
+                        #'Decoration -> cluster {}'.format(constraint_count))
+                model.add_constr(cluster.model_var >= constr + mip.xsum(to_xsum),
                                  'Decoration -> cluster {}'.format(constraint_count))
                 constraint_count += 1
 
@@ -305,7 +315,7 @@ class GroundStateFinder:
                             self.gs_clusters.add_to_multiplicity(i)
                             break
                         else:
-                            active = False
+                            active = True
 
                     # Add the site to the list of sites for this cluster
                     cluster_sites.append(site.index)
@@ -366,7 +376,7 @@ class GroundStateFinder:
                 activity_sums[orbit_index] += cluster.model_var
             else:
                 activity_sums[orbit_index] += 1
-        #for i, cluster_instance_activity in enumerate(cluster_instance_activities):
+        # for i, cluster_instance_activity in enumerate(cluster_instance_activities):
         #    orbit_index = self.gs_clusters.clusters[i].orbit_index
         #    activity_sums[orbit_index + 1] += cluster_instance_activity
 
@@ -378,7 +388,7 @@ class GroundStateFinder:
 
     def get_ground_state(self,
                          species_count: Dict[str, float],
-                         max_seconds: float = inf) -> Atoms:
+                         max_seconds: float=inf) -> Atoms:
         """
         Finds the ground state for a given structure and species count, which
         refers to the `count_species`, if provided when initializing the
@@ -407,8 +417,9 @@ class GroundStateFinder:
         if self._id_map[species_to_count] == 1:
             xcount = species_count[species_to_count]
         else:
-            active_count = len([sym for sym in self.structure.get_chemical_symbols()
-                                if sym in self._species])
+            active_count = len([atom.symbol for atom in self.structure
+                                if atom.symbol in self._species
+                                and atom.index in self.active_atom_indices])
             xcount = active_count - species_count[species_to_count]
 
         # The model is solved using python-MIPs choice of solver, which is
