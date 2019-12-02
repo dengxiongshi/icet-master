@@ -15,7 +15,7 @@ build_linux:
       - build
 
 
-tests:
+standard_test:
   stage: test
   tags:
     - linux
@@ -46,6 +46,15 @@ test_benchmarks_examples:
     - export PYTHONPATH=$PWD:$PWD/build/:$PYTHONPATH
     - for f in benchmark/*.py; do echo $f ; python3 $f ; done
     - for f in $(ls examples/*/*.py | grep -v __ | grep -v parallel_monte_carlo); do echo $f ; cd `dirname $f` ; python3 `basename $f` ; cd ../../ ; done
+
+
+mypy_check:
+  stage: test
+  tags:
+    - linux
+  script:
+    - mypy icet/ mchammer/
+  allow_failure: true
 
 
 style_check:
