@@ -24,6 +24,8 @@ def _structure_from_atoms(cls, conf: Atoms):
                conf.get_chemical_symbols(),
                conf.cell,
                conf.pbc.tolist())
+
+
 Structure.from_atoms = _structure_from_atoms
 
 
