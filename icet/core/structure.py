@@ -7,7 +7,8 @@ from ase import Atoms
 from _icet import Structure
 
 
-def _structure_from_atoms(cls, conf: Atoms):
+@classmethod
+def _structure_from_atoms(self, conf: Atoms):
     """
     Returns the input configuration as an icet Structure object.
 
@@ -20,10 +21,10 @@ def _structure_from_atoms(cls, conf: Atoms):
     -------
     atomic configuration
     """
-    return cls(conf.positions,
-               conf.get_chemical_symbols(),
-               conf.cell,
-               conf.pbc.tolist())
+    return self(conf.positions,
+                conf.get_chemical_symbols(),
+                conf.cell,
+                conf.pbc.tolist())
 
 
 Structure.from_atoms = _structure_from_atoms
