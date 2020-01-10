@@ -15,7 +15,8 @@ RUN \
 # Set up Python3 packages via pip
 RUN pip3 install --upgrade \
   pip \
-  setuptools
+  setuptools \
+  mypy
 
 # Install entrypoints "manually" to ensure a sufficiently recent version is
 # available for flake8 since the version from python3-dev/pip is too old.
