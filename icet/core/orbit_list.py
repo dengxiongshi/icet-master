@@ -13,7 +13,7 @@ from icet.core.neighbor_list import get_neighbor_lists
 from icet.core.permutation_matrix import (_get_lattice_site_permutation_matrix,
                                           permutation_matrix_from_structure)
 from icet.core.structure import Structure
-from icet.io.logging import logger
+from icet.input_output.logging_tools import logger
 
 logger = logger.getChild('orbit_list')
 
@@ -34,22 +34,33 @@ class OrbitList(_OrbitList):
     cutoffs : list of float
         the i-th element of this list is the cutoff for orbits with
         order i+2
+    symprec : float
+        tolerance imposed when analyzing the symmetry using spglib
+    position_tolerance : float
+        tolerance applied when comparing positions in Cartesian coordinates
+    fractional_position_tolerance : float
+        tolerance applied when comparing positions in fractional coordinates
     """
 
-    def __init__(self, structure_in, cutoffs):
-        if isinstance(structure_in, Structure):
-            structure_in = structure_in.to_structure()
-        structure = structure_in.copy()
-        structure.wrap()
+    def __init__(self,
+                 structure: Atoms,
+                 cutoffs: List[float],
+                 symprec: float,
+                 position_tolerance: float,
+                 fractional_position_tolerance: float) -> None:
         max_cutoff = np.max(cutoffs)
         # Set up a permutation matrix
         permutation_matrix, prim_structure, _ \
-            = permutation_matrix_from_structure(structure, max_cutoff, find_prim=False)
+            = permutation_matrix_from_structure(structure=structure,
+                                                cutoff=max_cutoff,
+                                                position_tolerance=position_tolerance,
+                                                find_primitive=False,
+                                                symprec=symprec)
 
         logger.info('Done getting permutation_matrix.')
 
         # Get a list of neighbor-lists
-        neighbor_lists = get_neighbor_lists(prim_structure, cutoffs)
+        neighbor_lists = get_neighbor_lists(prim_structure, cutoffs, position_tolerance)
 
         logger.info('Done getting neighbor lists.')
 
@@ -57,14 +68,14 @@ class OrbitList(_OrbitList):
         pm_lattice_sites \
             = _get_lattice_site_permutation_matrix(prim_structure,
                                                    permutation_matrix,
+                                                   fractional_position_tolerance,
                                                    prune=True)
 
-        logger.info('Transformation of permutation matrix to lattice neighbor'
-                    'format completed.')
+        logger.info('Transformation of permutation matrix to lattice neighbor format completed.')
 
-        _OrbitList.__init__(self, prim_structure,
-                            pm_lattice_sites, neighbor_lists)
-        self.sort()
+        _OrbitList.__init__(
+            self, prim_structure, pm_lattice_sites, neighbor_lists, position_tolerance)
+        self.check_equivalent_clusters(position_tolerance)
         logger.info('Finished construction of orbit list.')
 
     @property
@@ -81,11 +92,13 @@ class OrbitList(_OrbitList):
 
         for i, orbit in enumerate(self.orbits):
             cluster_str = self.orbits[i].representative_cluster.__str__()
-            nice_str += "\norbit {} - Multiplicity {} - Cluster: {}".format(
+            nice_str += '\norbit {} - Multiplicity {} - Cluster: {}'.format(
                 i, len(orbit), cluster_str)
         return nice_str
 
-    def get_supercell_orbit_list(self, structure: Atoms):
+    def get_supercell_orbit_list(self,
+                                 structure: Atoms,
+                                 position_tolerance: float):
         """
         Returns an orbit list for a supercell structure.
 
@@ -93,18 +106,17 @@ class OrbitList(_OrbitList):
         ----------
         structure
             supercell atomic structure
-
-        Returns
-        -------
-        An OrbitList object
+        position_tolerance : float
+            tolerance applied when comparing positions in Cartesian coordinates
         """
-        log = LocalOrbitListGenerator(self, Structure.from_atoms(structure))
+        log = LocalOrbitListGenerator(self, Structure.from_atoms(structure), position_tolerance)
 
         supercell_orbit_list = log.generate_full_orbit_list()
 
         return supercell_orbit_list
 
-    def remove_inactive_orbits(self, allowed_species: List[List[str]]) -> None:
+    def remove_inactive_orbits(self,
+                               allowed_species: List[List[str]]) -> None:
         """ Removes orbits with inactive sites.
 
         Parameters

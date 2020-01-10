@@ -14,8 +14,7 @@ T = TypeVar('T')
 def get_scaled_positions(positions: np.ndarray,
                          cell: np.ndarray,
                          wrap: bool = True,
-                         pbc: List[bool] = [True, True, True]) \
-        -> np.ndarray:
+                         pbc: List[bool] = [True, True, True]) -> np.ndarray:
     """
     Returns the positions in reduced (or scaled) coordinates.
 
@@ -64,8 +63,8 @@ def get_primitive_structure(structure: Atoms,
     symprec
         tolerance imposed when analyzing the symmetry using spglib
     """
-    structure_cpy = structure.copy()
-    structure_as_tuple = ase_atoms_to_spglib_cell(structure_cpy)
+    structure_copy = structure.copy()
+    structure_as_tuple = ase_atoms_to_spglib_cell(structure_copy)
 
     lattice, scaled_positions, numbers = spglib.standardize_cell(
         structure_as_tuple, to_primitive=to_primitive,
@@ -127,35 +126,6 @@ def get_position_from_lattice_site(structure: Atoms, lattice_site: LatticeSite):
         np.dot(lattice_site.unitcell_offset, structure.get_cell())
 
 
-def find_lattice_site_by_position(structure: Atoms, position: List[float],
-                                  tol: float = 1e-4) -> LatticeSite:
-    """
-    Tries to construct a lattice site equivalent from
-    position in reference to the ASE Atoms object.
-
-    structure
-        input atomic structure
-    position
-        presumed cartesian coordinates of a lattice site
-    """
-
-    for i, atom in enumerate(structure):
-        pos = position - atom.position
-        # Direct match
-        if np.linalg.norm(pos) < tol:
-            return LatticeSite(i, np.array((0., 0., 0.)))
-
-        fractional = np.linalg.solve(structure.cell.T, np.array(pos).T).T
-        unit_cell_offset = [np.floor(round(x)) for x in fractional]
-        residual = np.dot(fractional - unit_cell_offset, structure.cell)
-        if np.linalg.norm(residual) < tol:
-            latNbr = LatticeSite(i, unit_cell_offset)
-            return latNbr
-
-    # found nothing, raise error
-    raise RuntimeError('Did not find site in find_lattice_site_by_position')
-
-
 def fractional_to_cartesian(structure: Atoms,
                             frac_positions: List[Vector]) -> List[Vector]:
     """
@@ -196,7 +166,7 @@ def ase_atoms_to_spglib_cell(structure: Atoms) -> Tuple[np.ndarray, np.ndarray, 
 def get_occupied_primitive_structure(
         structure: Atoms,
         allowed_species: List[List[str]],
-        symprec: float = 1e-5) -> Tuple[Atoms, List[List[str]]]:
+        symprec) -> Tuple[Atoms, List[List[str]]]:
     """
     Returns an occupied primitive structure.
     Will put hydrogen on sublattice 1, Helium on sublattice 2 and
@@ -225,8 +195,7 @@ def get_occupied_primitive_structure(
         sublattice = symbols.index(tuple(sorted(sym))) + 1
         decorated_primitive[i].symbol = chemical_symbols[sublattice]
 
-    decorated_primitive = get_primitive_structure(decorated_primitive,
-                                                  symprec=symprec)
+    decorated_primitive = get_primitive_structure(decorated_primitive, symprec=symprec)
     decorated_primitive.wrap()
     primitive_chemical_symbols = []
     for atom in decorated_primitive:
@@ -268,8 +237,9 @@ def chemical_symbols_to_numbers(symbols: List[str]) -> List[int]:
     return numbers
 
 
-def get_wyckoff_sites(structure: Atoms, symprec: float = 1e-4,
-                      map_occupations: List[List[str]] = None) -> List[str]:
+def get_wyckoff_sites(structure: Atoms,
+                      map_occupations: List[List[str]] = None,
+                      symprec: float = 1e-5) -> List[str]:
     """Returns the Wyckoff symbols of the input structure. The Wyckoff
     sites are of general interest for symmetry analysis but can be
     especially useful when setting up, e.g., a
@@ -295,12 +265,12 @@ def get_wyckoff_sites(structure: Atoms, symprec: float = 1e-4,
     structure
         input structure, note that the occupation of the sites is
         included in the symmetry analysis
-    symprec
-        tolerance parameter handed over to spglib
     map_occupations
         each sublist in this list specifies a group of chemical
         species that shall be treated as indistinguishable for the
         purpose of the symmetry analysis
+    symprec
+        tolerance imposed when analyzing the symmetry using spglib
 
     Examples
     --------
@@ -380,10 +350,7 @@ def get_wyckoff_sites(structure: Atoms, symprec: float = 1e-4,
         else:
             new_symbols = len(structure) * ['H']
         structure_copy.set_chemical_symbols(new_symbols)
-    dataset = spglib.get_symmetry_dataset((structure_copy.get_cell(),
-                                           structure_copy.get_scaled_positions(),
-                                           structure_copy.get_atomic_numbers()),
-                                          symprec=symprec)
+    dataset = spglib.get_symmetry_dataset(ase_atoms_to_spglib_cell(structure_copy), symprec=symprec)
     n_unitcells = np.linalg.det(dataset['transformation_matrix'])
 
     equivalent_atoms = list(dataset['equivalent_atoms'])

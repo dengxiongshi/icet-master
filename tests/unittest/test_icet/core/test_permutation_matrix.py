@@ -27,13 +27,15 @@ class TestPermutationMatrix(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestPermutationMatrix, self).__init__(*args, **kwargs)
 
+        self.position_tolerance = 1e-6
+        self.symprec = 1e-6
+        self.fractional_position_tolerance = 1e-7
         self.structure = bulk('Ni', 'hcp', a=3.0).repeat([2, 2, 1])
         self.cutoff = 5.0
-
         self.structure_prim = get_primitive_structure(self.structure)
         neighbor_list = NeighborList(self.cutoff)
         icet_structure_prim = Structure.from_atoms(self.structure_prim)
-        neighbor_list.build(icet_structure_prim)
+        neighbor_list.build(icet_structure_prim, self.position_tolerance)
         self.frac_positions = get_fractional_positions_from_neighbor_list(
             icet_structure_prim, neighbor_list)
 
@@ -43,13 +45,11 @@ class TestPermutationMatrix(unittest.TestCase):
 
     def setUp(self):
         """Setup before each test."""
-        symmetry = spglib.get_symmetry(
-            ase_atoms_to_spglib_cell(self.structure_prim))
+        symmetry = spglib.get_symmetry(ase_atoms_to_spglib_cell(self.structure_prim))
         self.translations = symmetry['translations']
         self.rotations = symmetry['rotations']
 
-        self.pm = PermutationMatrix(self.translations,
-                                    self.rotations)
+        self.pm = PermutationMatrix(self.translations, self.rotations)
         self.pm.build(self.frac_positions)
 
     def test_init(self):
@@ -98,9 +98,9 @@ class TestPermutationMatrix(unittest.TestCase):
                       [0.3333333, 0.6666667, 0.5],
                       [0.3333333, 0.6666667, 0.5],
                       [0.0, 0.0, 0.0]]
-
         retval_row = [pos.tolist() for pos in pm_frac[0]]
-        self.assertListEqual(target_row, retval_row)
+        np.testing.assert_array_almost_equal(
+            np.array(sorted(target_row)), np.array(sorted(retval_row)), decimal=5)
 
         target_col = [[0.0, 0.0, 0.0],
                       [-1.0, -1.0, 0.0],
@@ -146,28 +146,13 @@ class TestPermutationMatrix(unittest.TestCase):
                       [1.3333333, 1.6666667, 0.5]]
 
         retval_col = [row[0].tolist() for row in pm_frac]
-        self.assertListEqual(target_col, retval_col)
-
-    def test_get_indexed_positions(self):
-        """
-        Tests that first set of indices along with unique positions in indexed
-        positions reproduce correctly the positions retuned in the first row
-        of permutation matrix.
-        """
-        pm_frac = self.pm.get_permuted_positions()
-        pm_ind = self.pm.get_indexed_positions()
-
-        indices = pm_ind[0][0]
-        repr_positions = pm_ind[-1]
-        ind_positions = [repr_positions[ind] for ind in indices]
-
-        for pos, ind_pos in zip(pm_frac[0], ind_positions):
-            self.assertEqual(pos.tolist(), ind_pos.tolist())
+        np.testing.assert_array_almost_equal(
+            np.array(sorted(target_col)), np.array(sorted(retval_col)), decimal=5)
 
     def test_permutation_matrix_from_structure(self):
         """Tests permutation matrix from structure functionality."""
-        pm, _, _ = \
-            permutation_matrix_from_structure(self.structure, self.cutoff)
+        pm, _, _ = permutation_matrix_from_structure(self.structure, self.cutoff,
+                                                     self.position_tolerance, self.symprec)
 
         matrix = pm.get_permuted_positions()
         matrix2 = self.pm.get_permuted_positions()
@@ -178,8 +163,9 @@ class TestPermutationMatrix(unittest.TestCase):
                 self.assertEqual(element.tolist(), element2.tolist())
 
         pm_prim, _, _ = \
-            permutation_matrix_from_structure(
-                self.structure_prim, self.cutoff, find_prim=False)
+            permutation_matrix_from_structure(self.structure_prim, self.cutoff,
+                                              self.position_tolerance, self.symprec,
+                                              find_primitive=False)
 
         matrix_prim = pm_prim.get_permuted_positions()
 
@@ -233,9 +219,10 @@ class TestPermutationMatrix(unittest.TestCase):
         structure = bulk('Al').repeat(2)
         cutoff = 4.2
         pm, prim_structure, _ = \
-            permutation_matrix_from_structure(structure, cutoff)
-        pm_lattice_site = \
-            get_lattice_site_permutation_matrix(prim_structure, pm)
+            permutation_matrix_from_structure(structure, cutoff,
+                                              self.position_tolerance, self.symprec)
+        pm_lattice_site = get_lattice_site_permutation_matrix(
+            prim_structure, pm, self.fractional_position_tolerance)
         for i in range(len(pm_lattice_site)):
             for j in range(i + 1, len(pm_lattice_site)):
                 dist_last = -1
@@ -256,11 +243,11 @@ class TestPermutationMatrix(unittest.TestCase):
         Tests that first column of pruned permutation matrix
         containes unique elements.
         """
-        pm, prim_structure, _ = \
-            permutation_matrix_from_structure(self.structure, self.cutoff)
+        pm, prim_structure, _ = permutation_matrix_from_structure(
+            self.structure, self.cutoff, self.position_tolerance, self.symprec)
 
-        pm_lattice_site = \
-            get_lattice_site_permutation_matrix(prim_structure, pm)
+        pm_lattice_site = get_lattice_site_permutation_matrix(
+            prim_structure, pm, self.fractional_position_tolerance)
 
         pruned_matrix = prune_permutation_matrix(pm_lattice_site)
         first_col = []

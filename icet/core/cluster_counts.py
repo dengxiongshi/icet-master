@@ -3,9 +3,13 @@ This module provides the ClusterCounts class.
 """
 
 from collections import OrderedDict
+from typing import Union
+
+import numpy as np
+
+from ase import Atoms
 from _icet import ClusterCounts as _ClusterCounts
 from _icet import Cluster
-from ase import Atoms
 from icet.core.orbit_list import OrbitList
 from icet import Structure
 from .local_orbit_list_generator import LocalOrbitListGenerator
@@ -21,6 +25,8 @@ class ClusterCounts(_ClusterCounts):
         orbit list for a primitive structure
     structure : ase.Atoms
         supercell of the structure that `orbit_list` is based on
+    fractional_position_tolerance : float
+        tolerance for positions in fractional coordinates
 
     Attributes
     ----------
@@ -32,19 +38,27 @@ class ClusterCounts(_ClusterCounts):
         {('Au', 'Ag'): 3, ('Au', 'Au'): 5}.
     """
 
-    def __init__(self, orbit_list: OrbitList, structure: Atoms):
+    def __init__(self,
+                 orbit_list: OrbitList,
+                 structure: Atoms,
+                 fractional_position_tolerance: float):
         self._orbit_list = orbit_list
         self._structure = Structure.from_atoms(structure)
         # call (base) C++ constructor
         _ClusterCounts.__init__(self)
-        self.cluster_counts = self._count_clusters()
+        self.cluster_counts = self._count_clusters(fractional_position_tolerance)
 
-    def _count_clusters(self, keep_order_intact=False, permute_sites=True):
+    def _count_clusters(self,
+                        fractional_position_tolerance: float,
+                        keep_order_intact: bool = False,
+                        permute_sites: bool = True):
         """
         Counts all clusters in a structure by finding their local orbit list.
 
         Parameters
         ----------
+        fractional_position_tolerance
+            tolerance for positions in fractional coordinates
         keep_order_intact : bool
             if true the order in the cluster will be sorted
         permute_sites : bool
@@ -53,7 +67,7 @@ class ClusterCounts(_ClusterCounts):
         """
 
         local_orbit_list_generator = LocalOrbitListGenerator(
-            self._orbit_list, self._structure)
+            self._orbit_list, self._structure, fractional_position_tolerance)
 
         for i in range(
                 local_orbit_list_generator.get_number_of_unique_offsets()):
@@ -84,11 +98,11 @@ class ClusterCounts(_ClusterCounts):
                 first = False
 
             # Add a description of the orbit to the string
-            tuplet_type = tuplets.get(len(cluster.sites),
-                                      '{}-tuplet'.format(len(cluster.sites)))
-            s += ['{}: {} {:} {:.4f}'
+            tuplet_type = tuplets.get(cluster.order,
+                                      '{}-tuplet'.format(cluster.order))
+            s += ['{}: {} {} {:.4f}'
                   .format(tuplet_type, cluster.sites,
-                          cluster.distances, cluster.radius)]
+                          [np.round(i, 5) for i in cluster.distances], cluster.radius)]
 
             # Print the actual counts together with the species they refer to
             for chemical_symbols, count in counts.items():
@@ -97,14 +111,14 @@ class ClusterCounts(_ClusterCounts):
         s += [''.center(width, '=')]
         return '\n'.join(s)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: Union[int, Cluster]):
         """
         Returns cluster count (Cluster object and dict with counts) for a
         ClusterCounts object.
 
         Parameters
         ----------
-        key : int or icet.Cluster
+        key
             if int, return the key-th counts;
             if Cluster, return the counts belonging to that cluster
         """

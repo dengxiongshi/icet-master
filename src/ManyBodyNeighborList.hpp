@@ -1,13 +1,14 @@
 #pragma once
-#include <pybind11/pybind11.h>
 #include <iostream>
+#include <vector>
 #include <pybind11/eigen.h>
+#include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <Eigen/Dense>
-#include "Vector3dCompare.hpp"
-#include "NeighborList.hpp"
-#include <vector>
 #include "LatticeSite.hpp"
+#include "NeighborList.hpp"
+#include "Vector3dCompare.hpp"
+
 /**
 Design approach:
     input pair neighbors and calculate higher order neighbors
@@ -41,7 +42,7 @@ class ManyBodyNeighborList
                               std::back_inserter(N_intersection));
         return N_intersection;
     }
-    
+
 
     void translateAllNi(std::vector<LatticeSite> &Ni, const Vector3d &unitCellOffset) const;
 

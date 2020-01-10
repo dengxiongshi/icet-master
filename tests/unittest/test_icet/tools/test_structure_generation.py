@@ -134,7 +134,6 @@ class TestStructureGenerationBinaryFCC(unittest.TestCase):
                                  n_steps=500,
                                  random_seed=42,
                                  optimality_weight=0.0)
-
         target_cv = [1., 0., -0.16666667, 0., 0., 0.,
                      0., 0., 0., 0., 0., 0., 0.]
         self.assertTrue(np.allclose(

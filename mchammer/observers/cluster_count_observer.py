@@ -37,16 +37,20 @@ class ClusterCountObserver(BaseObserver):
     tag : str
         human readable observer name
     interval : int
-        observation interval
+        the observation interval, defaults to None meaning that if the
+        observer is used in a Monte-simulation, then the Ensemble object
+        will set the interval.
     """
 
     def __init__(self, cluster_space, structure: Atoms,
-                 interval: int) -> None:
+                 interval: int = None) -> None:
         super().__init__(interval=interval, return_type=dict, tag='ClusterCountObserver')
 
         self._cluster_space = cluster_space
-        local_orbit_list_generator = LocalOrbitListGenerator(cluster_space.orbit_list,
-                                                             Structure.from_atoms(structure))
+        local_orbit_list_generator = LocalOrbitListGenerator(
+            cluster_space.orbit_list,
+            Structure.from_atoms(structure),
+            cluster_space.fractional_position_tolerance)
 
         self._full_orbit_list = local_orbit_list_generator.generate_full_orbit_list()
         self._cluster_counts_cpp = _ClusterCounts()

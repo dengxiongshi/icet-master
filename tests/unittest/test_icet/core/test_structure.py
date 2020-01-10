@@ -33,6 +33,7 @@ class TestStructure(unittest.TestCase):
         super(TestStructure, self).__init__(*args, **kwargs)
         self.ase_atoms = bulk('Ag', 'hcp', a=2.0)
         self.noise = 1e-6
+        self.fractional_position_tolerance = 2e-6
         self.positions = [[0., 0., 0.],
                           [0., 1.15470054, 1.63299316]]
         self.chemical_symbols = ['Ag', 'Ag']
@@ -76,6 +77,9 @@ class TestStructure(unittest.TestCase):
     def test_pbc(self):
         """Tests periodic boundary conditions."""
         self.assertListEqual(self.icet_structure.pbc, [True, True, True])
+        self.icet_structure.pbc = [True, True, False]
+        retval = self.icet_structure.pbc
+        self.assertListEqual(retval, [True, True, False])
 
     def test_unique_sites(self):
         """Tests unique sites."""
@@ -114,12 +118,6 @@ class TestStructure(unittest.TestCase):
         for i, vec in enumerate(retval):
             self.assertListEqual(vec.tolist(), new_cell[i])
 
-    def test_set_and_get_pbc(self):
-        """Tests set and get pbc."""
-        self.icet_structure.set_pbc([True, True, False])
-        retval = self.icet_structure.get_pbc()
-        self.assertListEqual(retval, [True, True, False])
-
     def test_set_and_get_unique_sites(self):
         """Tests set and get unique sites."""
         self.icet_structure.set_unique_sites([0, 1])
@@ -139,6 +137,54 @@ class TestStructure(unittest.TestCase):
 
         target = self.icet_structure.get_distance(0, 1)
         self.assertAlmostEqual(retval, target)
+
+    def test_find_lattice_site_by_position_with_tolerance(self):
+        """Tests the find lattice site by position method
+           by varying the tolerance
+           """
+        atoms = bulk('Al', crystalstructure='hcp', a=3).repeat(2)
+
+        icet_structure = Structure.from_atoms(atoms)
+
+        def _test_lattice_site_find(tol, noise, index):
+            for i in range(3):
+                position = atoms.positions[index]
+                position[i] += noise
+                ls = icet_structure.find_lattice_site_by_position(position, tol)
+                self.assertEqual(ls.index, index)
+
+                position = atoms.positions[index]
+                position[i] -= noise
+                ls = icet_structure.find_lattice_site_by_position(position, tol)
+                self.assertEqual(ls.index, index)
+
+        # First with noise smaller thant tol
+        tol = 1e-5
+        noise = 5e-6
+        for index in range(len(atoms)):
+            _test_lattice_site_find(tol, noise, index)
+
+        # Increase tolerance and force a fail
+        tol = 1e-5
+        noise = 5e-5
+        for index in range(len(atoms)):
+            with self.assertRaises(Exception) as context:
+                _test_lattice_site_find(tol, noise, index)
+            self.assertIn('Failed to find site by position', str(context.exception))
+
+        # Large noise  but larger tol
+        tol = 1e-3
+        noise = 5e-4
+        for index in range(len(atoms)):
+            _test_lattice_site_find(tol, noise, index)
+
+        # Large tol but larger noise
+        tol = 1e-3
+        noise = 5e-3
+        for index in range(len(atoms)):
+            with self.assertRaises(Exception) as context:
+                _test_lattice_site_find(tol, noise, index)
+            self.assertIn('Failed to find site by position', str(context.exception))
 
     def test_find_lattice_site_by_position_simple(self):
         """
@@ -168,7 +214,8 @@ class TestStructure(unittest.TestCase):
             pos = pos + np.array(noise_position[i])
             positions.append(pos)
         for site, pos in zip(lattice_sites, positions):
-            found_site = self.icet_structure.find_lattice_site_by_position(pos)
+            found_site = self.icet_structure.find_lattice_site_by_position(
+                pos, self.fractional_position_tolerance)
             self.assertEqual(site, found_site)
 
     def test_find_lattice_site_by_position_medium(self):
@@ -202,7 +249,8 @@ class TestStructure(unittest.TestCase):
             pos = pos + np.array(noise_position[i])
             positions.append(pos)
         for site, pos in zip(lattice_sites, positions):
-            found_site = icet_structure.find_lattice_site_by_position(pos)
+            found_site = icet_structure.find_lattice_site_by_position(
+                pos, self.fractional_position_tolerance)
 
             self.assertEqual(site, found_site)
 
@@ -242,7 +290,8 @@ class TestStructure(unittest.TestCase):
             pos += np.array(noise_position[i])
             positions.append(pos)
         for site, pos in zip(lattice_sites, positions):
-            found_site = icet_structure.find_lattice_site_by_position(pos)
+            found_site = icet_structure.find_lattice_site_by_position(
+                pos, self.fractional_position_tolerance)
             self.assertEqual(site, found_site)
 
     def test_structure_from_atoms(self):

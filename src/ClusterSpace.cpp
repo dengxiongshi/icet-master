@@ -3,19 +3,19 @@
 
 #include "ClusterSpace.hpp"
 
-//namespace icet {
-
 /**
 @details This constructor initializes a ClusterSpace object.
 @param chemicalSymbols vector of allowed chemical symbol for each site
 @param orbitList list of orbits for the primitive structure
+@param fractionalPositionTolerance tolerance applied when comparing positions in fractional coordinates
 */
 ClusterSpace::ClusterSpace(std::vector<std::vector<std::string>> &chemicalSymbols,
-                           const OrbitList &orbitList)
+                           const OrbitList &orbitList,
+                           const double positionTolerance,
+                           const double fractionalPositionTolerance)
+                           : _orbitList(orbitList), _chemicalSymbols(chemicalSymbols)
 {
-    _orbitList = orbitList;
     _primitiveStructure = orbitList.getPrimitiveStructure();
-    _chemicalSymbols = chemicalSymbols;
 
     _numberOfAllowedSpeciesPerSite.resize(chemicalSymbols.size());
     for (size_t i = 0; i < _numberOfAllowedSpeciesPerSite.size(); i++)
@@ -40,7 +40,7 @@ ClusterSpace::ClusterSpace(std::vector<std::vector<std::string>> &chemicalSymbol
         }
         _speciesMaps.push_back(speciesMap);
     }
-    precomputeMultiComponentVectors();
+    computeMultiComponentVectors();
 }
 
 /**
@@ -52,20 +52,21 @@ the zerolet. The remaining elements of the cluster vector represent averages
 over orbits (symmetry equivalent clusters) of increasing order and size.
 
 @param structure input configuration
+@param fractionalPositionTolerance tolerance applied when comparing positions in fractional coordinates
 
-@todo review the necessity for having the orderIntact argument to e.g.,
-countOrbitList.
+@todo review the necessity for having the orderIntact argument to e.g., countOrbitList.
 **/
-std::vector<double> ClusterSpace::getClusterVector(const Structure &structure) const
+std::vector<double> ClusterSpace::getClusterVector(const Structure &structure,
+                                                   const double fractionalPositionTolerance) const
 {
 
-    // Don't sort clusters
+    // Do not sort clusters.
     bool orderIntact = true;
 
     // Count the clusters in the orbit with the same order as the prototype cluster
     bool permuteSites = true;
 
-    LocalOrbitListGenerator localOrbitListGenerator = LocalOrbitListGenerator(_orbitList, structure);
+    LocalOrbitListGenerator localOrbitListGenerator = LocalOrbitListGenerator(_orbitList, structure, fractionalPositionTolerance);
     size_t uniqueOffsets = localOrbitListGenerator.getNumberOfUniqueOffsets();
     ClusterCounts clusterCounts = ClusterCounts();
 
@@ -80,9 +81,10 @@ std::vector<double> ClusterSpace::getClusterVector(const Structure &structure) c
     size_t numberOfUnitcellRepetitions = structure.size() / _primitiveStructure.size();
     if (uniqueOffsets != numberOfUnitcellRepetitions)
     {
-        std::string msg = "The number of unique offsets does not match the number of primitive units in the input structure: ";
-        msg += std::to_string(uniqueOffsets) + " != " + std::to_string(numberOfUnitcellRepetitions);
-        throw std::runtime_error(msg);
+        std::ostringstream msg;
+        msg << "The number of unique offsets does not match the number of primitive units in the input structure (ClusterSpace::getClusterVector)" << std::endl;
+        msg << uniqueOffsets << " != " << numberOfUnitcellRepetitions;
+        throw std::runtime_error(msg.str());
     }
 
     /// Get the cluster -> cluster counts map
@@ -108,9 +110,10 @@ std::vector<double> ClusterSpace::getClusterVector(const Structure &structure) c
         }
         catch (const std::exception &e)
         {
-            std::string msg = "Failed retrieving the number of allowed species in ClusterSpace::getClusterVector\n";
-            msg += e.what();
-            throw std::runtime_error(msg);
+            std::ostringstream msg;
+            msg << "Failed retrieving the number of allowed species (ClusterSpace::getClusterVector)" << std::endl;
+            msg << e.what();
+            throw std::runtime_error(msg.str());
         }
 
         // Jump to the next orbit if any of the sites in the representative cluster are inactive (i.e. the number of allowed species on this site is less than 2).
@@ -290,17 +293,17 @@ std::vector<int> ClusterSpace::getNumberOfAllowedSpeciesBySite(const Structure &
     return numberOfAllowedSpecies;
 }
 
-/// Precomputes permutations and multicomponent vectors of each orbit.
-void ClusterSpace::precomputeMultiComponentVectors()
+/// Computes permutations and multicomponent vectors of each orbit.
+void ClusterSpace::computeMultiComponentVectors()
 {
-    _clusterSpaceInfo.clear();
+    _multiComponentVectorsByOrbit.clear();
     std::vector<int> emptyVec = {0};
-    _clusterSpaceInfo.push_back(make_pair(-1, emptyVec));
+    _multiComponentVectorsByOrbit.push_back(make_pair(-1, emptyVec));
     _multiComponentVectors.resize(_orbitList.size());
     _sitePermutations.resize(_orbitList.size());
     for (size_t i = 0; i < _orbitList.size(); i++)
     {
-        
+
         std::vector<std::vector<int>> permutedMCVector;
         auto numberOfAllowedSpecies = getNumberOfAllowedSpeciesBySite(_primitiveStructure, _orbitList.getOrbit(i).getRepresentativeSites());
 
@@ -314,35 +317,33 @@ void ClusterSpace::precomputeMultiComponentVectors()
 
         for (const auto &multiComponentVector : multiComponentVectors)
         {
-            _clusterSpaceInfo.push_back(make_pair(i, multiComponentVector));
+            _multiComponentVectorsByOrbit.push_back(make_pair(i, multiComponentVector));
         }
     }
 }
 
 /**
-@details Returns a pair where pair.first is the  index of the underlying orbit in _orbitList.
-          and pair.second is the multicomponent vector for the "outerlying" orbit with index `index`
-@param index index for the "outerlying" orbit
-
-@todo think about a better word than outerlying.
-
+@details Returns a list of pair where pair.first is the index of the underlying
+    orbit in _orbitList and pair.second is the multi-component vector for the
+    orbit with index `index`
+@param index orbit index
 **/
-std::pair<int, std::vector<int>> ClusterSpace::getClusterSpaceInfo(const unsigned int index)
+std::pair<int, std::vector<int>> ClusterSpace::getMultiComponentVectorsByOrbit(const unsigned int index)
 {
-    if (index >= _clusterSpaceInfo.size())
+    if (index >= _multiComponentVectorsByOrbit.size())
     {
-        std::string msg = "Out of range in ClusterSpace::getClusterSpaceInfo: ";
-        msg += std::to_string(index) + " >= " + std::to_string(_clusterSpaceInfo.size());
-        throw std::out_of_range(msg);
+        std::ostringstream msg;
+        msg << "Out of range (ClusterSpace::getMultiComponentVectorsByOrbit)" << std::endl;
+        msg << index << " >= " << _multiComponentVectorsByOrbit.size();
+        throw std::out_of_range(msg.str());
     }
-
-    return _clusterSpaceInfo[index];
+    return _multiComponentVectorsByOrbit[index];
 }
 
 
 /**
 @details This function removes orbits from the underlying orbit list.
-@param indices list of orbit indices 
+@param indices list of orbit indices
 **/
 void ClusterSpace::pruneOrbitList(std::vector<size_t> &indices)
 {
@@ -353,5 +354,5 @@ void ClusterSpace::pruneOrbitList(std::vector<size_t> &indices)
         _orbitList.removeOrbit(indices[i]);
     }
 
-    precomputeMultiComponentVectors();
+    computeMultiComponentVectors();
 }

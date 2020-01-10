@@ -3,7 +3,7 @@ from typing import List, Union
 import numpy as np
 
 from _icet import _ClusterExpansionCalculator
-from icet.io.logging import logger
+from icet.input_output.logging_tools import logger
 from ase import Atoms
 from icet import ClusterExpansion, Structure
 from icet.core.sublattices import Sublattices
@@ -61,7 +61,8 @@ class ClusterExpansionCalculator(BaseCalculator):
         if self.use_local_energy_calculator:
             self.cpp_calc = _ClusterExpansionCalculator(
                 cluster_expansion.get_cluster_space_copy(),
-                Structure.from_atoms(structure_cpy))
+                Structure.from_atoms(structure_cpy),
+                cluster_expansion.fractional_position_tolerance)
 
         self._cluster_expansion = cluster_expansion
         if scaling is None:

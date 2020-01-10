@@ -1,14 +1,95 @@
 #include "Orbit.hpp"
 
+/// Constructor.
+
 Orbit::Orbit(const Cluster &cluster)
 {
     _representativeCluster = cluster;
 }
 
 /**
-Returns the number of exactly equal sites in equivalent sites vector
+@brief Adds one group of sites that are equivalent to the ones in this orbit.
+@param latticeSiteGroup a list of lattice sites to be added
+@param sort_orbit if True the orbit will be sorted
+*/
+void Orbit::addEquivalentSites(const std::vector<LatticeSite> &latticeSiteGroup, bool sort_orbit)
+{
+    _equivalentSites.push_back(latticeSiteGroup);
+    if (sort_orbit)
+    {
+        sort();
+    }
+}
 
-This is used among other things to debug orbits when duplicates is not expected
+/**
+@brief Adds a several groups of sites that are equivalent to the ones in this orbit.
+@param latticeSiteGroups a list of list of lattice sites to be added
+@param sort_orbit if True the orbit will be sorted
+*/
+void Orbit::addEquivalentSites(const std::vector<std::vector<LatticeSite>> &latticeSiteGroups, bool sort_orbit)
+{
+    _equivalentSites.insert(_equivalentSites.end(), latticeSiteGroups.begin(), latticeSiteGroups.end());
+    if (sort_orbit)
+    {
+        sort();
+    }
+}
+
+/**
+@brief Returns the equivalent sites at position `index`.
+@param index index of site to return
+*/
+std::vector<LatticeSite> Orbit::getSitesByIndex(unsigned int index) const
+{
+    if (index >= _equivalentSites.size())
+    {
+        throw std::out_of_range("Index out of range in function Orbit::getSitesByIndex");
+    }
+    return _equivalentSites[index];
+}
+
+/**
+@brief Returns the equivalent sites at position `index` using the permutation of the representative cluster.
+@param index index of site to return
+*/
+std::vector<LatticeSite> Orbit::getPermutedSitesByIndex(unsigned int index) const
+{
+    if (index >= _equivalentSites.size())
+    {
+        std::ostringstream msg;
+        msg << "Index out of range in function Orbit::getPermutedSitesByIndex (1).\n";
+        msg << " index: " << index << "\n";
+        msg << " size(_equivalentSites): " << _equivalentSites.size() << "\n";
+        throw std::out_of_range(msg.str());
+    }
+    if (index >= _equivalentSitesPermutations.size())
+    {
+        std::ostringstream msg;
+        msg << "Index out of range in function Orbit::getPermutedSitesByIndex (2).\n";
+        msg << " index: " << index << "\n";
+        msg << " size(_equivalentSitesPermutations): " << _equivalentSitesPermutations.size();
+        throw std::out_of_range(msg.str());
+    }
+    return icet::getPermutedVector<LatticeSite>(_equivalentSites[index], _equivalentSitesPermutations[index]);
+}
+
+/**
+@brief Returns all permuted equivalent sites.
+*/
+std::vector<std::vector<LatticeSite>> Orbit::getPermutedEquivalentSites() const
+{
+    std::vector<std::vector<LatticeSite>> permutedSites(_equivalentSites.size());
+    for (size_t i = 0; i < _equivalentSites.size(); i++)
+    {
+        permutedSites[i] = getPermutedSitesByIndex(i);
+    }
+    return permutedSites;
+}
+
+/**
+Returns the number of exactly equal sites in equivalent sites vector.
+
+This is used among other things to debug orbits when duplicates are not expected.
 */
 int Orbit::getNumberOfDuplicates(int verbosity) const
 {
@@ -32,12 +113,12 @@ int Orbit::getNumberOfDuplicates(int verbosity) const
                         std::cout << "sites on " << i << std::endl;
                         for (auto i_latnbr : i_sites)
                         {
-                            i_latnbr.print();
+                            std::cout << i_latnbr << std::endl;
                         }
                         std::cout << "sites on " << j << std::endl;
                         for (auto j_latnbr : j_sites)
                         {
-                            j_latnbr.print();
+                            std::cout << j_latnbr << std::endl;
                         }
                     }
                 }
@@ -50,8 +131,7 @@ int Orbit::getNumberOfDuplicates(int verbosity) const
 
 /**
   @brief Returns the inequivalent MC vectors for this orbit
-  @param Mi_local : Vector of the number of allowed sites
-
+  @param Mi_local list of the number of allowed sites
  */
 std::vector<std::vector<int>> Orbit::getMultiComponentVectors(const std::vector<int> &Mi_local) const
 {
@@ -82,7 +162,7 @@ std::vector<std::vector<int>> Orbit::getMultiComponentVectors(const std::vector<
     return distinctMCVectors;
 }
 
-///Similar to get all permutations but needs to be filtered through the number of allowed elements
+/// Similar to get all permutations but needs to be filtered through the number of allowed elements
 std::vector<std::vector<int>> Orbit::getAllPossibleMultiComponentVectorPermutations(const std::vector<int> &Mi_local) const
 {
 
@@ -173,7 +253,7 @@ void Orbit::removeSitesWithIndex(const size_t indexToRemove, bool onlyConsiderZe
 @details Removes sets of sites in equivalent sites for which no site in the set has an index equal to index.
 @param index the index to look for
 @param onlyConsiderZeroOffset if true only look for sites with zero offset
-**/
+*/
 void Orbit::removeSitesNotWithIndex(const size_t index, bool onlyConsiderZeroOffset)
 {
     for (int i = _equivalentSites.size() - 1; i >= 0; i--)
@@ -197,11 +277,10 @@ void Orbit::removeSitesNotWithIndex(const size_t index, bool onlyConsiderZeroOff
     }
 }
 
-
 /**
 @details Removes a specific set of sites in this orbit and the corresponding site permutation.
 @param sites vector of sites that will be removed, order of sites is irrelevant
- **/
+*/
 void Orbit::removeSites(std::vector<LatticeSite> sites)
 {
 
@@ -222,4 +301,22 @@ void Orbit::removeSites(std::vector<LatticeSite> sites)
         }
     }
     throw std::runtime_error("did not find any mathcing sites in Orbit::removeSites");
+}
+
+namespace std {
+
+    /// Stream operator.
+    ostream& operator<<(ostream& os, const Orbit& orbit)
+    {
+        for (const auto sites : orbit._equivalentSites)
+        {
+            os << "  ";
+            for (const auto site : sites)
+            {
+                os << " " << site;
+            }
+        }
+        return os;
+    }
+
 }

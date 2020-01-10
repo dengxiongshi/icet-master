@@ -183,7 +183,7 @@ class WangLandauEnsemble(BaseEnsemble):
                  user_tag: str = None,
                  data_container: str = None,
                  random_seed: int = None,
-                 data_container_write_period: float = np.inf,
+                 data_container_write_period: float = 600,
                  ensemble_data_write_interval: int = None,
                  trajectory_write_interval: int = None,
                  sublattice_probabilities: List[float] = None) -> None:
@@ -361,10 +361,10 @@ class WangLandauEnsemble(BaseEnsemble):
         the data container but rather uses the last data written the data frame.
         """
         super()._restart_ensemble()
-        self._fill_factor = self.data_container.last_state['fill_factor']
-        self._fill_factor_history = self.data_container.last_state['fill_factor_history']
-        self._histogram = self.data_container.last_state['histogram']
-        self._entropy = self.data_container.last_state['entropy']
+        self._fill_factor = self.data_container._last_state['fill_factor']
+        self._fill_factor_history = self.data_container._last_state['fill_factor_history']
+        self._histogram = self.data_container._last_state['histogram']
+        self._entropy = self.data_container._last_state['entropy']
 
     def write_data_container(self, outfile: Union[str, BinaryIO, TextIO]):
         """Updates last state of the Wang-Landau simulation and

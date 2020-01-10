@@ -29,13 +29,9 @@ import tempfile
 import unittest
 
 import numpy as np
-from ase import Atoms
 from ase.build import bulk
 from ase.db import connect as db_connect
 from icet import ClusterSpace
-from icet.core.cluster_space import (get_singlet_info,
-                                     get_singlet_configuration)
-from icet.core.lattice_site import LatticeSite
 
 
 def strip_surrounding_spaces(input_string):
@@ -215,10 +211,13 @@ class TestClusterSpace(unittest.TestCase):
         retval = self.cs.__repr__()
         target = """
 ====================================== Cluster Space =======================================
- chemical species: ['Ag', 'Au'] (sublattice A)
- cutoffs: 4.0000 4.0000 4.0000
- total number of parameters: 5
- number of parameters by order: 0= 1  1= 1  2= 1  3= 1  4= 1
+ chemical species                       : ['Ag', 'Au'] (sublattice A)
+ cutoffs                                : 4.0000 4.0000 4.0000
+ total number of parameters             : 5
+ number of parameters by order          : 0= 1  1= 1  2= 1  3= 1  4= 1
+ fractional_position_tolerance          : 4e-06
+ position_tolerance                     : 1e-05
+ symprec                                : 1e-05
 --------------------------------------------------------------------------------------------
 index | order |  radius  | multiplicity | orbit_index | multi_component_vector | sublattices
 --------------------------------------------------------------------------------------------
@@ -234,14 +233,16 @@ index | order |  radius  | multiplicity | orbit_index | multi_component_vector |
 
     def test_get_string_representation(self):
         """Tests _get_string_representation functionality."""
-        retval = self.cs._get_string_representation(print_threshold=2,
-                                                    print_minimum=1)
+        retval = self.cs._get_string_representation(print_threshold=2, print_minimum=1)
         target = """
 ====================================== Cluster Space =======================================
- chemical species: ['Ag', 'Au'] (sublattice A)
- cutoffs: 4.0000 4.0000 4.0000
- total number of parameters: 5
- number of parameters by order: 0= 1  1= 1  2= 1  3= 1  4= 1
+ chemical species                       : ['Ag', 'Au'] (sublattice A)
+ cutoffs                                : 4.0000 4.0000 4.0000
+ total number of parameters             : 5
+ number of parameters by order          : 0= 1  1= 1  2= 1  3= 1  4= 1
+ fractional_position_tolerance          : 4e-06
+ position_tolerance                     : 1e-05
+ symprec                                : 1e-05
 --------------------------------------------------------------------------------------------
 index | order |  radius  | multiplicity | orbit_index | multi_component_vector | sublattices
 --------------------------------------------------------------------------------------------
@@ -286,42 +287,12 @@ index | order |  radius  | multiplicity | orbit_index | multi_component_vector |
             retval = list(self.cs.get_cluster_vector(structure))
             self.assertAlmostEqual(retval, target, places=9)
 
-        # Test that exception is raised if input is bad
-        structure = self.structure_prim.copy()
-        structure.pbc = False
-        with self.assertRaises(ValueError) as cm:
-            self.cs.get_cluster_vector(structure)
-        self.assertIn('must have periodic boundary conditions', str(cm.exception))
-
         # Bad position
         structure = self.structure_prim.repeat(3)
         structure[0].position[0] += 0.1
         with self.assertRaises(RuntimeError) as cm:
             self.cs.get_cluster_vector(structure)
         self.assertIn('Failed to find site by position', str(cm.exception))
-
-    def test_get_singlet_info(self):
-        """Tests get_singlet_info functionality."""
-        retval = get_singlet_info(self.structure_list[0])
-        target = [{'orbit_index': 0,
-                   'sites': [[LatticeSite(0, [0., 0., 0.])]],
-                   'multiplicity': 1,
-                   'representative_site': [LatticeSite(0, [0., 0., 0.])]}]
-        self.assertEqualComplexList(retval, target)
-        retval1, retval2 = get_singlet_info(self.structure_list[0],
-                                            return_cluster_space=True)
-        self.assertEqualComplexList(retval1, target)
-        self.assertIsInstance(retval2, type(self.cs))
-
-    def test_get_singlet_configuration(self):
-        """Tests get_singlet_configuration functionality."""
-        retval = get_singlet_configuration(self.structure_prim)
-        self.assertIsInstance(retval, Atoms)
-        self.assertEqual(retval[0].symbol, 'H')
-        retval = get_singlet_configuration(self.structure_list[0],
-                                           to_primitive=True)
-        self.assertIsInstance(retval, Atoms)
-        self.assertEqual(len(retval), len(self.structure_prim))
 
     def test_cutoffs(self):
         """Tests cutoffs property."""
@@ -346,7 +317,7 @@ index | order |  radius  | multiplicity | orbit_index | multi_component_vector |
             target = np.array(row.data.target_cv)
             self.assertTrue(np.all(np.isclose(target, retval)))
 
-    def test_cluster_vectors(self):
+    def test_cluster_vectors_fcc(self):
         """
         Tests the calculation of cluster vectors against databases
         of structures with known cluster vectors.
@@ -360,6 +331,11 @@ index | order |  radius  | multiplicity | orbit_index | multi_component_vector |
         self._test_cluster_vectors_in_database(
             '../../../structure_databases/fcc_quaternary.db')
 
+    def test_cluster_vectors_bcc(self):
+        """
+        Tests the calculation of cluster vectors against databases
+        of structures with known cluster vectors.
+        """
         self._test_cluster_vectors_in_database(
             '../../../structure_databases/bcc_longedge_binary.db')
         self._test_cluster_vectors_in_database(
@@ -367,6 +343,11 @@ index | order |  radius  | multiplicity | orbit_index | multi_component_vector |
         self._test_cluster_vectors_in_database(
             '../../../structure_databases/bcc_quaternary.db')
 
+    def test_cluster_vectors_hcp(self):
+        """
+        Tests the calculation of cluster vectors against databases
+        of structures with known cluster vectors.
+        """
         self._test_cluster_vectors_in_database(
             '../../../structure_databases/hcp_binary.db')
         self._test_cluster_vectors_in_database(

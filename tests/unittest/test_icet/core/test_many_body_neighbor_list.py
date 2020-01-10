@@ -13,9 +13,9 @@ class TestManyBodyNeighborList(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(TestManyBodyNeighborList, self).__init__(*args, **kwargs)
-
         self.structure = bulk('Ni', 'hcp', a=3.0).repeat([2, 2, 1])
         self.cutoffs = [5.0, 5.0]
+        self.position_tolerance = 1e-5
 
     def shortDescription(self):
         """Silences unittest from printing the docstrings in test cases."""
@@ -25,7 +25,7 @@ class TestManyBodyNeighborList(unittest.TestCase):
         """Instantiates class before each test."""
         self.mbnl = ManyBodyNeighborList()
         structure = Structure.from_atoms(self.structure)
-        self.neighbor_lists = get_neighbor_lists(structure, self.cutoffs)
+        self.neighbor_lists = get_neighbor_lists(structure, self.cutoffs, self.position_tolerance)
 
     def test_build(self):
         """Tests build."""
@@ -116,7 +116,8 @@ class TestManyBodyNeighborList(unittest.TestCase):
         """Tests many-body neighbor list for non-pbc structure."""
         structure = self.structure.copy()
         structure.set_pbc([False])
-        neighbor_lists = get_neighbor_lists(Structure.from_atoms(structure), self.cutoffs)
+        neighbor_lists = get_neighbor_lists(
+            Structure.from_atoms(structure), self.cutoffs, self.position_tolerance)
 
         mbnl = ManyBodyNeighborList()
 
@@ -150,7 +151,8 @@ class TestManyBodyNeighborList(unittest.TestCase):
         structure = bulk('Al', 'sc', a=4.0).repeat(4)
         structure.set_pbc(False)
 
-        neighbor_lists = get_neighbor_lists(Structure.from_atoms(structure), self.cutoffs)
+        neighbor_lists = get_neighbor_lists(
+            Structure.from_atoms(structure), self.cutoffs, self.position_tolerance)
 
         mbnl = ManyBodyNeighborList()
         # atomic indices located at the corner of structure

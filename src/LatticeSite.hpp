@@ -1,7 +1,9 @@
 #pragma once
-#include <Eigen/Dense>
-#include <boost/functional/hash.hpp>
+
 #include <iostream>
+#include <boost/functional/hash.hpp>
+#include <Eigen/Dense>
+
 using boost::hash;
 using boost::hash_combine;
 using boost::hash_value;
@@ -99,28 +101,6 @@ public:
         return latnbr;
     }
 
-    /// Cast object as string.
-    operator std::string () const
-    {
-        std::string str = std::to_string(_index) + " :";
-        for (size_t i = 0; i < 3; i++)
-        {
-            str += " " + std::to_string(_unitcellOffset[i]);
-        }
-        return str;
-    }
-
-    /// Write class information to stdout.
-    void print() const
-    {
-        std::string str = std::to_string(_index) + " :";
-        for (size_t i = 0; i < 3; i++)
-        {
-            str += " " + std::to_string(_unitcellOffset[i]);
-        }
-        std::cout << str << std::endl;
-    }
-
 private:
 
     /// Site index.
@@ -138,8 +118,7 @@ namespace std
     template <>
     struct hash<LatticeSite>
     {
-        size_t
-        operator()(const LatticeSite &k) const
+        size_t operator()(const LatticeSite &k) const
         {
             // Compute individual hash values for first,
             // second and third and combine them using XOR
@@ -159,18 +138,20 @@ namespace std
     template <>
     struct hash<std::vector<LatticeSite>>
     {
-        size_t
-        operator()(const std::vector<LatticeSite> &k) const
+        size_t operator()(const std::vector<LatticeSite> &k) const
         {
             // Compute individual hash values for first,
             // second and third and combine them using XOR
             // and bit shifting:
             size_t seed = 0;
-            for (const auto &latNbr : k)
+            for (const auto &latticeSite : k)
             {
-                hash_combine(seed, std::hash<LatticeSite>{}(latNbr));
+                hash_combine(seed, std::hash<LatticeSite>{}(latticeSite));
             }
             return seed;
         }
     };
+
+    /// Stream operator.
+    ostream& operator<<(ostream&, const LatticeSite&);
 }

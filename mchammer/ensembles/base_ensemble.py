@@ -106,7 +106,7 @@ class BaseEnsemble(ABC):
         self._data_container_filename = data_container
 
         if data_container is not None and os.path.isfile(data_container):
-            self._data_container = BaseDataContainer.read(data_container)
+            self._data_container = data_container_class.read(data_container)
 
             dc_ensemble_parameters = self.data_container.ensemble_parameters
             if not dicts_equal(self.ensemble_parameters,
@@ -335,6 +335,9 @@ class BaseEnsemble(ABC):
         """
         Attaches an observer to the ensemble.
 
+        If the observer does not have an observation interval,
+        then it will be set to the default_interval len(atoms).
+
         Parameters
         ----------
         observer
@@ -432,10 +435,10 @@ class BaseEnsemble(ABC):
         """
 
         # Restart step
-        self._step = self.data_container.last_state['last_step']
+        self._step = self.data_container._last_state['last_step']
 
         # Update configuration
-        occupations = self.data_container.last_state['occupations']
+        occupations = self.data_container._last_state['occupations']
         active_sites = []
         for sl in self.sublattices.active_sublattices:
             active_sites.extend(sl.indices)
@@ -443,10 +446,10 @@ class BaseEnsemble(ABC):
         self.update_occupations(active_sites, active_occupations)
 
         # Restart number of total and accepted trial steps
-        self._accepted_trials = self.data_container.last_state['accepted_trials']
+        self._accepted_trials = self.data_container._last_state['accepted_trials']
 
         # Restart state of random number generator
-        random.setstate(self.data_container.last_state['random_state'])
+        random.setstate(self.data_container._last_state['random_state'])
 
     def write_data_container(self, outfile: Union[str, BinaryIO, TextIO]):
         """Updates last state of the Monte Carlo simulation and
@@ -492,9 +495,22 @@ class BaseEnsemble(ABC):
         """
         pass
 
+    def __str__(self) -> str:
+        """ string representation of BaseEnsemble. """
+        width = 60
+        name = self.__class__.__name__
+        s = [' {} '.format(name).center(width, '=')]
+
+        fmt = '{:15} : {}'
+        for k, v in self.ensemble_parameters.items():
+            s += [fmt.format(k, v)]
+
+        s += [fmt.format('step', self.step)]
+        s += [fmt.format('calculator', self._calculator.__class__.__name__)]
+        return '\n'.join(s)
+
 
 def dicts_equal(dict1: Dict, dict2: Dict, atol: float = 1e-12) -> bool:
-
     """Returns True (False) if two dicts are equal (not equal), if
     float or integers are in the dicts then atol is used for comparing them."""
     if len(dict1) != len(dict2):
@@ -504,7 +520,7 @@ def dicts_equal(dict1: Dict, dict2: Dict, atol: float = 1e-12) -> bool:
             return False
         if isinstance(dict1[key], (int, float)) and isinstance(dict2[key], (int, float)):
             if not np.isclose(dict1[key], dict2[key], rtol=0.0, atol=atol) and \
-                   not np.isnan(dict1[key]) and not np.isnan(dict2[key]):
+                    not np.isnan(dict1[key]) and not np.isnan(dict2[key]):
                 return False
         else:
             if dict1[key] != dict2[key]:

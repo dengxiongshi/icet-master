@@ -197,7 +197,7 @@ class TestCECalculatorBinary(unittest.TestCase):
         """Tests the get local clustervector method."""
 
         cpp_calc = _ClusterExpansionCalculator(
-            self.cs, Structure.from_atoms(self.structure))
+            self.cs, Structure.from_atoms(self.structure), self.cs.fractional_position_tolerance)
 
         index = 4
         cpp_calc.get_local_cluster_vector(

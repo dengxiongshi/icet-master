@@ -38,8 +38,13 @@ class TestClusterCounts(unittest.TestCase):
         self.structure.set_chemical_symbols('NiFeNi2')
         self.icet_structure = Structure.from_atoms(self.structure)
         self.cutoffs = [2.2]
-        self.orbit_list = OrbitList(self.structure_prim, self.cutoffs)
-        self.orbit_list.sort()
+        self.symprec = 1e-5
+        self.position_tolerance = 1e-5
+        self.fractional_position_tolerance = 1e-6
+        self.orbit_list = OrbitList(self.structure_prim, self.cutoffs,
+                                    self.symprec, self.position_tolerance,
+                                    self.fractional_position_tolerance)
+        self.orbit_list.sort(self.position_tolerance)
 
     def shortDescription(self):
         """Silences unittest from printing the docstrings in test cases."""
@@ -47,24 +52,9 @@ class TestClusterCounts(unittest.TestCase):
 
     def setUp(self):
         """ Sets up an empty cluster counts object. """
-        self.cluster_counts = ClusterCounts(self.orbit_list, self.structure)
-
-    def test_count_lattice_sites(self):
-        """
-        Tests cluster_counts counts a pair given a set of
-        lattice neighbors.
-        """
-        lattice_sites = []
-        lattice_sites.append(LatticeSite(0, [0., 0., 0.]))
-        lattice_sites.append(LatticeSite(1, [0., 0., 0.]))
-
-        cluster = Cluster(self.icet_structure, lattice_sites)
-
-        self.cluster_counts.count(self.icet_structure, lattice_sites)
-        cluster_map = self.cluster_counts.get_cluster_counts()
-
-        count = cluster_map[cluster]
-        self.assertEqual(count, {('Fe', 'Ni'): 1})
+        self.cluster_counts = ClusterCounts(self.orbit_list,
+                                            self.structure,
+                                            self.fractional_position_tolerance)
 
     def test_count_list_lattice_sites(self):
         """
@@ -79,21 +69,24 @@ class TestClusterCounts(unittest.TestCase):
         lattice_sites2.append(LatticeSite(0, [0., 0., 0.]))
         lattice_sites2.append(LatticeSite(2, [0., 0., 0.]))
 
-        cluster = Cluster(self.icet_structure, lattice_sites)
+        # The tag is set to -1 in order not to collide with an existing
+        # cluster-tag as the latter is used to generate a hash (and defaults to
+        # 0, which is certainly already taken).
+        cluster = Cluster(self.icet_structure, lattice_sites, tag=-1)
 
         lattice_neighbors = [lattice_sites, lattice_sites2]
 
-        self.cluster_counts.count(self.icet_structure, lattice_neighbors,
-                                  cluster, True)
+        self.cluster_counts.count(self.icet_structure, lattice_neighbors, cluster, True)
         cluster_map = self.cluster_counts.get_cluster_counts()
 
         count = cluster_map[cluster]
+        print(count)
         self.assertEqual(count, {('Ni', 'Fe'): 1, ('Ni', 'Ni'): 1})
 
     def test_count_orbit_list(self):
         """Tests cluster_counts given orbits in an orbit list."""
-        cluster_singlet = Cluster(self.icet_structure, [], False, 0)
-        cluster_pair = Cluster(self.icet_structure, [], False, 1)
+        cluster_singlet = Cluster(self.icet_structure, [], 0)
+        cluster_pair = Cluster(self.icet_structure, [], 1)
         clusters = [cluster_singlet, cluster_pair]
 
         expected_counts = [{('Fe',): 1, ('Ni',): 3},
@@ -102,26 +95,6 @@ class TestClusterCounts(unittest.TestCase):
 
         for k, cluster in enumerate(clusters):
             count = self.cluster_counts[cluster]
-            self.assertEqual(count, expected_counts[k])
-
-    @unittest.expectedFailure
-    def test_count_orbit_list_non_pbc(self):
-        """Tests cluster counts using orbit_list for a non-pbc structure."""
-        structure_non_pbc = self.structure.copy()
-        structure_non_pbc.set_pbc(False)
-        orbit_list = OrbitList(structure_non_pbc, self.cutoffs)
-
-        cluster_singlet = Cluster(self.icet_structure, [], False, 0)
-        cluster_pair = Cluster(self.icet_structure, [], False, 1)
-        clusters = [cluster_singlet, cluster_pair]
-
-        expected_counts = [{('Fe',): 1, ('Ni',): 3},
-                           {('Fe', 'Ni'): 2, ('Ni', 'Ni'): 2}]
-
-        cluster_counts = ClusterCounts(orbit_list, structure_non_pbc)
-
-        for k, cluster in enumerate(clusters):
-            count = cluster_counts[cluster]
             self.assertEqual(count, expected_counts[k])
 
     def test_len(self):

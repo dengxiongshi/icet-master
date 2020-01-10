@@ -1,6 +1,4 @@
 #include "NeighborList.hpp"
-#include "Structure.hpp"
-#include "Vector3dCompare.hpp"
 
 /**
 @details This function returns a vector of lattice sites that identify the
@@ -14,55 +12,22 @@ std::vector<LatticeSite> NeighborList::getNeighbors(size_t index) const
 {
     if (index < 0 || index >= _neighbors.size())
     {
-        std::string errorMessage = "Site index out of bounds";
-        errorMessage += " index: " + std::to_string(index);
-        errorMessage += " nnbrs: " + std::to_string(_neighbors.size());
-        errorMessage += " (NeighborList::getNeighbors)";
-        throw std::out_of_range(errorMessage);
+        std::ostringstream msg;
+        msg << "Site index out of bounds (NeighborList::getNeighbors)" << std::endl;
+        msg << " index: " << index;
+        msg << " nnbrs: " << _neighbors.size();
+        throw std::out_of_range(msg.str());
     }
     return _neighbors[index];
-}
-
-/**
-@details This function returns True (False) if two sites identified by
-their respective indices are (not) neighbors of each other.
-
-@param index1 first site
-@param index2 second site
-@param offset \
-*/
-bool NeighborList::isNeighbor(const size_t index1, const size_t index2, const Vector3d offset) const
-{
-    if (index1 < 0 || index1 >= _neighbors.size() || index2 < 0 || index2 >= _neighbors.size())
-    {
-        std::string errorMessage = "Site index out of bounds";
-        errorMessage += " index1: " + std::to_string(index1);
-        errorMessage += " index2: " + std::to_string(index2);
-        errorMessage += " nnbrs: " + std::to_string(_neighbors.size());
-        errorMessage += " (NeighborList::isNeighbor)";
-        throw std::out_of_range(errorMessage);
-    }
-
-    for (const auto &nbr : _neighbors[index1])
-    {
-        if (nbr.index() == index2) // indices are the same
-        {
-            /// @todo testing equality between floats/doubles is dangerous
-            if (nbr.unitcellOffset() == offset) // are the _offsets equal?
-            {
-                return true;
-            }
-        }
-    }
-    return false;
 }
 
 /**
 @details This function builds a neighbor list for the given structure.
 
 @param structure atomic configuration
+@param positionTolerance tolerance applied when evaluating positions in Cartesian coordinates; acts as an effective skin thickness
 **/
-void NeighborList::build(const Structure &conf)
+void NeighborList::build(const Structure &conf, const double positionTolerance)
 {
     size_t numberOfSites = conf.size();
     _neighbors.resize(numberOfSites);
@@ -100,7 +65,7 @@ void NeighborList::build(const Structure &conf)
                         {
                             Vector3d noOffset(0, 0, 0);
                             double distance_ij = conf.getDistance(i, j, noOffset, extVector);
-                            if (distance_ij <= _cutoff + DISTTOL && distance_ij > 2 * DISTTOL)
+                            if (distance_ij <= _cutoff + positionTolerance && distance_ij > 2 * positionTolerance)
                             {
                                 LatticeSite neighbor = LatticeSite(j, extVector);
                                 auto find_neighbor = std::find(_neighbors[i].begin(),_neighbors[i].end(), neighbor);

@@ -1,4 +1,5 @@
 from itertools import product
+from typing import Dict, List, Tuple, Generator
 
 import numpy as np
 
@@ -6,13 +7,14 @@ from ase import Atoms
 from ase.build import make_supercell
 from spglib import get_symmetry
 from spglib import niggli_reduce as spg_nigg_red
+
+from icet.tools.geometry import ase_atoms_to_spglib_cell
 from .structure_enumeration_support.hermite_normal_form \
     import yield_reduced_hnfs, HermiteNormalForm
 from .structure_enumeration_support.smith_normal_form \
     import get_unique_snfs, SmithNormalForm
 from .structure_enumeration_support.labeling_generation \
     import LabelingGenerator
-from typing import Dict, List, Tuple, Generator
 
 
 def _translate_labelings(
@@ -200,7 +202,7 @@ def _yield_unique_labelings(labelings: List[int], snf: SmithNormalForm,
             yield labeling
 
 
-def _labeling_to_structure(labeling: tuple, hnf: np.ndarray, cell: np.ndarray,
+def _labeling_to_ase_atoms(labeling: tuple, hnf: np.ndarray, cell: np.ndarray,
                            new_cell: np.ndarray,
                            basis: np.ndarray, chemical_symbols: List[str],
                            pbc: List[bool]) -> Atoms:
@@ -267,7 +269,7 @@ def get_symmetry_operations(structure: Atoms,
         numerical tolerance imposed during symmetry analysis
     """
 
-    symmetries = get_symmetry(structure)
+    symmetries = get_symmetry(ase_atoms_to_spglib_cell(structure), symprec=tolerance)
     assert symmetries, ('spglib.get_symmetry() failed. Please make sure that'
                         ' the structure object is sensible.')
     rotations = symmetries['rotations']
@@ -464,7 +466,7 @@ def enumerate_structures(structure: Atoms, sizes: List[int],
                     new_cell = np.dot(structure.cell.T, hnf.H).T
                 for labeling in _yield_unique_labelings(labelings, snf, hnf,
                                                         nsites):
-                    yield _labeling_to_structure(labeling, hnf, structure.cell,
+                    yield _labeling_to_ase_atoms(labeling, hnf, structure.cell,
                                                  new_cell, basis, elements,
                                                  structure.pbc)
 

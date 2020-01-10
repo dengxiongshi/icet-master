@@ -6,8 +6,9 @@ from tempfile import NamedTemporaryFile
 
 from icet.tools import map_structure_to_reference
 from icet.tools.structure_mapping import (_get_reference_supercell,
-                                          _match_positions)
-from icet.io.logging import logger, set_log_config
+                                          _match_positions,
+                                          calculate_strain_tensor)
+from icet.input_output.logging_tools import logger, set_log_config
 from ase import Atom
 
 
@@ -111,13 +112,67 @@ class TestStructureMapping(unittest.TestCase):
             _match_positions(structure, reference)
         self.assertIn('The boundary conditions of', str(context.exception))
 
-        # Working example
+        # Working example: volume change
         reference = self.reference.repeat(2)
         reference.set_cell(reference.cell * 1.01, scale_atoms=True)
         mapped, drmax, dravg = _match_positions(self.structure, reference)
         self.assertAlmostEqual(drmax, 0.279012386)
         self.assertAlmostEqual(dravg, 0.140424392)
         self.assertEqual(mapped.get_chemical_formula(), 'H3Au6Pd2X5')
+
+        # check attached arrays
+        target_val = [[-0.14847, 0.03737, 0.01010],
+                      [None, None, None],
+                      [0.08989, -0.08484, 0.06363],
+                      [None, None, None],
+                      [-0.25856, 0.03737, -0.09797],
+                      [None, None, None],
+                      [0.04848, -0.00505, 0.09393],
+                      [None, None, None],
+                      [0.16059, 0.19594, 0.03030],
+                      [-0.00404, 0.04141, 0.00303],
+                      [0.01515, 0.01414, 0.00707],
+                      [None, None, None],
+                      [0.02323, -0.09494, 0.02424],
+                      [0.01010, -0.07575, 0.07575],
+                      [-0.02929, 0.02424, -0.07979],
+                      [-0.10605, -0.17372, 0.14847]]
+        for a, t in zip(mapped.arrays['Displacement'], target_val):
+            if t[0] is None:
+                continue
+            self.assertTrue(np.allclose(a, t))
+        target_val = [[0.15343359, 1.87193031, 1.98820700],
+                      [None, None, None],
+                      [0.13902091, 1.93302127, 1.93829131],
+                      [None, None, None],
+                      [0.27901239, 1.76455816, 1.93970336],
+                      [None, None, None],
+                      [0.10582371, 1.92668665, 1.97376277],
+                      [None, None, None],
+                      [0.25514647, 1.83136619, 1.86995083],
+                      [0.04171679, 1.97859644, 2.01638753],
+                      [0.02189628, 2.00491233, 2.00592967],
+                      [None, None, None],
+                      [0.10070161, 1.92535275, 1.99815195],
+                      [0.10760174, 1.94575130, 1.94575130],
+                      [0.08838510, 1.94058247, 1.99245585],
+                      [0.25192972, 1.85527351, 1.88256468]]
+        for a, t in zip(mapped.arrays['Minimum_Distances'], target_val):
+            if t[0] is None:
+                continue
+            self.assertTrue(np.allclose(a, t))
+
+        # Working example: with less than 3 atoms
+        reference = self.reference.copy()
+        structure = self.reference.copy()
+        structure[0].position += [0, 0, 0.1]
+        mapped, drmax, dravg = _match_positions(structure, reference)
+        self.assertAlmostEqual(drmax, 0.1)
+        self.assertAlmostEqual(dravg, 0.05)
+        self.assertEqual(mapped.get_chemical_formula(), 'HAu')
+        self.assertTrue(np.allclose(mapped.arrays['Displacement'], [[0, 0, -0.1], [0, 0, 0]]))
+        self.assertTrue(np.allclose(mapped.arrays['Displacement_Magnitude'], [0.1, 0]))
+        self.assertTrue(np.allclose(mapped.arrays['Minimum_Distances'], [[0.1, 1.9], [0, 2]]))
 
     def test_map_structure_to_reference(self):
         """
@@ -135,71 +190,91 @@ class TestStructureMapping(unittest.TestCase):
             mapped, info = map_structure_to_reference(structure,
                                                       self.reference,
                                                       **kwargs)
-            self.assertEqual(len(info), 5)
+            self.assertEqual(len(info), 6)
             self.assertAlmostEqual(info['drmax'], expected_drmax)
             self.assertAlmostEqual(info['dravg'], expected_dravg)
             self.assertEqual(mapped.get_chemical_formula(), 'H3Au6Pd2X5')
             logfile.seek(0)
-            return logfile
+            return logfile, info
 
         # Log ClusterSpace output to StringIO stream
         for handler in logger.handlers:
             logger.removeHandler(handler)
 
         # Standard, warning-free mapping
-        logfile = test_mapping(self.structure, inert_species=['Au', 'Pd'])
+        logfile, info = test_mapping(self.structure, inert_species=['Au', 'Pd'])
         self.assertEqual(len(logfile.readlines()), 0)
+        self.assertEqual(len(info['warnings']), 0)
 
         # Warn when there is a lot of volumetric strain
         structure = self.structure.copy()
         structure.set_cell(1.2 * structure.cell, scale_atoms=True)
-        logfile = test_mapping(structure, inert_species=['Au', 'Pd'])
+        logfile, info = test_mapping(structure, inert_species=['Au', 'Pd'])
         lines = logfile.readlines()
         self.assertEqual(len(lines), 1)
         self.assertIn('High volumetric strain', lines[0])
+        self.assertIn('high_volumetric_strain', info['warnings'])
 
         # Do not warn if warnings are suppressed
         structure = self.structure.copy()
         structure.set_cell(1.2 * structure.cell, scale_atoms=True)
-        logfile = test_mapping(structure, inert_species=['Au', 'Pd'],
-                               suppress_warnings=True)
+        logfile, info = test_mapping(structure, inert_species=['Au', 'Pd'],
+                                     suppress_warnings=True)
         lines = logfile.readlines()
         self.assertEqual(len(lines), 0)
 
         # Warning-free assuming no cell relaxation
         structure = self.structure.copy()
         structure.set_cell((1 / 1.01) * structure.cell, scale_atoms=True)
-        logfile = test_mapping(structure, assume_no_cell_relaxation=True)
+        logfile, info = test_mapping(structure, assume_no_cell_relaxation=True)
         lines = logfile.readlines()
         self.assertEqual(len(lines), 0)
+        self.assertEqual(len(info['warnings']), 0)
 
         # Warning even with little strain with no cell relaxation assumption
         structure = self.structure.copy()
         structure.set_cell(structure.cell, scale_atoms=True)
-        logfile = test_mapping(structure, assume_no_cell_relaxation=True)
+        logfile, info = test_mapping(structure, assume_no_cell_relaxation=True)
         lines = logfile.readlines()
         self.assertEqual(len(lines), 1)
         self.assertIn('High volumetric strain', lines[0])
+        self.assertIn('high_volumetric_strain', info['warnings'])
 
         # Anisotropic strain
         structure = self.structure.copy()
         A = [[1.2, 0, 0], [0, 1 / 1.2, 0], [0, 0, 1.]]
         structure.set_cell(np.dot(structure.cell, A), scale_atoms=True)
-        logfile = test_mapping(structure, inert_species=['Au', 'Pd'])
+        logfile, info = test_mapping(structure, inert_species=['Au', 'Pd'])
         lines = logfile.readlines()
         self.assertEqual(len(lines), 1)
         self.assertIn('High anisotropic strain', lines[0])
+        self.assertIn('high_anisotropic_strain', info['warnings'])
 
         # Large deviations
         structure = self.structure.copy()
         structure.positions += [1, 0, 0]
-        logfile = test_mapping(structure, inert_species=['Au', 'Pd'],
-                               expected_drmax=1.11822844,
-                               expected_dravg=0.95130331)
+        logfile, info = test_mapping(structure, inert_species=['Au', 'Pd'],
+                                     expected_drmax=1.11822844,
+                                     expected_dravg=0.95130331)
         lines = logfile.readlines()
         self.assertEqual(len(lines), 2)
         self.assertIn('Large maximum relaxation distance', lines[0])
         self.assertIn('Large average relaxation distance', lines[1])
+        self.assertIn('large_maximum_relaxation_distance', info['warnings'])
+        self.assertIn('large_average_relaxation_distance', info['warnings'])
+
+    def test_calculate_strain_tensor(self):
+        """
+        Tests that calculation of strain tensor works.
+        """
+        cell = self.reference.cell.copy()
+        cell *= 1.05
+        cell[0, 0] = 0.02
+        target_val = np.array([[4.49940477e-02, 2.49401921e-03, 2.49401921e-03],
+                               [2.49401921e-03, 5.00089427e-02, 8.94271822e-06],
+                               [2.49401921e-03, 8.94271822e-06, 5.00089427e-02]])
+        strain = calculate_strain_tensor(self.reference.cell, cell)
+        self.assertTrue(np.allclose(strain, target_val))
 
 
 if __name__ == '__main__':

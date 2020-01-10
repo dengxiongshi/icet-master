@@ -67,11 +67,10 @@ class TestSublattices(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestSublattices,
               self).__init__(*args, **kwargs)
-
         self.prim = bulk('Au').repeat([2, 1, 1])
         self.prim[1].symbol = 'H'
         self.allowed_species = [('Pd', 'Au'), ('H', 'V')]
-
+        self.fractional_position_tolerance = 1e-7
         self.supercell = self.prim.repeat(3)
 
     def shortDescription(self):
@@ -80,8 +79,11 @@ class TestSublattices(unittest.TestCase):
 
     def setUp(self):
         """Set up sublattices before each test."""
-        self.sublattices = Sublattices(allowed_species=self.allowed_species,
-                                       primitive_structure=self.prim, structure=self.supercell)
+        self.sublattices = Sublattices(
+            allowed_species=self.allowed_species,
+            primitive_structure=self.prim,
+            structure=self.supercell,
+            fractional_position_tolerance=self.fractional_position_tolerance)
 
     def test_sublattice_ordering(self):
         """Tests ordering of sublattices."""
@@ -89,7 +91,9 @@ class TestSublattices(unittest.TestCase):
         prim = self.prim.repeat([2, 1, 1])
         supercell = prim.repeat(3)
         sublattices = Sublattices(allowed_species=allowed_species,
-                                  primitive_structure=prim, structure=supercell)
+                                  primitive_structure=prim,
+                                  structure=supercell,
+                                  fractional_position_tolerance=self.fractional_position_tolerance)
 
         ret = sublattices.allowed_species
         target = [('Au', 'Pd'), ('H', 'V'), ('H',), ('He',)]
@@ -160,7 +164,9 @@ class TestSublattices(unittest.TestCase):
         # Now create something that actually have inactive sublattices
 
         sublattices = Sublattices(allowed_species=[['Au', 'Pd'], ['H']],
-                                  primitive_structure=self.prim, structure=self.supercell)
+                                  primitive_structure=self.prim,
+                                  structure=self.supercell,
+                                  fractional_position_tolerance=self.fractional_position_tolerance)
 
         inactive_sublattices = sublattices.inactive_sublattices
 

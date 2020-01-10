@@ -19,25 +19,25 @@ using namespace Eigen;
 
 class ClusterExpansionCalculator
 {
-    public:
-    
+public:
+
     /// Constructor.
-    ClusterExpansionCalculator(const ClusterSpace &, const Structure &);
+    ClusterExpansionCalculator(const ClusterSpace &, const Structure &, const double);
 
     /// Returns the local cluster vector.
     std::vector<double> getLocalClusterVector(const std::vector<int>&, const int, const std::vector<size_t>);
 
-    private:
-  
+private:
+
     /// Maps offsets to local orbit lists.
     std::unordered_map<Vector3d, OrbitList, Vector3dHash> _localOrbitlists;
 
     /// Internal cluster space.
     ClusterSpace _clusterSpace;
-    
+
     /// The supercell the calculator is created for.
-    Structure _superCell;
-    
+    Structure _supercell;
+
     /// The full primitive orbit list, contains all clusters for the primitive cell.
     OrbitList _fullPrimitiveOrbitList;
 

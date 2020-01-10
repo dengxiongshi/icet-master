@@ -15,6 +15,7 @@ class TestNeighborList(unittest.TestCase):
 
         self.structure = bulk('Ni', 'hcp', a=1.0).repeat([3, 3, 1])
         self.cutoff = 1.4
+        self.position_tolerance = 1e-5
         self.icet_structure = Structure.from_atoms(self.structure)
         self.ase_nl = ASENeighborList(len(self.structure) * [self.cutoff / 2],
                                       skin=1e-8, bothways=True,
@@ -29,7 +30,7 @@ class TestNeighborList(unittest.TestCase):
     def setUp(self):
         """Setup before each test."""
         self.nl = NeighborList(self.cutoff)
-        self.nl.build(self.icet_structure)
+        self.nl.build(self.icet_structure, self.position_tolerance)
         neighbors = self.nl.get_neighbors(0)
         self.indices = []
         self.offsets = []
@@ -84,7 +85,8 @@ class TestNeighborList(unittest.TestCase):
 
     def test_get_neighbors_lists(self):
         """Tests get_neighbor_lists functionality."""
-        list_of_nl = get_neighbor_lists(self.icet_structure, [self.cutoff] * 4)
+        list_of_nl = get_neighbor_lists(
+            self.icet_structure, [self.cutoff] * 4, self.position_tolerance)
         self.assertEqual(len(list_of_nl), 4)
         self.assertEqual(len(list_of_nl[0]), len(self.nl))
 
@@ -98,7 +100,7 @@ class TestNeighborList(unittest.TestCase):
         structure.center(4.0, axis=[2])
 
         nl = NeighborList(self.cutoff)
-        nl.build(Structure.from_atoms(structure))
+        nl.build(Structure.from_atoms(structure), self.position_tolerance)
         indices = [ngb.index for ngb in nl.get_neighbors(0)]
         offsets = [ngb.unitcell_offset for ngb in nl.get_neighbors(0)]
 

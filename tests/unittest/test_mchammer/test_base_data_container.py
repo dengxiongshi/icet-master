@@ -51,8 +51,7 @@ class TestBaseDataContainer(unittest.TestCase):
                               metadata=OrderedDict(ensemble_name='test-ensemble',
                                                    seed=144))
 
-        self.assertTrue('structure is not an ASE Atoms object'
-                        in str(context.exception))
+        self.assertTrue('structure is not an ASE Atoms object' in str(context.exception))
 
     def test_structure(self):
         """Tests reference structure property."""
@@ -88,8 +87,7 @@ class TestBaseDataContainer(unittest.TestCase):
         # test whether method raises correct Exceptions
         with self.assertRaises(TypeError) as context:
             self.dc.append(5.0, 1.0)
-        self.assertTrue('mctrial has the wrong type'
-                        in str(context.exception))
+        self.assertTrue('mctrial has the wrong type' in str(context.exception))
 
         with self.assertRaises(ValueError) as context:
             self.dc.append(10, 1.0)
@@ -98,8 +96,7 @@ class TestBaseDataContainer(unittest.TestCase):
 
         with self.assertRaises(TypeError) as context:
             self.dc.append(110, 'tst')
-        self.assertTrue('record has the wrong type'
-                        in str(context.exception))
+        self.assertTrue('record has the wrong type' in str(context.exception))
 
     def test_str(self):
         """Tests __str__ method."""
@@ -196,18 +193,6 @@ class TestBaseDataContainer(unittest.TestCase):
         self.assertIn('username', metadata.keys())
         self.assertIn('hostname', metadata.keys())
         self.assertIn('icet_version', metadata.keys())
-
-    def test_property_last_state(self):
-        """Tests last_state property."""
-        self.dc._update_last_state(last_step=10001,
-                                   occupations=[13] * len(self.structure),
-                                   accepted_trials=12,
-                                   random_state=random.getstate())
-        self.assertEqual(self.dc.last_state,
-                         dict([('last_step', 10001),
-                               ('occupations', [13] * len(self.structure)),
-                               ('accepted_trials', 12),
-                               ('random_state', random.getstate())]))
 
     def test_get_data(self):
         """

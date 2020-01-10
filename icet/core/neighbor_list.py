@@ -10,7 +10,8 @@ from .structure import Structure
 
 
 def get_neighbor_lists(structure: Union[Atoms, Structure],
-                       cutoffs: List[float] = None) -> List[NeighborList]:
+                       cutoffs: List[float],
+                       position_tolerance: float) -> List[NeighborList]:
     """
     Returns a list of icet neighbor lists given a configuration and cutoffs.
 
@@ -20,6 +21,8 @@ def get_neighbor_lists(structure: Union[Atoms, Structure],
         atomic configuration
     cutoffs
         positive floats indicating the cutoffs for the various clusters
+    position_tolerance
+        tolerance applied when comparing positions in Cartesian coordinates
     """
 
     # deal with different types of structure objects
@@ -31,15 +34,12 @@ def get_neighbor_lists(structure: Union[Atoms, Structure],
         raise Exception(' '.join(msg))
 
     neighbor_lists = []
-    if cutoffs is None:
-        raise Exception('Both n and cutoffs is None in count clusters')
-    else:
-        for cutoff in cutoffs:
-            nl = NeighborList(cutoff)
-            neighbor_lists.append(nl)
+    for cutoff in cutoffs:
+        nl = NeighborList(cutoff)
+        neighbor_lists.append(nl)
 
-    # build the neighbor_lists
+    # build the neighbor lists
     for nl in neighbor_lists:
-        nl.build(structure)
+        nl.build(structure, position_tolerance)
 
     return neighbor_lists

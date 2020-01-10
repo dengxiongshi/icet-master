@@ -12,15 +12,9 @@ class TestLocalOrbitListGenerator(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(TestLocalOrbitListGenerator, self).__init__(*args, **kwargs)
-        # corner case: tilted structure
-        prim_structure = bulk('Al')
-        cutoffs = [4.2, 4.2]
-        self.orbit_list = OrbitList(prim_structure, cutoffs)
-        self.primitive = self.orbit_list.get_primitive_structure()
-        super_structure = make_supercell(prim_structure, [[2, 0, 1000],
-                                                          [0, 2, 0],
-                                                          [0, 0, 2]])
-        self.supercell = Structure.from_atoms(super_structure)
+        self.symprec = 1e-5
+        self.position_tolerance = 1e-5
+        self.fractional_position_tolerance = 1e-6
 
     def shortDescription(self):
         """Silences unittest from printing the docstrings in test cases."""
@@ -28,7 +22,21 @@ class TestLocalOrbitListGenerator(unittest.TestCase):
 
     def setUp(self):
         """Instantiate class for each test case."""
-        self.lolg = LocalOrbitListGenerator(self.orbit_list, self.supercell)
+        prim_structure = bulk('Al')
+        cutoffs = [4.2, 4.2]
+        self.orbit_list = OrbitList(
+            prim_structure, cutoffs,
+            symprec=self.symprec, position_tolerance=self.position_tolerance,
+            fractional_position_tolerance=self.fractional_position_tolerance)
+        self.primitive = self.orbit_list.get_primitive_structure()
+        super_structure = make_supercell(prim_structure, [[2, 0, 1000],
+                                                          [0, 2, 0],
+                                                          [0, 0, 2]])
+        self.supercell = Structure.from_atoms(super_structure)
+
+        self.lolg = LocalOrbitListGenerator(
+            self.orbit_list, self.supercell,
+            fractional_position_tolerance=self.fractional_position_tolerance)
 
     def test_generate_local_orbit_list_from_index(self):
         """
@@ -65,6 +73,17 @@ class TestLocalOrbitListGenerator(unittest.TestCase):
                     pos_prim = self.primitive.get_position(site_p)
                     self.assertTrue(np.all(np.isclose(pos_super, pos_prim)))
 
+    def test_generating_full_orbit_list_with_primitive(self):
+        """
+        Tests creating a full orbit list using the primitive as the supercell.
+        """
+        prim_structure = bulk('Al')
+        prim = Structure.from_atoms(prim_structure)
+        lolg = LocalOrbitListGenerator(
+            self.orbit_list, prim,
+            fractional_position_tolerance=self.fractional_position_tolerance)
+        lolg.generate_full_orbit_list()
+
     def test_generate_full_orbit_list(self):
         """
         Tests that equivalent sites of all local orbit lists are listed
@@ -82,6 +101,7 @@ class TestLocalOrbitListGenerator(unittest.TestCase):
         Tests vector of unique offsets and primitive to supercell mapping
         are cleared.
         """
+
         self.lolg.generate_local_orbit_list(2)
         self.lolg.clear()
         offsets_count = self.lolg.get_number_of_unique_offsets()
@@ -135,7 +155,13 @@ class TestLocalOrbitListGeneratorHCP(unittest.TestCase):
         super(TestLocalOrbitListGeneratorHCP, self).__init__(*args, **kwargs)
         prim_structure = bulk('Ni', 'hcp', a=4.0)
         cutoffs = [4.2, 4.2]
-        self.orbit_list = OrbitList(prim_structure, cutoffs)
+        self.symprec = 1e-5
+        self.position_tolerance = 1e-5
+        self.fractional_position_tolerance = 1e-6
+        self.orbit_list = OrbitList(
+            prim_structure, cutoffs,
+            symprec=self.symprec, position_tolerance=self.position_tolerance,
+            fractional_position_tolerance=self.fractional_position_tolerance)
         self.primitive = self.orbit_list.get_primitive_structure()
         super_structure = make_supercell(prim_structure, [[2, 0, 1000],
                                                           [0, 2, 0],
@@ -148,7 +174,8 @@ class TestLocalOrbitListGeneratorHCP(unittest.TestCase):
 
     def setUp(self):
         """Instantiate class for each test case."""
-        self.lolg = LocalOrbitListGenerator(self.orbit_list, self.supercell)
+        self.lolg = LocalOrbitListGenerator(
+            self.orbit_list, self.supercell, self.fractional_position_tolerance)
 
     def test_generate_local_orbit_list(self):
         """

@@ -102,16 +102,6 @@ with open('icet/__init__.py', encoding='utf-8') as fd:
         raise Exception('Caught exception {}'.format(exc))
 
 
-author_list = ['Mattias Ångqvist',
-               'William A. Muñoz',
-               'J. Magnus Rahm',
-               'Erik Fransson',
-               'Céline Durniak',
-               'Piotr Rozyczko',
-               'Thomas Holm Rod',
-               'Paul Erhart']
-authors = ', '.join(author_list[:-1]) + ', and ' + author_list[-1]
-
 version = re.search("__version__ = '(.*)'", lines).group(1)
 maintainer = re.search("__maintainer__ = '(.*)'", lines).group(1)
 email = re.search("__email__ = '(.*)'", lines).group(1)
@@ -120,7 +110,7 @@ url = re.search("__url__ = '(.*)'", lines).group(1)
 license = re.search("__license__ = '(.*)'", lines).group(1)
 
 classifiers = [
-    'Development Status :: 5 - Stable',
+    'Development Status :: 5 - Production/Stable',
     'Operating System :: OS Independent',
     'Programming Language :: Python :: 3 :: Only',
     'Programming Language :: Python :: 3',
@@ -137,7 +127,7 @@ if __name__ == '__main__':
     setup(
         name='icet',
         version=version,
-        author=authors,
+        author='icet developer group',
         author_email=email,
         description=description,
         long_description=long_description,
@@ -146,7 +136,7 @@ if __name__ == '__main__':
                           'ase',
                           'numpy',
                           'scipy',
-                          'sklearn',
+                          'scikit-learn>=0.22',
                           'pandas>=0.23',
                           'spglib>1.12.0'],
         packages=find_packages(),

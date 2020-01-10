@@ -56,8 +56,8 @@ void ManyBodyNeighborList::addSinglet(const int index, std::vector<std::pair<std
     std::vector<LatticeSite> singletLatticeSites;
     singletLatticeSites.push_back(latticeNeighborSinglet);
 
-    std::vector<LatticeSite> latNbrsEmpty;
-    many_bodyNeighborIndices.push_back(std::make_pair(singletLatticeSites, latNbrsEmpty));
+    std::vector<LatticeSite> latticeSitesEmpty;
+    many_bodyNeighborIndices.push_back(std::make_pair(singletLatticeSites, latticeSitesEmpty));
 }
 
 ///Add all pairs originating from index using neighbor_list
@@ -208,9 +208,9 @@ std::vector<LatticeSite> ManyBodyNeighborList::getFilteredNj(const std::vector<L
 */
 void ManyBodyNeighborList::translateAllNi(std::vector<LatticeSite> &Ni, const Vector3d &offset) const
 {
-    for (auto &latNbr : Ni)
+    for (auto &latticeSite : Ni)
     {
-        latNbr.addUnitcellOffset(offset);
+        latticeSite.addUnitcellOffset(offset);
     }
 }
 

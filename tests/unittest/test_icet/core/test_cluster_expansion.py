@@ -178,20 +178,29 @@ class TestClusterExpansion(unittest.TestCase):
             self.ce.prune(indices=[0])
         self.assertTrue('zerolet may not be pruned' in str(context.exception))
 
+    def test_plot_parameters(self):
+        """Tests plot_parameters."""
+        file = tempfile.NamedTemporaryFile()
+        self.ce.plot_parameters(file.name+'.pdf')
+
     def test_repr(self):
         """Tests repr functionality."""
 
         retval = self.ce.__repr__()
+
         target = """
 ========================================== Cluster Expansion ===========================================
- chemical species: ['Au', 'Pd'] (sublattice A)
- cutoffs: 3.0000 3.0000 3.0000
- total number of parameters: 5
- number of parameters by order: 0= 1  1= 1  2= 1  3= 1  4= 1
- total number of nonzero parameters: 4
- number of nonzero parameters by order: 0= 0  1= 1  2= 1  3= 1  4= 1  
+ chemical species                       : ['Au', 'Pd'] (sublattice A)
+ cutoffs                                : 3.0000 3.0000 3.0000
+ total number of parameters             : 5
+ number of parameters by order          : 0= 1  1= 1  2= 1  3= 1  4= 1
+ fractional_position_tolerance          : 4e-06
+ position_tolerance                     : 1e-05
+ symprec                                : 1e-05
+ total number of nonzero parameters     : 4
+ number of nonzero parameters by order  : 0= 0  1= 1  2= 1  3= 1  4= 1
 --------------------------------------------------------------------------------------------------------
-index | order |  radius  | multiplicity | orbit_index | multi_component_vector | sublattices |    ECI   
+index | order |  radius  | multiplicity | orbit_index | multi_component_vector | sublattices |    ECI
 --------------------------------------------------------------------------------------------------------
    0  |   0   |   0.0000 |        1     |      -1     |           .            |      .      |         0
    1  |   1   |   0.0000 |        1     |       0     |          [0]           |      A      |         1
@@ -211,14 +220,17 @@ index | order |  radius  | multiplicity | orbit_index | multi_component_vector |
 
         target = """
 ========================================== Cluster Expansion ===========================================
- chemical species: ['Au', 'Pd'] (sublattice A)
- cutoffs: 3.0000 3.0000 3.0000
- total number of parameters: 5
- number of parameters by order: 0= 1  1= 1  2= 1  3= 1  4= 1
- total number of nonzero parameters: 4
- number of nonzero parameters by order: 0= 0  1= 1  2= 1  3= 1  4= 1  
+ chemical species                       : ['Au', 'Pd'] (sublattice A)
+ cutoffs                                : 3.0000 3.0000 3.0000
+ total number of parameters             : 5
+ number of parameters by order          : 0= 1  1= 1  2= 1  3= 1  4= 1
+ fractional_position_tolerance          : 4e-06
+ position_tolerance                     : 1e-05
+ symprec                                : 1e-05
+ total number of nonzero parameters     : 4
+ number of nonzero parameters by order  : 0= 0  1= 1  2= 1  3= 1  4= 1
 --------------------------------------------------------------------------------------------------------
-index | order |  radius  | multiplicity | orbit_index | multi_component_vector | sublattices |    ECI   
+index | order |  radius  | multiplicity | orbit_index | multi_component_vector | sublattices |    ECI
 --------------------------------------------------------------------------------------------------------
    0  |   0   |   0.0000 |        1     |      -1     |           .            |      .      |         0
  ...
@@ -279,7 +291,7 @@ class TestClusterExpansionTernary(unittest.TestCase):
         self.assertEqual(pair_indices_new, [])
 
     def test_property_metadata(self):
-        """ Test get metadata method. """
+        """ Test metadata property. """
 
         user_metadata = dict(parameters=[1, 2, 3], fit_method='ardr')
         ce = ClusterExpansion(self.cs, self.parameters, metadata=user_metadata)
@@ -294,6 +306,11 @@ class TestClusterExpansionTernary(unittest.TestCase):
         self.assertIn('username', metadata.keys())
         self.assertIn('hostname', metadata.keys())
         self.assertIn('icet_version', metadata.keys())
+
+    def test_property_primitive_structure(self):
+        """ Test primitive_structure property.. """
+        prim = self.cs.primitive_structure
+        self.assertEqual(prim, self.ce.primitive_structure)
 
 
 if __name__ == '__main__':

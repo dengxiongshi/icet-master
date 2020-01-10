@@ -1,11 +1,13 @@
 #pragma once
-#include <pybind11/pybind11.h>
+
 #include <iostream>
-#include <pybind11/eigen.h>
-#include <Eigen/Dense>
 #include <vector>
-#include "LatticeSite.hpp"
+#include <pybind11/pybind11.h>
+#include <Eigen/Dense>
+
+//#include "LatticeSite.hpp"
 #include "Structure.hpp"
+
 namespace icet
 {
 
@@ -15,7 +17,7 @@ std::vector<int> getPermutation(const std::vector<T> &v_original, const std::vec
 {
     if (v_original.size() != v_permutation.size())
     {
-        throw std::runtime_error("Error: vectors are not of the same size in function getPermutation in Symmetry.hpp");
+        throw std::runtime_error("Vectors are not of the same size (Symmetry/getPermutation)");
     }
 
     std::vector<int> indices(v_original.size());
@@ -25,7 +27,7 @@ std::vector<int> getPermutation(const std::vector<T> &v_original, const std::vec
         auto find = std::find(v_permutation.begin(), v_permutation.end(), v_original[i]);
         if (find == v_permutation.end())
         {
-            throw std::runtime_error("Error: Permutation not possible since vectors do not contain same elements in function getPermutation in Symmetry.hpp ");
+            throw std::runtime_error("Permutation not possible since vectors do not contain the same elements (Symmetry/getPermutation)");
         }
         else
         {
@@ -36,17 +38,14 @@ std::vector<int> getPermutation(const std::vector<T> &v_original, const std::vec
     return indices;
 }
 
-///Return the permutation of v using the permutation in indices
+/// Returns the permutation of v using the permutation in indices.
 template <typename T>
-std::vector<T>
-getPermutedVector(
-    const std::vector<T> &v,
-    const std::vector<int> &indices)
+std::vector<T> getPermutedVector(const std::vector<T> &v,
+                                 const std::vector<int> &indices)
 {
-
     if (v.size() != indices.size())
     {
-        throw std::runtime_error("Error: vectors are not of the same size in function getPermutedVector in Symmetry.hpp");
+        throw std::runtime_error("Sizes of vectors do not match (Symmetry/getPermutedVector)");
     }
 
     std::vector<T> v2(v.size());
@@ -57,11 +56,9 @@ getPermutedVector(
     return v2;
 }
 
-///Return the permutation of v using the permutation in indices
+/// Returns the permutation of v using the permutation in indices.
 template <typename T>
-std::vector<std::vector<T>>
-getAllPermutations(
-    std::vector<T> v)
+std::vector<std::vector<T>> getAllPermutations(std::vector<T> v)
 {
     std::vector<std::vector<T>> allPermutations;
     std::sort(v.begin(), v.end());
@@ -75,13 +72,7 @@ getAllPermutations(
     return allPermutations;
 }
 
-/// Return the transformed position `position` using the input translation and rotation
-/// @TODO whys is there a '2' here?
-Eigen::Vector3d transformPosition(const Eigen::Vector3d &position, const Eigen::Vector3d &translation, const Eigen::Matrix3d &rotation);
-
-///Returns the next cartesian product of currentProduct using the vector of vectors items items[0] is the possible combinations for element n
+/// Returns the next cartesian product of currentProduct using the vector of vectors items items[0] is the possible combinations for element n
 bool nextCartesianProduct(const std::vector<std::vector<int>> &items, std::vector<int> &currentProduct);
 
-std::vector<Eigen::Vector3d> getOffsetPositions(const Structure&, const Eigen::Vector3d&);
-
-}
+} // namespace icet

@@ -3,14 +3,12 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 
-#include "Structure.hpp"
-#include "OrbitList.hpp"
-#include "LocalOrbitListGenerator.hpp"
 #include "ClusterCounts.hpp"
+#include "LocalOrbitListGenerator.hpp"
+#include "OrbitList.hpp"
 #include "PeriodicTable.hpp"
+#include "Structure.hpp"
 #include "VectorHash.hpp"
-
-//namespace icet {
 
 /**
 @brief This class handles the cluster space.
@@ -21,14 +19,14 @@ class ClusterSpace
 {
   public:
     /// Constructor.
-    ClusterSpace(){};
-    ClusterSpace(std::vector<std::vector<std::string>> &, const OrbitList &);
+    ClusterSpace() {};
+    ClusterSpace(std::vector<std::vector<std::string>> &, const OrbitList &, const double, const double);
 
     /// Returns the cluster vector corresponding to the input structure.
-    std::vector<double> getClusterVector(const Structure &) const;
+    std::vector<double> getClusterVector(const Structure &, const double) const;
 
-    /// Returns information concerning the cluster space.
-    std::pair<int, std::vector<int>> getClusterSpaceInfo(const unsigned int);
+    /// Returns information concerning the association between orbits and multi-component vectors.
+    std::pair<int, std::vector<int>> getMultiComponentVectorsByOrbit(const unsigned int);
 
     /// Returns the entire orbit list.
     OrbitList getOrbitList() const { return _orbitList; }
@@ -45,7 +43,7 @@ class ClusterSpace
     std::vector<std::vector<std::vector<int>>> getMultiComponentVectorPermutations(const std::vector<std::vector<int>> &, const int) const;
 
   public:
-  
+
     /// Returns the cutoff for each order.
     std::vector<double> getCutoffs() const { return _clusterCutoffs; }
 
@@ -59,12 +57,13 @@ class ClusterSpace
     std::vector<std::vector<std::string>> getChemicalSymbols() const { return _chemicalSymbols; }
 
     /// Returns the cluster space size, i.e. the length of a cluster vector.
-    size_t getClusterSpaceSize() { return _clusterSpaceInfo.size(); }
+    size_t getClusterSpaceSize() { return _multiComponentVectorsByOrbit.size(); }
 
     /// Returns the mapping between atomic numbers and the internal species enumeration scheme for each site.
     std::vector<std::unordered_map<int, int>> getSpeciesMaps() const { return _speciesMaps; }
 
-    ///Primitive orbit list based on the structure and the global cutoffs
+    /// Primitive orbit list based on the structure and the global cutoffs
+    /// @todo Make private.
     OrbitList _orbitList;
 
     /// Returns the cluster product.
@@ -80,20 +79,19 @@ class ClusterSpace
     /// Precomputed site permutations for each orbit in _orbitlist.
     /// @todo Make private.
     std::vector<std::vector<std::vector<std::vector<int>>>> _sitePermutations;
-    
-    /// Precomputes permutations and multicomponent vectors of each orbit.
-    void precomputeMultiComponentVectors();
-    
+
+    /// Computes permutations and multicomponent vectors of each orbit.
+    void computeMultiComponentVectors();
+
     /// Prunes the orbit list.
     void pruneOrbitList(std::vector<size_t> &);
 
   private:
 
-    /// Cluster space information.
-    /// The first index (int) corresponds to the orbit index, the second index (vector of ints) refers to a multi-component vector.
-    /// @todo Check description.
-    /// @todo This function returns a very specific type of information. Consider giving it a more descriptive name.
-    std::vector<std::pair<int, std::vector<int>>> _clusterSpaceInfo;
+    /// Multi-component vectors for each orbit. The first index (int)
+    /// corresponds to the orbit index, the second index (vector of ints)
+    /// refers to a multi-component vector.
+    std::vector<std::pair<int, std::vector<int>>> _multiComponentVectorsByOrbit;
 
     /// Primitive (prototype) structure.
     Structure _primitiveStructure;
@@ -112,7 +110,4 @@ class ClusterSpace
 
     /// The allowed chemical symbols on each site in the primitive structure.
     std::vector<std::vector<std::string>> _chemicalSymbols;
-
 };
-
-//}

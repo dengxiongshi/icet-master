@@ -5,10 +5,13 @@
 @param neighbor_lists list of neighbor lists
 @param permutationMatrix permutation matrix
 @param structure (supercell) structure for which to generate orbit list
+@param neighbor_lists neighbor lists for each (cluster) order
+@param positionTolerance tolerance applied when comparing positions in Cartesian coordinates
 **/
 OrbitList::OrbitList(const Structure &structure,
-		     const std::vector<std::vector<LatticeSite>> &permutationMatrix,
-		     const std::vector<NeighborList> &neighbor_lists)
+		             const std::vector<std::vector<LatticeSite>> &permutationMatrix,
+		             const std::vector<NeighborList> &neighbor_lists,
+                     const double positionTolerance)
 {
     bool bothways = false;
     _primitiveStructure = structure;
@@ -23,8 +26,11 @@ OrbitList::OrbitList(const Structure &structure,
     std::set<LatticeSite> col1_uniques(col1.begin(), col1.end());
     if (col1.size() != col1_uniques.size())
     {
-        std::string msg = "Found duplicates in column1 of permutation matrix " + std::to_string(col1.size()) + " != " + std::to_string(col1_uniques.size());
-        throw std::runtime_error(msg);
+        std::ostringstream msg;
+        msg << "Found duplicates in column1 of permutation matrix: ";
+        msg << std::to_string(col1.size()) << " != " << std::to_string(col1_uniques.size());
+        msg << " (OrbitList::OrbitList)";
+        throw std::runtime_error(msg.str());
     }
     for (size_t index = 0; index < neighbor_lists[0].size(); index++)
     {
@@ -35,35 +41,35 @@ OrbitList::OrbitList(const Structure &structure,
 
             for (const auto &latticeSite : mbnl_pair.second)
             {
-                std::vector<LatticeSite> lat_nbrs = mbnl_pair.first;
-                lat_nbrs.push_back(latticeSite);
-                auto lat_nbrs_copy = lat_nbrs;
-                std::sort(lat_nbrs_copy.begin(), lat_nbrs_copy.end());
-                if (lat_nbrs_copy != lat_nbrs && !bothways)
+                std::vector<LatticeSite> lattice_sites = mbnl_pair.first;
+                lattice_sites.push_back(latticeSite);
+                auto lattice_sites_copy = lattice_sites;
+                std::sort(lattice_sites_copy.begin(), lattice_sites_copy.end());
+                if (lattice_sites_copy != lattice_sites && !bothways)
                 {
-                    throw std::runtime_error("Original sites is not sorted");
+                    throw std::runtime_error("Original sites is not sorted (OrbitList::OrbitList)");
                 }
-                std::vector<std::vector<LatticeSite>> translatedSites = getSitesTranslatedToUnitcell(lat_nbrs);
+                std::vector<std::vector<LatticeSite>> translatedSites = getSitesTranslatedToUnitcell(lattice_sites);
 
                 auto sites_index_pair = getMatchesInPM(translatedSites, col1);
                 if (!isRowsTaken(taken_rows, sites_index_pair[0].second))
                 {
                     //new stuff found
-                    addPermutationMatrixColumns(latticeSites, taken_rows, sites_index_pair[0].first, sites_index_pair[0].second, permutationMatrix, col1, true);
+                    addPermutedPositionsMatrixColumns(latticeSites, taken_rows, sites_index_pair[0].first, sites_index_pair[0].second, permutationMatrix, col1, true);
                 }
             }
 
             // special singlet case
-            // copy-paste from above section but with line with lat_nbrs.push_back(latticeSite); is removed
+            // copy-paste from above section but with line with lattice_sites.push_back(latticeSite); is removed
             if (mbnl_pair.second.size() == 0)
             {
-                std::vector<LatticeSite> lat_nbrs = mbnl_pair.first;
-                auto pm_rows = findRowsFromCol1(col1, lat_nbrs);
+                std::vector<LatticeSite> lattice_sites = mbnl_pair.first;
+                auto pm_rows = findRowsFromCol1(col1, lattice_sites);
                 auto find = taken_rows.find(pm_rows);
                 if (find == taken_rows.end())
                 {
                     // Found new stuff
-                    addPermutationMatrixColumns(latticeSites, taken_rows, lat_nbrs, pm_rows, permutationMatrix, col1, true);
+                    addPermutedPositionsMatrixColumns(latticeSites, taken_rows, lattice_sites, pm_rows, permutationMatrix, col1, true);
                 }
             }
         }
@@ -79,13 +85,44 @@ OrbitList::OrbitList(const Structure &structure,
     // @todo Rename this.
     addPermutationInformationToOrbits(col1, permutationMatrix);
 
-    bool debug = true;
-    if (debug)
-    {
-        checkEquivalentClusters();
-    }
+    // Sort the orbit list.
+    sort(positionTolerance);
 
-    sort();
+}
+
+/**
+@details This function sorts the orbit list. This is done to obtain a reproducable (stable) order of the orbit list.
+@param positionTolerance tolerance applied when comparing positions in Cartesian coordinates
+*/
+void OrbitList::sort(const double positionTolerance)
+{
+    std::sort(_orbits.begin(), _orbits.end(),
+              [positionTolerance](const Orbit& lhs, const Orbit& rhs)
+              {
+                  /// Test against number of bodies in cluster.
+                  if (lhs.getRepresentativeCluster().order() != rhs.getRepresentativeCluster().order())
+                  {
+                      return lhs.getRepresentativeCluster().order() < rhs.getRepresentativeCluster().order();
+                  }
+                  /// Compare by radius.
+                  if (fabs(lhs.radius() - rhs.radius()) > positionTolerance)
+                  {
+                      return lhs.radius() < rhs.radius();
+                  }
+
+                  // Check size of vector of equivalent sites.
+                  if (lhs.size() < rhs.size())
+                  {
+                      return true;
+                  }
+                  if (lhs.size() > rhs.size())
+                  {
+                      return false;
+                  }
+
+                  // Check the individual equivalent sites.
+                  return lhs.getEquivalentSites() < rhs.getEquivalentSites();
+              });
 }
 
 /**
@@ -124,30 +161,13 @@ void OrbitList::addClusterToOrbitList(const Cluster &cluster,
         // add to back (assuming addOrbit does not sort orbit list)
         _orbits.back().addEquivalentSites(sites);
         clusterIndexMap[cluster] = _orbits.size() - 1;
-        _orbits.back().sortOrbit();
+        _orbits.back().sort();
     }
     else
     {
         _orbits[orbitNumber].addEquivalentSites(sites, true);
     }
 }
-
-/**
-@details Returns the index of the orbit for which the given cluster is representative.
-@param cluster cluster to search for
-@returns orbit index; -1 if nothing is found
-**/
-// int OrbitList::findOrbitIndex(const Cluster &cluster) const
-// {
-//     for (size_t i = 0; i < _orbits.size(); i++)
-//     {
-//         if (_orbits[i].getRepresentativeCluster() == cluster)
-//         {
-//             return i;
-//         }
-//     }
-//     return -1;
-// }
 
 /**
 @details Returns the index of the orbit for which the given cluster is representative.
@@ -178,42 +198,9 @@ Orbit OrbitList::getOrbit(unsigned int index) const
 {
     if (index >= size())
     {
-        throw std::out_of_range("Error: Tried accessing orbit at out of bound index. Orbit OrbitList::getOrbit");
+        throw std::out_of_range("Tried accessing orbit at out of bound index (Orbit OrbitList::getOrbit)");
     }
     return _orbits[index];
-}
-
-/**
-@details This function prints information about the orbit list.
-@param verbosity control verbosity of information
-**/
-void OrbitList::print(int verbosity = 0) const
-{
-    int orbitCount = 0;
-    for (const auto &orbit : _orbits)
-    {
-        std::cout << "Orbit number: " << orbitCount++ << std::endl;
-        std::cout << "Representative cluster " << std::endl;
-        orbit.getRepresentativeCluster().print();
-
-        std::cout << "Multiplicities: " << orbit.size() << std::endl;
-        if (verbosity > 1)
-        {
-            std::cout << "Duplicates: " << orbit.getNumberOfDuplicates() << std::endl;
-        }
-        if (verbosity > -1)
-        {
-            for (auto sites : orbit.getEquivalentSites())
-            {
-                for (auto site : sites)
-                {
-                    std::cout << "(" << site.index() << " : [" << site.unitcellOffset()[0] << " " << site.unitcellOffset()[1] << " " << site.unitcellOffset()[2] << "]) . ";
-                }
-                std::cout << std::endl;
-            }
-        }
-        std::cout << std::endl;
-    }
 }
 
 /**
@@ -305,7 +292,7 @@ void OrbitList::addPermutationInformationToOrbits(const std::vector<LatticeSite>
                         failedLoops++;
                         if (failedLoops == translatedRepresentativeSites.size())
                         {
-                            throw std::runtime_error("Error: did not find any integer permutation from allowed permutation to any translated representative site ");
+                            throw std::runtime_error("Did not find integer permutation from allowed permutation to any translated representative site (OrbitList::addPermutationInformationToOrbits)");
                         }
                         continue;
                     }
@@ -347,7 +334,7 @@ void OrbitList::addPermutationInformationToOrbits(const std::vector<LatticeSite>
                     }
                     if (onePermPair == translatedPermutationsOfSites.back())
                     {
-                        throw std::runtime_error("Did not find a permutation of the orbit sites to the permutations of the representative sites");
+                        throw std::runtime_error("Did not find a permutation of the orbit sites to the permutations of the representative sites (OrbitList::addPermutationInformationToOrbits)");
                     }
                 }
             }
@@ -360,10 +347,10 @@ void OrbitList::addPermutationInformationToOrbits(const std::vector<LatticeSite>
 
         if (sitePermutations.size() != _orbits[i].getEquivalentSites().size() || sitePermutations.size() == 0)
         {
-            std::string msg = "";
-            msg += "Each set of site did not get a permutations " + std::to_string(sitePermutations.size());
-            msg += " != " + std::to_string(_orbits[i].getEquivalentSites().size());
-            throw std::runtime_error(msg);
+            std::ostringstream msg;
+            msg << "Not each set of site got a permutation (OrbitList::addPermutationInformationToOrbits) " << std::endl;
+            msg << sitePermutations.size() << " != " << _orbits[i].getEquivalentSites().size();
+            throw std::runtime_error(msg.str());
         }
 
         _orbits[i].setEquivalentSitesPermutations(sitePermutations);
@@ -455,7 +442,7 @@ std::vector<std::vector<LatticeSite>> OrbitList::getSitesTranslatedToUnitcell(
     /// Sanity check that the periodic boundary conditions are currently respected.
     if (!isSitesPBCCorrect(latticeSites))
     {
-        throw std::runtime_error("Function getSitesTranslatedToUnitcell received a latticeSite that had a repeated site in the unitcell direction where pbc was false");
+        throw std::runtime_error("Received a latticeSite that had a repeated site in the unitcell direction where pbc was false (OrbitList::getSitesTranslatedToUnitcell)");
     }
 
     std::vector<std::vector<LatticeSite>> translatedLatticeSites;
@@ -473,7 +460,7 @@ std::vector<std::vector<LatticeSite>> OrbitList::getSitesTranslatedToUnitcell(
 
             if (!isSitesPBCCorrect(translatedSites))
             {
-                throw std::runtime_error("Function getSitesTranslatedToUnitcell translated a latticeSite and got a repeated site in the unitcell direction where pbc was false");
+                throw std::runtime_error("Translated a latticeSite and got a repeated site in the unitcell direction where pbc was false (OrbitList::getSitesTranslatedToUnitcell)");
             }
 
             translatedLatticeSites.push_back(translatedSites);
@@ -517,36 +504,25 @@ std::vector<LatticeSite> OrbitList::translateSites(const std::vector<LatticeSite
     return translatedSites;
 }
 
-/// Debug function to check that all equivalent sites in every orbit give the same sorted cluster.
-void OrbitList::checkEquivalentClusters() const
+/// Debug function for checking that all equivalent sites in every orbit yield the same radius.
+/// @param positionTolerance tolerance applied when evaluating positions in Cartesian coordinates
+/// @todo Consider this function for removal. Python side check should be sufficient.
+void OrbitList::checkEquivalentClusters(const double positionTolerance) const
 {
     for (const auto &orbit : _orbits)
     {
         Cluster representative_cluster = orbit.getRepresentativeCluster();
         for (const auto &sites : orbit.getEquivalentSites())
         {
-            Cluster equivalentCluster = Cluster(_primitiveStructure, sites);
-            if (representative_cluster != equivalentCluster)
+            Cluster equivalentCluster = Cluster(_primitiveStructure, sites, true);
+            if (fabs(equivalentCluster.radius() - representative_cluster.radius()) > positionTolerance)
             {
-                std::cout << " found an 'equivalent' cluster that does not match the representative cluster" << std::endl;
-                std::cout << "representative_cluster:" << std::endl;
-                representative_cluster.print();
-
-                std::cout << "equivalentCluster:" << std::endl;
-                equivalentCluster.print();
-
-                throw std::runtime_error("found an 'equivalent' cluster that does not match the representative cluster");
-            }
-            if (fabs(equivalentCluster.radius() - representative_cluster.radius()) > 1e-3)
-            {
-                std::cout << " found an 'equivalent' cluster that does not match the representative cluster" << std::endl;
-                std::cout << "representative_cluster:" << std::endl;
-                representative_cluster.print();
-
-                std::cout << "equivalentCluster:" << std::endl;
-                equivalentCluster.print();
-                std::cout << " test geometric size: " << icet::getGeometricalRadius(sites, _primitiveStructure) << " " << std::endl;
-                throw std::runtime_error("Found an 'equivalent' cluster that does not match the representative cluster");
+                std::ostringstream msg;
+                msg << "Found an 'equivalent' cluster that does not match the representative cluster (OrbitList::checkEquivalentClusters)." << std::endl;
+                msg << "representative_cluster: " << representative_cluster << std::endl;
+                msg << "equivalentCluster:      " << equivalentCluster << std::endl;
+                msg << "geometric size: " << icet::getGeometricalRadius(sites, _primitiveStructure);
+                throw std::runtime_error(msg.str());
             }
         }
     }
@@ -578,17 +554,17 @@ void OrbitList::addOrbitFromPM(const Structure &structure,
     {
         _orbits.back().addEquivalentSites(sites);
     }
-    _orbits.back().sortOrbit();
+    _orbits.back().sort();
 }
 
 /**
 @details From all columns in permutation matrix add all the vector<LatticeSites> from pm_rows
 When taking new columns update taken_rows accordingly
 **/
-void OrbitList::addPermutationMatrixColumns(std::vector<std::vector<std::vector<LatticeSite>>> &latticeSites,
+void OrbitList::addPermutedPositionsMatrixColumns(std::vector<std::vector<std::vector<LatticeSite>>> &latticeSites,
                                             std::unordered_set<std::vector<int>,
                                             VectorHash> &taken_rows,
-                                            const std::vector<LatticeSite> &lat_nbrs,
+                                            const std::vector<LatticeSite> &lattice_sites,
                                             const std::vector<int> &pm_rows,
                                             const std::vector<std::vector<LatticeSite>> &permutationMatrix,
                                             const std::vector<LatticeSite> &col1,
@@ -662,7 +638,7 @@ std::vector<std::pair<std::vector<LatticeSite>, std::vector<int>>> OrbitList::ge
     else
     {
         // No matching rows in permutation matrix, this should not happen so we throw an error.
-        throw std::runtime_error("Did not find any of the translated sites in col1 of permutation matrix in function getFirstMatchInPM in orbit list");
+        throw std::runtime_error("Did not find any of the translated sites in col1 of permutation matrix (OrbitList::getMatchesInPM)");
     }
 }
 /**
@@ -697,7 +673,7 @@ std::vector<int> OrbitList::findRowsFromCol1(const std::vector<LatticeSite> &col
         const auto find = std::find(col1.begin(), col1.end(), latticeSite);
         if (find == col1.end())
         {
-            throw std::runtime_error("Did not find lattice site in col1 of permutation matrix in function findRowsFromCol1 in many-body neighbor list");
+            throw std::runtime_error("Did not find lattice site in col1 of permutation matrix (OrbitList::findRowsFromCol1)");
         }
         else
         {
@@ -735,57 +711,62 @@ std::vector<LatticeSite> OrbitList::getColumn1FromPM(const std::vector<std::vect
 
 /**
 @details This function returns the orbit for a supercell that is associated with a given orbit in the primitive structure.
-@param superCell input structure
+@param supercell input structure
 @param cellOffset offset by which to translate the orbit
 @param orbitIndex index of orbit in list of orbits
 @param primToSuperMap map from sites in the primitive cell to sites in the supercell
+@param fractionalPositionTolerance tolerance applied when comparing positions in fractional coordinates
 **/
-Orbit OrbitList::getSuperCellOrbit(const Structure &superCell,
+Orbit OrbitList::getSuperCellOrbit(const Structure &supercell,
                                    const Vector3d &cellOffset,
                                    const unsigned int orbitIndex,
-                                   std::unordered_map<LatticeSite, LatticeSite> &primToSuperMap) const
+                                   std::unordered_map<LatticeSite, LatticeSite> &primToSuperMap,
+                                   const double fractionalPositionTolerance) const
 {
     if (orbitIndex >= _orbits.size())
     {
-        std::string msg = "";
-        msg += "Orbit index out of range in OrbitList::getSuperCellOrbit ";
-        msg += std::to_string(orbitIndex) + " >= " + std::to_string(_orbits.size());
-        throw std::out_of_range(msg);
+        std::ostringstream msg;
+        msg << "Orbit index out of range (OrbitList::getSuperCellOrbit).";
+        msg << orbitIndex << " >= " << _orbits.size();
+        throw std::out_of_range(msg.str());
     }
 
-    Orbit superCellOrbit = _orbits[orbitIndex] + cellOffset;
+    Orbit supercellOrbit = _orbits[orbitIndex] + cellOffset;
 
-    auto equivalentSites = superCellOrbit.getEquivalentSites();
+    auto equivalentSites = supercellOrbit.getEquivalentSites();
 
     for (auto &sites : equivalentSites)
     {
         for (auto &site : sites)
         {
-            transformSiteToSupercell(site, superCell, primToSuperMap);
+            transformSiteToSupercell(site, supercell, primToSuperMap, fractionalPositionTolerance);
         }
     }
 
-    superCellOrbit.setEquivalentSites(equivalentSites);
-    return superCellOrbit;
+    supercellOrbit.setEquivalentSites(equivalentSites);
+    return supercellOrbit;
 }
 
 /**
 @details Transforms a site from the primitive structure to a given supercell.
 This involves finding a map from the site in the primitive cell to the supercell.
 If no map is found mapping is attempted based on the position of the site in the supercell.
+@param site lattice site to transform
 @param structure supercell structure
 @param primToSuperMap map from primitive to supercell
+@param fractionalPositionTolerance tolerance applied when comparing positions in fractional coordinates
 **/
 void OrbitList::transformSiteToSupercell(LatticeSite &site,
-                                         const Structure &superCell,
-                                         std::unordered_map<LatticeSite, LatticeSite> &primToSuperMap) const
+                                         const Structure &supercell,
+                                         std::unordered_map<LatticeSite, LatticeSite> &primToSuperMap,
+                                         const double fractionalPositionTolerance) const
 {
     auto find = primToSuperMap.find(site);
     LatticeSite supercellSite;
     if (find == primToSuperMap.end())
     {
         Vector3d sitePosition = _primitiveStructure.getPosition(site);
-        supercellSite = superCell.findLatticeSiteByPosition(sitePosition);
+        supercellSite = supercell.findLatticeSiteByPosition(sitePosition, fractionalPositionTolerance);
         primToSuperMap[site] = supercellSite;
     }
     else
@@ -800,20 +781,22 @@ void OrbitList::transformSiteToSupercell(LatticeSite &site,
 
 /**
 @details Returns a "local" orbitList by offsetting each site in the primitive cell by an offset.
-@param superCell supercell structure
+@param supercell supercell structure
 @param cellOffset offset to be applied to sites
 @param primToSuperMap map from primitive to supercell
+@param fractionalPositionTolerance tolerance applied when comparing positions in fractional coordinates
 **/
-OrbitList OrbitList::getLocalOrbitList(const Structure &superCell,
+OrbitList OrbitList::getLocalOrbitList(const Structure &supercell,
                                        const Vector3d &cellOffset,
-                                       std::unordered_map<LatticeSite, LatticeSite> &primToSuperMap) const
+                                       std::unordered_map<LatticeSite, LatticeSite> &primToSuperMap,
+                                       const double fractionalPositionTolerance) const
 {
     OrbitList localOrbitList = OrbitList();
     localOrbitList.setPrimitiveStructure(_primitiveStructure);
 
     for (size_t orbitIndex = 0; orbitIndex < _orbits.size(); orbitIndex++)
     {
-        localOrbitList.addOrbit(getSuperCellOrbit(superCell, cellOffset, orbitIndex, primToSuperMap));
+        localOrbitList.addOrbit(getSuperCellOrbit(supercell, cellOffset, orbitIndex, primToSuperMap, fractionalPositionTolerance));
     }
     return localOrbitList;
 }
@@ -854,7 +837,7 @@ void OrbitList::subtractSitesFromOrbitList(const OrbitList &orbitList)
 {
     if (orbitList.size() != size())
     {
-        throw std::runtime_error("Orbit lists differ in size in function OrbitList::subtractSitesFromOrbitList");
+        throw std::runtime_error("Orbit lists differ in size (OrbitList::subtractSitesFromOrbitList)");
     }
     for (size_t i = 0; i < size(); i++)
     {
@@ -876,10 +859,10 @@ void OrbitList::removeOrbit(const size_t index)
 {
     if (index >= size())
     {
-        std::string msg = "";
-        msg += "Index " + std::to_string(index) + " was out of bounds in OrbitList::removeOrbit ";
-        msg += "OrbitList size is " + std::to_string(size());
-        throw std::out_of_range(msg);
+        std::ostringstream msg;
+        msg << "Index " << index << " was out of bounds (OrbitList::removeOrbit)." << std::endl;
+        msg << "OrbitList size: " << size();
+        throw std::out_of_range(msg.str());
     }
     _orbits.erase(_orbits.begin() + index);
 }
@@ -915,10 +898,10 @@ OrbitList &OrbitList::operator+=(const OrbitList &rhs_ol)
 
     if (size() != rhs_ol.size())
     {
-	    std::string msg = "";
-	    msg += "Left and right hand side differ in size in OrbitList& operator+= ";
-	    msg += std::to_string(size()) + " != " + std::to_string(rhs_ol.size());
-        throw std::runtime_error(msg);
+	    std::ostringstream msg;
+        msg << "Left (" << size() << ") and right hand side (" << rhs_ol.size();
+        msg << ") differ in size (OrbitList& operator+=).";
+        throw std::runtime_error(msg.str());
     }
 
     for (size_t i = 0; i < rhs_ol.size(); i++)

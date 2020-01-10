@@ -21,10 +21,14 @@ class Sublattice:
         the allowed species on this sublattice
     indices
         the lattice indices the sublattice consists of
-
+    symbol
+        string used to mark the sublattice
     """
 
-    def __init__(self, chemical_symbols: List[str], indices: List[int], symbol: str):
+    def __init__(self,
+                 chemical_symbols: List[str],
+                 indices: List[int],
+                 symbol: str):
         self._chemical_symbols = chemical_symbols
         self._indices = indices
         self._symbol = symbol
@@ -63,10 +67,15 @@ class Sublattices:
         the primitive structure the allowed species reference to
     structure
         the structure that the sublattices will be based on
+    fractional_position_tolerance
+        tolerance applied when comparing positions in fractional coordinates
     """
 
-    def __init__(self, allowed_species: List[List[str]], primitive_structure: Atoms,
-                 structure: Atoms):
+    def __init__(self,
+                 allowed_species: List[List[str]],
+                 primitive_structure: Atoms,
+                 structure: Atoms,
+                 fractional_position_tolerance: float):
         self._structure = structure
         # sorted unique sites, this basically decides A, B, C... sublattices
         active_lattices = sorted(set([tuple(sorted(symbols))
@@ -82,7 +91,8 @@ class Sublattices:
         self._sublattices = []
         sublattice_to_indices = [[] for _ in range(len(self._allowed_species))]
         for index, position in enumerate(structure.get_positions()):
-            lattice_site = cpp_prim_structure.find_lattice_site_by_position(position)
+            lattice_site = cpp_prim_structure.find_lattice_site_by_position(
+                position, fractional_position_tolerance)
 
             # Get allowed species on this site
             species = allowed_species[lattice_site.index]

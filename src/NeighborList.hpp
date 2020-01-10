@@ -1,13 +1,15 @@
 #pragma once
-#include <pybind11/pybind11.h>
+
 #include <iostream>
 #include <pybind11/eigen.h>
+#include <pybind11/pybind11.h>
 #include <Eigen/Dense>
-#include <vector>
-#include <utility>
 #include <string>
-#include "Structure.hpp"
+#include <utility>
+#include <vector>
 #include "LatticeSite.hpp"
+#include "Structure.hpp"
+#include "Vector3dCompare.hpp"
 
 using namespace Eigen;
 
@@ -19,8 +21,6 @@ using namespace Eigen;
 neighbor list defined by ManyBodyNeighborList).
 
 @see ManyBodyNeighborList
-
-@todo get rid of local DISTTOL definition
 */
 class NeighborList
 {
@@ -33,13 +33,7 @@ public:
     NeighborList(const double cutoff) : _cutoff(cutoff) { };
 
     /// Build a neighbor list based on the given structure.
-    void build(const Structure &);
-
-    /// Update a neighbor list based on the given structure.
-    void update(const Structure &);
-
-    /// Check if two sites are neighbors.
-    bool isNeighbor(const size_t, const size_t, const Vector3d) const;
+    void build(const Structure &, const double);
 
     /// Returns list of neighbors.
     std::vector<LatticeSite> getNeighbors(size_t) const;
@@ -53,7 +47,6 @@ public:
   private:
     /**
     @brief Neighbor list.
-
     @details Each entry in the outer vector corresponds to one position in the
     structure used to build the neighbor list; each inner vector specifies the
     neighbors of said position in the form of lattice sites.
@@ -62,7 +55,4 @@ public:
 
     /// Cutoff radius used for building the neighbor list.
     double _cutoff;
-
-    /// Tolerance imposed for distance comparison.
-    double DISTTOL = 1e-7;
 };

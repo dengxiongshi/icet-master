@@ -12,11 +12,13 @@ from ase import Atoms
 from ase.data import chemical_symbols as periodic_table
 
 
-def generate_target_structure(cluster_space: ClusterSpace, max_size: int,
+def generate_target_structure(cluster_space: ClusterSpace,
+                              max_size: int,
                               target_concentrations: dict,
                               target_cluster_vector: List[float],
                               include_smaller_cells: bool = True,
-                              T_start: float = 5.0, T_stop: float = 0.001,
+                              T_start: float = 5.0,
+                              T_stop: float = 0.001,
                               n_steps: float = None,
                               optimality_weight: float = 1.0,
                               random_seed: int = None,
@@ -109,10 +111,12 @@ def generate_target_structure(cluster_space: ClusterSpace, max_size: int,
     return ens.generate_structure(number_of_trial_steps=n_steps)
 
 
-def generate_sqs(cluster_space: ClusterSpace, max_size: int,
+def generate_sqs(cluster_space: ClusterSpace,
+                 max_size: int,
                  target_concentrations: dict,
                  include_smaller_cells: bool = True,
-                 T_start: float = 5.0, T_stop: float = 0.001,
+                 T_start: float = 5.0,
+                 T_stop: float = 0.001,
                  n_steps: float = None,
                  optimality_weight: float = 1.0,
                  random_seed: int = None,
@@ -180,7 +184,8 @@ def generate_sqs(cluster_space: ClusterSpace, max_size: int,
                                      tol=tol)
 
 
-def generate_sqs_by_enumeration(cluster_space: ClusterSpace, max_size: int,
+def generate_sqs_by_enumeration(cluster_space: ClusterSpace,
+                                max_size: int,
                                 target_concentrations: dict,
                                 include_smaller_cells: bool = True,
                                 optimality_weight: float = 1.0,

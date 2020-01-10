@@ -278,7 +278,7 @@ class TestEnsemble(unittest.TestCase):
                            check_dtype=False,
                            check_like=True)
 
-        self.assertEqual(ensemble_reloaded.data_container.last_state['last_step'], 182 + 50)
+        self.assertEqual(ensemble_reloaded.data_container._last_state['last_step'], 182 + 50)
 
     def test_restart_different_parameters(self):
         """Tests that restarting ensemble from data container with different
@@ -428,6 +428,12 @@ class TestEnsemble(unittest.TestCase):
         # check dicts differ when a larger difference is introduced
         d2['T'] += 1e-10
         self.assertFalse(dicts_equal(d1, d2))
+
+    def test_str(self):
+        """Tests __str__ method."""
+        self.ensemble.run(10)
+        ret = str(self.ensemble)
+        self.assertIsInstance(ret, str)
 
 
 if __name__ == '__main__':

@@ -196,7 +196,7 @@ capacity as a function of temperature using the following relations:
 The mean and the standard deviation of the energy as well as thermodynamic
 averages of other observables can be extracted using
 :func:`get_average_observables_wl
-<mchammer.data_container.get_average_observables_wl>`:
+<mchammer.data_containers.get_average_observables_wl>`:
 
 .. literalinclude:: ../../../../examples/advanced_topics/wang_landau/2_analyze_simulation.py
    :start-after: # Compute thermodynamic

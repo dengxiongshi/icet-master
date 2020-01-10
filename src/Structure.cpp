@@ -1,8 +1,7 @@
 #include "Structure.hpp"
-#include <iostream>
-#include <Eigen/Dense>
-#include <vector>
-#include <string>
+
+#include "FloatType.hpp"
+#include "PeriodicTable.hpp"
 
 using namespace Eigen;
 
@@ -12,19 +11,15 @@ using namespace Eigen;
   @param chemicalSymbols list of chemical symbols
   @param cell cell metric
   @param pbc periodic boundary conditions
-  @param tolerance numerical tolerance imposed when testing for equality of positions and distances
 **/
-Structure::Structure(const Eigen::Matrix<double, Dynamic, 3, RowMajor> &positions,
+Structure::Structure(const Matrix<double, Dynamic, 3, RowMajor> &positions,
                      const std::vector<std::string> &chemicalSymbols,
-                     const Eigen::Matrix3d &cell,
-                     const std::vector<bool> &pbc,
-                     double tolerance)
+                     const Matrix3d &cell,
+                     const std::vector<bool> &pbc)
+                     : _cell(cell), _pbc(pbc)
 {
     setPositions(positions);
     setChemicalSymbols(chemicalSymbols);
-    _cell = cell;
-    _pbc = pbc;
-    _tolerance = tolerance;
     _uniqueSites.resize(chemicalSymbols.size());
     _numbersOfAllowedSpecies.resize(positions.rows());
 }
@@ -35,21 +30,22 @@ Structure::Structure(const Eigen::Matrix<double, Dynamic, 3, RowMajor> &position
   @param index2 index of the second site
   @param offset1 offset of site 1 relative to origin in units of lattice vectors
   @param offset2 offset of site 2 relative to origin in units of lattice vectors
-  @todo Add  mic functionality
 */
-double Structure::getDistance(const size_t index1, const size_t index2,
+double Structure::getDistance(const size_t index1,
+                              const size_t index2,
                               const Vector3d offset1 = {0.0, 0.0, 0.0},
                               const Vector3d offset2 = {0.0, 0.0, 0.0}) const
 {
-    if (index1 >= (size_t) _positions.rows() ||
-        index2 >= (size_t) _positions.rows())
+    if (index1 >= (size_t)_positions.rows() ||
+        index2 >= (size_t)_positions.rows())
     {
-        std::string errorMessage = "At least one site index out of bounds ";
-        errorMessage += " index1: " + std::to_string(index1);
-        errorMessage += " index2: " + std::to_string(index2);
-        errorMessage += " npositions: " + std::to_string(_positions.rows());
-        errorMessage += " (Structure::getDistance)";
-        throw std::out_of_range(errorMessage);
+        std::ostringstream msg;
+        msg << "At least one site index out of bounds ";
+        msg << " index1: " << index1;
+        msg << " index2: " << index2;
+        msg << " positions: " << _positions.rows();
+        msg << " (Structure::getDistance)";
+        throw std::out_of_range(msg.str());
     }
     Vector3d pos1 = _positions.row(index1) + offset1.transpose() * _cell;
     Vector3d pos2 = _positions.row(index2) + offset2.transpose() * _cell;
@@ -63,13 +59,14 @@ double Structure::getDistance(const size_t index1, const size_t index2,
 */
 Vector3d Structure::getPosition(const LatticeSite &latticeNeighbor) const
 {
-    if (latticeNeighbor.index() >= (size_t) _positions.rows())
+    if (latticeNeighbor.index() >= (size_t)_positions.rows())
     {
-        std::string errorMessage = "Site index out of bounds";
-        errorMessage += " index: " + std::to_string(latticeNeighbor.index());
-        errorMessage += " number of positions: " + std::to_string(_positions.rows());
-        errorMessage += " (Structure::getPosition)";
-        throw std::out_of_range(errorMessage);
+        std::ostringstream msg;
+        msg << "Site index out of bounds";
+        msg << " index: " << latticeNeighbor.index();
+        msg << " number of positions: " << _positions.rows();
+        msg << " (Structure::getPosition)";
+        throw std::out_of_range(msg.str());
     }
     Vector3d position = _positions.row(latticeNeighbor.index()) + latticeNeighbor.unitcellOffset().transpose() * _cell;
     return position;
@@ -92,11 +89,12 @@ int Structure::getAtomicNumber(const size_t index) const
 {
     if (index >= _atomicNumbers.size())
     {
-        std::string errorMessage = "Site index out of bounds";
-        errorMessage += " index: " + std::to_string(index);
-        errorMessage += " nsites: " + std::to_string(_atomicNumbers.size());
-        errorMessage += " (Structure::getAtomicNumber)";
-        throw std::out_of_range(errorMessage);
+        std::ostringstream msg;
+        msg << "Site index out of bounds";
+        msg << " index: " << index;
+        msg << " nsites: " << _atomicNumbers.size();
+        msg << " (Structure::getAtomicNumber)";
+        throw std::out_of_range(msg.str());
     }
     return _atomicNumbers[index];
 }
@@ -109,13 +107,14 @@ int Structure::getAtomicNumber(const size_t index) const
 **/
 void Structure::setUniqueSites(const std::vector<size_t> &sites)
 {
-    if (sites.size() != (size_t) _positions.rows())
+    if (sites.size() != (size_t)_positions.rows())
     {
-        std::string errorMessage = "Length of input vector does not match number of sites";
-        errorMessage += " nsites: " + std::to_string(sites.size());
-        errorMessage += " npositions: " + std::to_string(_positions.rows());
-        errorMessage += " (Structure::setUniqueSites)";
-        throw std::out_of_range(errorMessage);
+        std::ostringstream msg;
+        msg << "Length of input vector does not match number of sites";
+        msg << " nsites: " << sites.size();
+        msg << " positions: " << _positions.rows();
+        msg << " (Structure::setUniqueSites)";
+        throw std::out_of_range(msg.str());
     }
     _uniqueSites = sites;
 }
@@ -129,35 +128,14 @@ size_t Structure::getUniqueSite(const size_t i) const
 {
     if (i >= _uniqueSites.size())
     {
-        std::string errorMessage = "Site index out of bounds";
-        errorMessage += " i: " + std::to_string(i);
-        errorMessage += " nsites: " + std::to_string(_uniqueSites.size());
-        errorMessage += " (Structure::getUniqueSite)";
-        throw std::out_of_range(errorMessage);
+        std::ostringstream msg;
+        msg << "Site index out of bounds";
+        msg << " i: " << i ;
+        msg << " nsites: " << _uniqueSites.size();
+        msg << " (Structure::getUniqueSite)";
+        throw std::out_of_range(msg.str());
     }
     return _uniqueSites[i];
-}
-
-/**
-  @details This function returns the index of the site the position of
-  which matches the input position to the tolerance specified for this
-  structure.
-
-  @param position position to match in Cartesian coordinates
-
-  @returns index of site; -1 = failed to find a match.
-**/
-int Structure::findSiteByPosition(const Vector3d &position) const
-{
-    for (size_t i = 0; i < (size_t) _positions.rows(); i++)
-    {
-        if ((_positions.row(i).transpose() - position).norm() < _tolerance)
-        {
-            return i;
-        }
-    }
-
-    return -1;
 }
 
 /**
@@ -175,39 +153,35 @@ int Structure::findSiteByPosition(const Vector3d &position) const
   If no index is found a runtime_error is thrown.
 
   @param position position to match in Cartesian coordinates
+  @param fractionalPositionTolerance tolerance applied when comparing positions in fractional coordinates
 
   @returns LatticeSite object
 */
-LatticeSite Structure::findLatticeSiteByPosition(const Vector3d &position) const
+LatticeSite Structure::findLatticeSiteByPosition(const Vector3d &position, const double fractionalPositionTolerance) const
 {
-    Vector3d fractional = _cell.transpose().partialPivLu().solve(position);
-
-    Vector3d unitcellOffset;
-    for (size_t i = 0; i < 3; i++)
+    /// Loop over all positions
+    for (size_t i = 0; i < (size_t)_positions.rows(); i++)
     {
-        if (hasPBC(i))
+        Vector3d distanceVector = position - _positions.row(i).transpose();
+        Vector3d fractionalDistanceVector = _cell.transpose().partialPivLu().solve(distanceVector);
+        icet::roundVector3d(fractionalDistanceVector, FLOATTYPE_EPSILON);
+        Vector3d latticeVector = {round(fractionalDistanceVector[0]),
+                                  round(fractionalDistanceVector[1]),
+                                  round(fractionalDistanceVector[2])};
+        if ((fractionalDistanceVector - latticeVector).norm() < fractionalPositionTolerance)
         {
-            unitcellOffset[i] = floor(roundFloat((double)fractional[i]));
-            if (fabs(unitcellOffset[i] - fractional[i]) > 1.0 - _tolerance)
-            {
-                unitcellOffset[i] = int(round(fractional[i]));
-            }
-        }
-        else
-        {
-            unitcellOffset[i] = 0.0;
+            return LatticeSite(i, latticeVector);
         }
     }
-    Vector3d remainder = (fractional - unitcellOffset).transpose() * _cell;
-    auto index = findSiteByPosition(remainder);
-    if (index == -1)
-    {
-        std::string errorMessage = "Failed to find site by position (findLatticeSiteByPosition)";
-        throw std::runtime_error(errorMessage);
-    }
+    Vector3d fractionalPosition = _cell.transpose().partialPivLu().solve(position);
+    std::ostringstream msg;
+    msg << "Failed to find site by position (findLatticeSiteByPosition)." << std::endl;
+    msg << "Try increasing symprec or position_tolerance." << std::endl;
+    msg << "position: " << position[0] << " " << position[1] << " " << position[2] << std::endl;
+    msg << "fractional position: " << fractionalPosition[0] << " " << fractionalPosition[1] << " " << fractionalPosition[2] << std::endl;
+    msg << "fractional position tolerance: " << fractionalPositionTolerance;
+    throw std::runtime_error(msg.str());
 
-    LatticeSite ret = LatticeSite(index, unitcellOffset);
-    return ret;
 }
 
 /**
@@ -217,20 +191,21 @@ LatticeSite Structure::findLatticeSiteByPosition(const Vector3d &position) const
   Structure::findLatticeSiteByPosition.
 
   @param positions list of position to match in Cartesian coordinates
+  @param fractionalPositionTolerance tolerance applied when comparing positions in fractional coordinates
 
   @returns list of LatticeSite objects
 */
-std::vector<LatticeSite> Structure::findLatticeSitesByPositions(const std::vector<Vector3d> &positions) const
+std::vector<LatticeSite> Structure::findLatticeSitesByPositions(const std::vector<Vector3d> &positions, const double fractionalPositionTolerance) const
 {
-    std::vector<LatticeSite> latNbrVector;
-    latNbrVector.reserve(positions.size());
+    std::vector<LatticeSite> latticeSites;
+    latticeSites.reserve(positions.size());
 
     for (const Vector3d position : positions)
     {
-        latNbrVector.push_back(findLatticeSiteByPosition(position));
+        latticeSites.push_back(findLatticeSiteByPosition(position, fractionalPositionTolerance));
     }
 
-    return latNbrVector;
+    return latticeSites;
 }
 
 /**
@@ -245,12 +220,12 @@ void Structure::setNumberOfAllowedSpecies(const std::vector<int> &numbersOfAllow
 {
     if (numbersOfAllowedSpecies.size() != size())
     {
-        std::string errorMessage;
-        errorMessage += "Size of input list incompatible with structure";
-        errorMessage += " length: " + std::to_string(numbersOfAllowedSpecies.size());
-        errorMessage += " nsites: " + std::to_string(size());
-        errorMessage += " (Structure::setNumberOfAllowedSpecies)";
-        throw std::out_of_range(errorMessage);
+        std::ostringstream msg;
+        msg << "Size of input list incompatible with structure";
+        msg << " length: " << numbersOfAllowedSpecies.size();
+        msg << " nsites: " << size();
+        msg << " (Structure::setNumberOfAllowedSpecies)";
+        throw std::out_of_range(msg.str());
     }
     _numbersOfAllowedSpecies = numbersOfAllowedSpecies;
 }
@@ -278,11 +253,12 @@ int Structure::getNumberOfAllowedSpeciesBySite(const size_t index) const
 {
     if (index >= _numbersOfAllowedSpecies.size())
     {
-        std::string errorMessage = "Site index out of bounds";
-        errorMessage += " index: " + std::to_string(index);
-        errorMessage += " nsites: " + std::to_string(_numbersOfAllowedSpecies.size());
-        errorMessage += " (Structure::getNumberOfAllowedSpeciesBySite)";
-        throw std::out_of_range(errorMessage);
+        std::ostringstream msg;
+        msg << "Site index out of bounds";
+        msg << " index: " << index;
+        msg << " nsites: " << _numbersOfAllowedSpecies.size();
+        msg << " (Structure::getNumberOfAllowedSpeciesBySite)";
+        throw std::out_of_range(msg.str());
     }
     return _numbersOfAllowedSpecies[index];
 }

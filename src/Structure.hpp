@@ -1,10 +1,8 @@
 #pragma once
+
 #include <Eigen/Dense>
-#include <vector>
-#include <string>
-#include "PeriodicTable.hpp"
+
 #include "LatticeSite.hpp"
-#include "Structure.hpp"
 
 using namespace Eigen;
 
@@ -20,14 +18,13 @@ class Structure
   public:
 
     /// Default constructor.
-    Structure(){};
+    Structure() {};
 
     /// Overloaded constructor.
-    Structure(const Eigen::Matrix<double, Dynamic, 3, RowMajor> &,
+    Structure(const Matrix<double, Dynamic, 3, RowMajor> &,
               const std::vector<std::string> &,
-              const Eigen::Matrix3d &,
-              const std::vector<bool> &,
-              double);
+              const Matrix3d &,
+              const std::vector<bool> &);
 
     /// Returns distance vector between two sites.
     double getDistance(const size_t, const size_t, const Vector3d, const Vector3d) const;
@@ -51,14 +48,11 @@ class Structure
     /// Returns a unique site.
     size_t getUniqueSite(const size_t) const;
 
-    /// Returns index of site that matches the given position.
-    int findSiteByPosition(const Vector3d &) const;
-
     /// Return LatticeSite object that matches the given position.
-    LatticeSite findLatticeSiteByPosition(const Vector3d &) const;
+    LatticeSite findLatticeSiteByPosition(const Vector3d &, const double) const;
 
     /// Return list of LatticeSite objects that matche a given list of positions.
-    std::vector<LatticeSite> findLatticeSitesByPositions(const std::vector<Vector3d> &) const;
+    std::vector<LatticeSite> findLatticeSitesByPositions(const std::vector<Vector3d> &, const double) const;
 
   public:
 
@@ -66,10 +60,10 @@ class Structure
     size_t size() const { return (_atomicNumbers.size()); }
 
     /// Set the atomic positions.
-    void setPositions(const Eigen::Matrix<double, Dynamic, 3> &positions) { _positions = positions; }
+    void setPositions(const Matrix<double, Dynamic, 3> &positions) { _positions = positions; }
 
     /// Returns positions.
-    Eigen::Matrix<double, Dynamic, 3, RowMajor> getPositions() const { return _positions; }
+    Matrix<double, Dynamic, 3, RowMajor> getPositions() const { return _positions; }
 
     /// Set atomic numbers.
     void setAtomicNumbers(const std::vector<int> &atomicNumbers) { _atomicNumbers = atomicNumbers; }
@@ -93,10 +87,10 @@ class Structure
     void setPBC(const std::vector<bool> pbc) { _pbc = pbc; }
 
     /// Set the cell metric.
-    void setCell(const Eigen::Matrix<double, 3, 3> &cell) { _cell = cell; }
+    void setCell(const Matrix<double, 3, 3> &cell) { _cell = cell; }
 
     /// Returns the cell metric.
-    Eigen::Matrix<double, 3, 3> getCell() const { return _cell; }
+    Matrix<double, 3, 3> getCell() const { return _cell; }
 
     /// Set allowed components for each site by vector.
     void setNumberOfAllowedSpecies(const std::vector<int> &);
@@ -110,12 +104,6 @@ class Structure
     /// Returns number of allowed components on each site.
     std::vector<int> getNumberOfAllowedSpeciesBySites(const std::vector<LatticeSite> &) const;
 
-    /// Set tolerance applied when comparing positions.
-    void setTolerance(double tolerance) { _tolerance = tolerance; }
-
-    /// Returns tolerance applied when comparing positions.
-    double getTolerance() const { return _tolerance; }
-
     /// List of atomic numbers.
     std::vector<int> _atomicNumbers;
 
@@ -127,21 +115,13 @@ class Structure
     /// Convert chemical symbols to atomic numbers.
     std::vector<std::string> convertAtomicNumbersToChemicalSymbols(const std::vector<int> &) const;
 
-    /// Round float number to given tolerance.
-    /// @todo move to a more general location.
-    double roundFloat(const double &val, const double rounding_tolerance = 1e-7) const
-    {
-        return round(val / rounding_tolerance) * rounding_tolerance;
-    }
-
-
   private:
 
     /// Positions of sites in Cartesian coordinates.
-    Eigen::Matrix<double, Dynamic, 3, RowMajor> _positions;
+    Matrix<double, Dynamic, 3, RowMajor> _positions;
 
     /// Cell metric.
-    Eigen::Matrix3d _cell;
+    Matrix3d _cell;
 
     /// Periodic boundary conditions.
     std::vector<bool> _pbc;
@@ -151,8 +131,5 @@ class Structure
 
     /// List of the number of allowed components on each site.
     std::vector<int> _numbersOfAllowedSpecies;
-
-    /// tolerance used for rounding positions.
-    double _tolerance;
 
 };

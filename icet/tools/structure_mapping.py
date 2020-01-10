@@ -6,7 +6,38 @@ from ase import Atoms
 from ase.build import make_supercell
 from ase.geometry import get_distances
 from scipy.optimize import linear_sum_assignment
-from icet.io.logging import logger
+from icet.input_output.logging_tools import logger
+import scipy.linalg
+
+
+def calculate_strain_tensor(A: np.ndarray,
+                            B: np.ndarray) -> np.ndarray:
+    """Calculates the strain tensor for mapping a cell A onto cell B. The
+    strain calculated is the Biot strain tensor and is rotationally invariant.
+
+    Parameters
+    ----------
+    A
+        reference cell (row-major format)
+    B
+        target cell (row-major format)
+
+    Returns
+    -------
+    strain_tensor
+        Biot strain tensor (symmetric matrix)
+    """
+    assert A.shape == (3, 3)
+    assert B.shape == (3, 3)
+
+    # Calculate deformation gradient (F) in column-major format
+    F = np.linalg.solve(A, B).T
+
+    # Calculate right stretch tensor (U)
+    _, U = scipy.linalg.polar(F)
+
+    # return Biot strain tensor
+    return U - np.eye(3)
 
 
 def map_structure_to_reference(relaxed: Atoms,
@@ -83,11 +114,11 @@ def map_structure_to_reference(relaxed: Atoms,
         relaxed, reference, inert_species=inert_species,
         tol_positions=tol_positions, assume_no_cell_relaxation=assume_no_cell_relaxation)
 
-    # Compute strain
-    epsilon = np.dot(relaxed.cell.T - reference_supercell.cell.T,
-                     np.linalg.inv(reference_supercell.cell.T))
-    strain_tensor = 0.5 * (epsilon + epsilon.T)
-    eigenvalues = np.linalg.eig(strain_tensor)[0]
+    # Calculate strain tensor
+    strain_tensor = calculate_strain_tensor(reference_supercell.cell, relaxed.cell)
+
+    # Symmetric matrix has real eigenvalues
+    eigenvalues, _ = np.linalg.eigh(strain_tensor)
     volumetric_strain = sum(eigenvalues)
 
     # Rescale the relaxed atoms object
@@ -97,6 +128,7 @@ def map_structure_to_reference(relaxed: Atoms,
     # Match positions
     mapped_structure, drmax, dravg = _match_positions(relaxed_scaled, reference_supercell)
 
+    warnings = []
     if not suppress_warnings:
         s = 'Consider excluding this structure when training a cluster expansion.'
         if assume_no_cell_relaxation:
@@ -106,16 +138,20 @@ def map_structure_to_reference(relaxed: Atoms,
             trigger_levels = {'volumetric_strain': 0.25,
                               'eigenvalue_diff': 0.1}
         if abs(volumetric_strain) > trigger_levels['volumetric_strain']:
+            warnings.append('high_volumetric_strain')
             logger.warning('High volumetric strain ({:.2f} %). {}'.format(
                 100 * volumetric_strain, s))
         if max(eigenvalues) - min(eigenvalues) > trigger_levels['eigenvalue_diff']:
+            warnings.append('high_anisotropic_strain')
             logger.warning('High anisotropic strain (the difference between '
                            'largest and smallest eigenvalues of strain tensor is '
                            '{:.5f}). {}'.format(max(eigenvalues) - min(eigenvalues), s))
         if drmax > 1.0:
+            warnings.append('large_maximum_relaxation_distance')
             logger.warning('Large maximum relaxation distance '
                            '({:.5f} Angstrom). {}'.format(drmax, s))
         if dravg > 0.5:
+            warnings.append('large_average_relaxation_distance')
             logger.warning('Large average relaxation distance '
                            '({:.5f} Angstrom). {}'.format(dravg, s))
 
@@ -124,7 +160,8 @@ def map_structure_to_reference(relaxed: Atoms,
             'dravg': dravg,
             'strain_tensor': strain_tensor,
             'volumetric_strain': volumetric_strain,
-            'strain_tensor_eigenvalues': eigenvalues}
+            'strain_tensor_eigenvalues': eigenvalues,
+            'warnings': warnings}
 
     return mapped_structure, info
 
@@ -268,6 +305,7 @@ def _match_positions(relaxed: Atoms, reference: Atoms) -> Tuple[Atoms, float, fl
     displacement_magnitudes = []
     displacements = []
     minimum_distances = []
+    n_dist_max = min(len(mapped), 3)
     for i, j in zip(row_ind, col_ind):
         atom = mapped[i]
         if j >= len(relaxed):
@@ -275,7 +313,7 @@ def _match_positions(relaxed: Atoms, reference: Atoms) -> Tuple[Atoms, float, fl
             atom.symbol = 'X'
             displacement_magnitudes.append(None)
             displacements.append(3 * [None])
-            minimum_distances.append(3 * [None])
+            minimum_distances.append(n_dist_max * [None])
         else:
             atom.symbol = relaxed[j].symbol
             dvecs, drs = get_distances([relaxed[j].position],
@@ -284,13 +322,13 @@ def _match_positions(relaxed: Atoms, reference: Atoms) -> Tuple[Atoms, float, fl
             displacement_magnitudes.append(drs[0][0])
             displacements.append(dvecs[0][0])
             # distances to the next three available sites
-            minimum_distances.append(sorted(dists[:, j])[:3])
+            minimum_distances.append(sorted(dists[:, j])[:n_dist_max])
 
     displacement_magnitudes = np.array(displacement_magnitudes, dtype=np.float64)
     mapped.new_array('Displacement', displacements, float, (3, ))
     mapped.new_array('Displacement_Magnitude', displacement_magnitudes, float)
     mapped.new_array('Minimum_Distances', minimum_distances,
-                     float, (min(3, len(mapped)), ))
+                     float, (n_dist_max,))
 
     drmax = np.nanmax(displacement_magnitudes)
     dravg = np.nanmean(displacement_magnitudes)

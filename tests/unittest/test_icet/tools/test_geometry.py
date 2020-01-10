@@ -1,4 +1,3 @@
-import random
 import unittest
 import numpy as np
 
@@ -6,14 +5,11 @@ from ase import Atoms
 from ase.build import bulk
 from ase.neighborlist import NeighborList
 
-from icet.core.lattice_site import LatticeSite
 from icet.tools.geometry import (get_wyckoff_sites,
                                  ase_atoms_to_spglib_cell,
                                  atomic_number_to_chemical_symbol,
                                  chemical_symbols_to_numbers,
-                                 find_lattice_site_by_position,
                                  fractional_to_cartesian,
-                                 get_position_from_lattice_site,
                                  get_permutation,
                                  get_primitive_structure,
                                  get_scaled_positions)
@@ -90,8 +86,7 @@ class TestGeometry(unittest.TestCase):
             return True
 
         structure = bulk('Al', crystalstructure='fcc', a=4).repeat(2)
-        retval = get_primitive_structure(structure, no_idealize=True,
-                                         to_primitive=True, symprec=1e-5)
+        retval = get_primitive_structure(structure, no_idealize=True, to_primitive=True)
         targetval = Atoms('Al',
                           cell=[[0.0, 2.0, 2.0], [2.0, 0.0, 2.0], [2.0, 2.0, 0.0]],
                           pbc=True,
@@ -102,8 +97,7 @@ class TestGeometry(unittest.TestCase):
         noise_level = 1e-3
         structure[0].position += noise_level * np.array([1, -5, 3])
         structure[3].position += noise_level * np.array([-2, 3, -1])
-        retval = get_primitive_structure(structure, no_idealize=True,
-                                         to_primitive=True, symprec=1e-5)
+        retval = get_primitive_structure(structure, no_idealize=True, to_primitive=True)
         targetval = Atoms(8*'Al',
                           cell=[[-4.0, 0.0, -4.0], [-4.0, 4.0, 0.0], [0.0, 4.0, -4.0]],
                           pbc=True,
@@ -121,8 +115,7 @@ class TestGeometry(unittest.TestCase):
         noise_level = 1e-7
         structure[0].position += noise_level * np.array([1, -5, 3])
         structure[3].position += noise_level * np.array([-2, 3, -1])
-        retval = get_primitive_structure(structure, no_idealize=True,
-                                         to_primitive=True, symprec=1e-5)
+        retval = get_primitive_structure(structure, no_idealize=True, to_primitive=True)
         targetval = Atoms('Al',
                           cell=[[0.0, 2.0, 2.0], [2.0, 0.0, 2.0], [2.0, 2.0, 0.0]],
                           pbc=True,
@@ -131,8 +124,7 @@ class TestGeometry(unittest.TestCase):
 
         structure = bulk('SiC', crystalstructure='zincblende', a=4).repeat((2, 2, 1))
         structure.pbc = [True, True, False]
-        retval = get_primitive_structure(structure, no_idealize=True,
-                                         to_primitive=True, symprec=1e-5)
+        retval = get_primitive_structure(structure, no_idealize=True, to_primitive=True)
         targetval = Atoms('SiC',
                           cell=[[0.0, 2.0, 2.0], [2.0, 0.0, 2.0], [2.0, 2.0, 0.0]],
                           pbc=[True, True, False],
@@ -141,8 +133,7 @@ class TestGeometry(unittest.TestCase):
 
         structure = bulk('SiC', crystalstructure='zincblende', a=4).repeat((2, 2, 1))
         structure.pbc = [True, True, False]
-        retval = get_primitive_structure(structure, no_idealize=True,
-                                         to_primitive=False, symprec=1e-5)
+        retval = get_primitive_structure(structure, no_idealize=True, to_primitive=False)
         targetval = Atoms(4 * 'SiC',
                           cell=[4, 4, 4],
                           pbc=[True, True, False],
@@ -158,8 +149,8 @@ class TestGeometry(unittest.TestCase):
 
         structure = bulk('SiC', crystalstructure='zincblende', a=4)
         structure.cell = [[0.0, 2.0, 2.0], [2.0, 0.0, 2.0], [2.0, 2.0, 0.00001]]
-        retval = get_primitive_structure(structure, no_idealize=False,
-                                         to_primitive=True, symprec=1e-3)
+        retval = get_primitive_structure(
+            structure, no_idealize=False, to_primitive=True, symprec=1e-3)
         targetval = Atoms('SiC',
                           cell=[[0.0, 1.9999983333374998, 1.9999983333374998],
                                 [1.9999983333374998, 0.0, 1.9999983333374998],
@@ -167,112 +158,6 @@ class TestGeometry(unittest.TestCase):
                           pbc=[True, True, False],
                           positions=[[0, 0, 0], [0.99999917, 0.99999917, 0.99999917]])
         self.assertTrue(compare_structures(retval, targetval))
-
-    def test_find_lattice_site_by_position_simple(self):
-        """
-        Tests finding lattice site by position, simple version using
-        only one atom cell.
-
-        1. Create a bunch of lattice sites all with index 0 and
-        integer unitcell offsets
-        2. convert these to x,y,z positions. Nothing strange so far
-        3. Find lattice site from the position and assert that it should
-           be equivalent to the original lattice site.
-        """
-
-        def compare_lattice_sites(s1: LatticeSite, s2: LatticeSite) -> bool:
-            if s1.index != s2.index:
-                return False
-            if np.any(s1.unitcell_offset != s2.unitcell_offset):
-                return False
-            return True
-
-        lattice_sites = []
-        unit_cell_range = 100
-        for j in range(500):
-            offset = [random.randint(-unit_cell_range, unit_cell_range)
-                      for i in range(3)]
-            lattice_sites.append(LatticeSite(0, offset))
-
-        positions = []
-        for site in lattice_sites:
-            pos = get_position_from_lattice_site(self.structure, site)
-            positions.append(pos)
-        for site, pos in zip(lattice_sites, positions):
-            found_site = find_lattice_site_by_position(self.structure, pos)
-            self.assertEqual(site, found_site)
-
-        # check site at origin
-        structure = bulk('Al', crystalstructure='fcc', a=4.0)
-        retval = find_lattice_site_by_position(structure, [0, 0, 0])
-        targetval = LatticeSite(0, [0, 0, 0])
-        self.assertTrue(compare_lattice_sites(retval, targetval))
-
-        # let the method fail
-        structure = bulk('Al', crystalstructure='fcc', a=4.0)
-        with self.assertRaises(RuntimeError) as e:
-            retval = find_lattice_site_by_position(structure, [0, 0, 0.001])
-        self.assertTrue('not find' in str(e.exception))
-
-    def test_find_lattice_site_by_position_medium(self):
-        """
-        Tests finding lattice site by position, medium version
-        tests against hcp and user more than one atom in the basis
-        1. Create a bunch of lattice sites all with index 0 and
-        integer unitcell offsets
-        2. convert these to x,y,z positions. Nothing strange so far
-        3. Find lattice site from the position and assert that it should
-           be equivalent to the original lattice site.
-        """
-        structure = bulk('Au', 'hcp', a=2.0).repeat([3, 2, 5])
-        lattice_sites = []
-        unit_cell_range = 100
-        for j in range(500):
-            offset = [random.randint(-unit_cell_range, unit_cell_range)
-                      for i in range(3)]
-            index = random.randint(0, len(structure) - 1)
-            lattice_sites.append(LatticeSite(index, offset))
-
-        positions = []
-        for site in lattice_sites:
-            pos = get_position_from_lattice_site(structure, site)
-            positions.append(pos)
-        for site, pos in zip(lattice_sites, positions):
-            found_site = find_lattice_site_by_position(structure, pos)
-
-            self.assertEqual(site, found_site)
-
-    def test_find_lattice_site_by_position_hard(self):
-        """
-        Tests finding lattice site by position, hard version tests against hcp,
-        many structure in the basis AND pbc = [True, True, False] !
-        1. Create a bunch of lattice sites all with index 0 and
-        integer unitcell offsets
-        2. convert these to x,y,z positions. Nothing strange so far
-        3. Find lattice site from the position and assert that it should
-           be equivalent to the original lattice site.
-        """
-        structure = bulk('Au', 'hcp', a=2.0).repeat([3, 5, 5])
-        # Set pbc false in Z-direction and add vacuum
-        structure.pbc = [True, True, False]
-        structure.center(30, axis=[2])
-
-        lattice_sites = []
-        unit_cell_range = 100
-        for j in range(500):
-            offset = [random.randint(-unit_cell_range, unit_cell_range)
-                      for i in range(3)]
-            offset[2] = 0
-            index = random.randint(0, len(structure) - 1)
-            lattice_sites.append(LatticeSite(index, offset))
-
-        positions = []
-        for site in lattice_sites:
-            pos = get_position_from_lattice_site(structure, site)
-            positions.append(pos)
-        for site, pos in zip(lattice_sites, positions):
-            found_site = find_lattice_site_by_position(structure, pos)
-            self.assertEqual(site, found_site)
 
     def test_fractional_to_cartesian(self):
         """Tests the geometry function fractional_to_cartesian."""

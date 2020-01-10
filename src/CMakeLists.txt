@@ -8,20 +8,22 @@ ADD_SUBDIRECTORY("3rdparty/pybind11" pybind11)
 
 # List of source files that need to be compiled:
 SET(SourceFiles
-  Structure.cpp
-  PyBinding.cpp
-  NeighborList.cpp
-  ManyBodyNeighborList.cpp
   Cluster.cpp
-  PermutationMatrix.cpp
   ClusterCounts.cpp
+  ClusterExpansionCalculator.cpp
+  ClusterSpace.cpp
+  FloatType.cpp
+  Geometry.cpp
+  LatticeSite.cpp
+  LocalOrbitListGenerator.cpp
+  ManyBodyNeighborList.cpp
+  NeighborList.cpp
   Orbit.cpp
   OrbitList.cpp
-  LocalOrbitListGenerator.cpp
-  ClusterSpace.cpp
+  PermutedPositionsMatrix.cpp
+  PyBinding.cpp
+  Structure.cpp
   Symmetry.cpp
-  Geometry.cpp
-  ClusterExpansionCalculator.cpp
 )
 
 PYBIND11_ADD_MODULE(_icet ${SourceFiles})

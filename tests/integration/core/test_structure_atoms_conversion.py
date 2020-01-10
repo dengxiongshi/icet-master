@@ -2,8 +2,6 @@ import numpy as np
 from ase.db import connect
 import icet
 
-_tolerance = 1e-9
-
 """
 Testing icet structure against ASE
 TODO:
@@ -12,7 +10,6 @@ TODO:
 
 """ Fetch structures from database """
 db = connect('structures_for_testing.db')
-
 for row in db.select():
 
     ase_atoms = row.toatoms()
@@ -28,7 +25,7 @@ for row in db.select():
     for ase_pos, struct_pos in zip(ase_atoms.positions,
                                    icet_structure.positions):
         msg = 'Test for positions failed for structure {}'.format(row.tag)
-        assert (np.abs(ase_pos - struct_pos) < _tolerance).all(), msg
+        assert (np.abs(ase_pos - struct_pos) < 1e-9).all(), msg
 
     """ Test that chemical symbols are equal """
     for ase_symbol, struct_symbol in zip(ase_atoms.get_chemical_symbols(),

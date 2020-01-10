@@ -1,19 +1,17 @@
 #pragma once
-#include <pybind11/pybind11.h>
-#include <iostream>
+
 #include <vector>
-#include "Orbit.hpp"
-#include "ManyBodyNeighborList.hpp"
-#include "Structure.hpp"
+
 #include "Cluster.hpp"
-#include "NeighborList.hpp"
-#include <unordered_map>
-#include <unordered_set>
+#include "Geometry.hpp"
 #include "LatticeSite.hpp"
+#include "ManyBodyNeighborList.hpp"
+#include "NeighborList.hpp"
+#include "Orbit.hpp"
+#include "Structure.hpp"
+#include "Symmetry.hpp"
 #include "VectorHash.hpp"
 #include "Vector3dCompare.hpp"
-#include "Symmetry.hpp"
-#include "Geometry.hpp"
 
 /**
 container for a sorted list of orbits.
@@ -31,7 +29,11 @@ class OrbitList
     /// Constructs orbit list from a set of neighbor lists, a permutation matrix, and a structure.
     OrbitList(const Structure &,
               const std::vector<std::vector<LatticeSite>> &,
-              const std::vector<NeighborList> &);
+              const std::vector<NeighborList> &,
+              const double);
+
+    /// Sort orbit list.
+    void sort(const double);
 
     /// Adds an orbit.
     void addOrbit(const Orbit &orbit);
@@ -51,15 +53,17 @@ class OrbitList
     Orbit getSuperCellOrbit(const Structure &,
                             const Vector3d &,
                             const unsigned int,
-                            std::unordered_map<LatticeSite, LatticeSite> &) const;
+                            std::unordered_map<LatticeSite, LatticeSite> &,
+                            const double) const;
 
     /// Returns the local orbit list for a site.
     OrbitList getLocalOrbitList(const Structure &,
                                 const Vector3d &,
-                                std::unordered_map<LatticeSite, LatticeSite> &) const;
+                                std::unordered_map<LatticeSite, LatticeSite> &,
+                                const double) const;
 
     // @todo Add description.
-    void addPermutationMatrixColumns(std::vector<std::vector<std::vector<LatticeSite>>> &,
+    void addPermutedPositionsMatrixColumns(std::vector<std::vector<std::vector<LatticeSite>>> &,
                                      std::unordered_set<std::vector<int>, VectorHash> &,
                                      const std::vector<LatticeSite> &,
                                      const std::vector<int> &,
@@ -68,12 +72,6 @@ class OrbitList
 
     /// Clears the orbit list.
     void clear() { _orbits.clear(); }
-
-    /// Sorts the orbit list.
-    void sort() { std::sort(_orbits.begin(), _orbits.end()); }
-
-    /// Prints information about the orbit list.
-    void print(int) const;
 
     /// Returns the number of orbits.
     size_t size() const { return _orbits.size(); }
@@ -102,7 +100,7 @@ class OrbitList
                         const std::vector<std::vector<LatticeSite>> &);
 
     // @todo Add description.
-    void checkEquivalentClusters() const;
+    void checkEquivalentClusters(const double) const;
 
     // @todo Add description.
     std::vector<LatticeSite> translateSites(const std::vector<LatticeSite> &,
@@ -119,7 +117,8 @@ class OrbitList
     /// @todo Add description.
     void transformSiteToSupercell(LatticeSite &,
                                   const Structure &,
-                                  std::unordered_map<LatticeSite, LatticeSite> &) const;
+                                  std::unordered_map<LatticeSite, LatticeSite> &,
+                                  const double) const;
 
     /// Adds the permutation information to the orbits.
     void addPermutationInformationToOrbits(const std::vector<LatticeSite> &, const std::vector<std::vector<LatticeSite>> &);
@@ -153,10 +152,10 @@ class OrbitList
     void removeSitesNotContainingIndex(const int, bool);
 
     /// Returns the first column of the permutation matrix used to construct the orbit list.
-    std::vector<LatticeSite> getFirstColumnOfPermutationMatrix() const { return _col1; }
+    std::vector<LatticeSite> getFirstColumnOfPermutedPositionsMatrix() const { return _col1; }
 
     /// Returns the permutation matrix used to construct the orbit list.
-    std::vector<std::vector<LatticeSite>> getPermutationMatrix() const { return _permutationMatrix; }
+    std::vector<std::vector<LatticeSite>> getPermutedPositionsMatrix() const { return _permutationMatrix; }
 
     /// Removes all equivalent sites that exist both in this orbit list and the input orbit list.
     void subtractSitesFromOrbitList(const OrbitList &);

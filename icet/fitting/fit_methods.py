@@ -28,7 +28,7 @@ from sklearn.model_selection import ShuffleSplit
 from sklearn.feature_selection import RFE, RFECV
 from sklearn.preprocessing import StandardScaler
 from typing import Any, Dict, List, Union
-from ..io.logging import logger
+from ..input_output.logging_tools import logger
 from .split_bregman import fit_split_bregman
 
 
@@ -71,7 +71,7 @@ def fit(X: np.ndarray,
             msg += [' * ' + key]
         raise ValueError('\n'.join(msg))
 
-    if check_condition:
+    if check_condition and X.shape[0] >= X.shape[1]:
         cond = np.linalg.cond(X)
         if cond > 1e10:
             logger.warning('Condition number is large, {}'.format(cond))
@@ -443,18 +443,22 @@ class _Estimator:
     def predict(self, A):
         return np.dot(A, self.coef_)
 
+    def _get_tags(self):
+        from sklearn.base import _DEFAULT_TAGS
+        return _DEFAULT_TAGS
 
-def fit_rfe(X: np.ndarray,
-            y: np.ndarray,
-            n_features: int = None,
-            step: Union[int, float] = 0.04,
-            estimator: str = 'least-squares',
-            final_estimator: str = None,
-            estimator_kwargs: dict = {},
-            final_estimator_kwargs: dict = {},
-            cv_splits: int = 5,
-            n_jobs: int = -1,
-            **rfe_kwargs):
+
+def _fit_rfe(X: np.ndarray,
+             y: np.ndarray,
+             n_features: int = None,
+             step: Union[int, float] = 0.04,
+             estimator: str = 'least-squares',
+             final_estimator: str = None,
+             estimator_kwargs: dict = {},
+             final_estimator_kwargs: dict = {},
+             cv_splits: int = 5,
+             n_jobs: int = -1,
+             **rfe_kwargs):
     """
     Returns the solution `a` to the linear problem `Xa=y` obtained by
     recursive feature elimination (RFE).
@@ -525,6 +529,6 @@ fit_methods = OrderedDict([
     ('elasticnet', _fit_elasticnet),
     ('split-bregman', fit_split_bregman),
     ('ardr', _fit_ardr),
-    ('rfe', fit_rfe),
+    ('rfe', _fit_rfe),
     ])
 available_fit_methods = sorted(fit_methods.keys())

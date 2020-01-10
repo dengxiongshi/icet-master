@@ -8,6 +8,7 @@ import pickle
 import tarfile
 import tempfile
 from collections import OrderedDict
+from math import log10, floor
 from typing import List, Union
 
 import numpy as np
@@ -58,6 +59,10 @@ class ClusterSpace(_ClusterSpace):
         outer list must be the same length as the `structure` object and
         ``chemical_symbols[i]`` will correspond to the allowed species
         on lattice site ``i``.
+    symprec : float
+        tolerance imposed when analyzing the symmetry using spglib
+    position_tolerance : float
+        tolerance applied when comparing positions in Cartesian coordinates
 
     Examples
     --------
@@ -96,7 +101,9 @@ class ClusterSpace(_ClusterSpace):
     def __init__(self,
                  structure: Atoms,
                  cutoffs: List[float],
-                 chemical_symbols: Union[List[str], List[List[str]]]) -> None:
+                 chemical_symbols: Union[List[str], List[List[str]]],
+                 symprec: float = 1e-5,
+                 position_tolerance: float = None) -> None:
 
         if not isinstance(structure, Atoms):
             raise TypeError('Input configuration must be an ASE Atoms object'
@@ -104,6 +111,7 @@ class ClusterSpace(_ClusterSpace):
         if not all(structure.pbc):
             raise ValueError('Input structure must have periodic boundary conditions')
 
+        self._config = {'symprec': symprec}
         self._cutoffs = cutoffs.copy()
         self._input_structure = structure.copy()
         self._input_chemical_symbols = copy.deepcopy(chemical_symbols)
@@ -113,17 +121,33 @@ class ClusterSpace(_ClusterSpace):
 
         # set up primitive
         occupied_primitive, primitive_chemical_symbols = get_occupied_primitive_structure(
-            self._input_structure, chemical_symbols)
+            self._input_structure, chemical_symbols, symprec=self.symprec)
         self._primitive_chemical_symbols = primitive_chemical_symbols
         assert len(occupied_primitive) == len(primitive_chemical_symbols)
 
+        # derived tolerances
+        if position_tolerance is None:
+            self._config['position_tolerance'] = symprec
+        else:
+            self._config['position_tolerance'] = position_tolerance
+        effective_box_size = abs(np.linalg.det(occupied_primitive.cell)) ** (1 / 3)
+        tol = self.position_tolerance / effective_box_size
+        self._config['fractional_position_tolerance'] = round(tol, -int(floor(log10(abs(tol)))))
+
         # set up orbit list
-        self._orbit_list = OrbitList(occupied_primitive, self._cutoffs)
+        self._orbit_list = OrbitList(occupied_primitive,
+                                     self._cutoffs,
+                                     self.symprec,
+                                     self.position_tolerance,
+                                     self.fractional_position_tolerance)
         self._orbit_list.remove_inactive_orbits(primitive_chemical_symbols)
 
         # call (base) C++ constructor
-        _ClusterSpace.__init__(
-            self, primitive_chemical_symbols, self._orbit_list)
+        _ClusterSpace.__init__(self,
+                               primitive_chemical_symbols,
+                               self._orbit_list,
+                               self.position_tolerance,
+                               self.fractional_position_tolerance)
 
     def _get_chemical_symbols(self):
         """ Returns chemical symbols using input structure and
@@ -213,14 +237,16 @@ class ClusterSpace(_ClusterSpace):
         width = len(repr_orbit(prototype_orbit))
         s = []  # type: List
         s += ['{s:=^{n}}'.format(s=' Cluster Space ', n=width)]
-        s += [' chemical species: {}'
-              .format(self._get_chemical_symbol_representation())]
-        s += [' cutoffs: {}'.format(' '.join(['{:.4f}'.format(co)
-                                              for co in self._cutoffs]))]
-        s += [' total number of parameters: {}'.format(len(self))]
+        s += [' {:38} : {}'
+              .format('chemical species', self._get_chemical_symbol_representation())]
+        s += [' {:38} : {}'.format('cutoffs', ' '
+                                   .join(['{:.4f}'.format(co) for co in self._cutoffs]))]
+        s += [' {:38} : {}'.format('total number of parameters', len(self))]
         t = ['{}= {}'.format(k, c)
              for k, c in self.get_number_of_orbits_by_order().items()]
-        s += [' number of parameters by order: {}'.format('  '.join(t))]
+        s += [' {:38} : {}'.format('number of parameters by order', '  '.join(t))]
+        for key, value in sorted(self._config.items()):
+            s += [' {:38} : {}'.format(key, value)]
 
         # table header
         s += [''.center(width, '-')]
@@ -266,6 +292,21 @@ class ClusterSpace(_ClusterSpace):
                                               print_minimum=print_minimum))
 
     @property
+    def symprec(self) -> float:
+        """ tolerance imposed when analyzing the symmetry using spglib """
+        return self._config['symprec']
+
+    @property
+    def position_tolerance(self) -> float:
+        """ tolerance applied when comparing positions in Cartesian coordinates """
+        return self._config['position_tolerance']
+
+    @property
+    def fractional_position_tolerance(self) -> float:
+        """ tolerance applied when comparing positions in fractional coordinates """
+        return self._config['fractional_position_tolerance']
+
+    @property
     def orbit_data(self) -> List[dict]:
         """
         list of orbits with information regarding
@@ -283,9 +324,9 @@ class ClusterSpace(_ClusterSpace):
         data.append(zerolet)
         index = 1
         while index < len(self):
-            cluster_space_info = self.get_cluster_space_info(index)
-            orbit_index = cluster_space_info[0]
-            mc_vector = cluster_space_info[1]
+            multi_component_vectors_by_orbit = self.get_multi_component_vectors_by_orbit(index)
+            orbit_index = multi_component_vectors_by_orbit[0]
+            mc_vector = multi_component_vectors_by_orbit[1]
             orbit = self.get_orbit(orbit_index)
             rep_sites = orbit.get_representative_sites()
             orbit_sublattices = '-'.join(
@@ -346,7 +387,9 @@ class ClusterSpace(_ClusterSpace):
             raise TypeError('Input structure must be an ASE Atoms object')
 
         try:
-            cv = _ClusterSpace.get_cluster_vector(self, Structure.from_atoms(structure))
+            cv = _ClusterSpace.get_cluster_vector(self,
+                                                  Structure.from_atoms(structure),
+                                                  self.fractional_position_tolerance)
         except Exception as e:
             self.assert_structure_compatibility(structure)
             raise(e)
@@ -366,7 +409,7 @@ class ClusterSpace(_ClusterSpace):
         self._prune_orbit_list_cpp(indices)
         for index in sorted(indices, reverse=True):
             self._orbit_list.remove_orbit(index)
-        self._precompute_multi_component_vectors()
+        self._compute_multi_component_vectors()
 
         size_after = len(self._orbit_list)
         assert size_before - len(indices) == size_after
@@ -426,7 +469,10 @@ class ClusterSpace(_ClusterSpace):
         structure
             structure the sublattices are based on
         """
-        sl = Sublattices(self.chemical_symbols, self.primitive_structure, structure)
+        sl = Sublattices(self.chemical_symbols,
+                         self.primitive_structure,
+                         structure,
+                         self.fractional_position_tolerance)
         return sl
 
     def assert_structure_compatibility(self, structure: Atoms, vol_tol: float = 1e-5) -> None:
@@ -473,7 +519,7 @@ class ClusterSpace(_ClusterSpace):
             If True, the structure contains self-interactions via periodic
             boundary conditions, otherwise False.
         """
-        ol = self.orbit_list.get_supercell_orbit_list(structure)
+        ol = self.orbit_list.get_supercell_orbit_list(structure, self.position_tolerance)
         orbit_indices = set()
         for orbit in ol.orbits:
             for sites in orbit.get_equivalent_sites():
@@ -497,8 +543,11 @@ class ClusterSpace(_ClusterSpace):
         with tarfile.open(name=filename, mode='w') as tar_file:
 
             # write items
-            items = dict(cutoffs=self._cutoffs, chemical_symbols=self._input_chemical_symbols,
-                         pruning_history=self._pruning_history)
+            items = dict(cutoffs=self._cutoffs,
+                         chemical_symbols=self._input_chemical_symbols,
+                         pruning_history=self._pruning_history,
+                         symprec=self.symprec,
+                         position_tolerance=self.position_tolerance)
             temp_file = tempfile.TemporaryFile()
             pickle.dump(items, temp_file)
             temp_file.seek(0)
@@ -512,6 +561,7 @@ class ClusterSpace(_ClusterSpace):
             temp_file.seek(0)
             tar_info = tar_file.gettarinfo(arcname='atoms', fileobj=temp_file)
             tar_file.addfile(tar_info, temp_file)
+            temp_file.close()
 
     @staticmethod
     def read(filename: str):
@@ -538,137 +588,23 @@ class ClusterSpace(_ClusterSpace):
         structure = ase_read(temp_file.name, format='json')
 
         tar_file.close()
-        cs = ClusterSpace(structure=structure, cutoffs=items['cutoffs'],
-                          chemical_symbols=items['chemical_symbols'])
+
+        cs = ClusterSpace(structure=structure,
+                          cutoffs=items['cutoffs'],
+                          chemical_symbols=items['chemical_symbols'],
+                          symprec=items['symprec'],
+                          position_tolerance=items['position_tolerance'])
         for indices in items['pruning_history']:
             cs._prune_orbit_list(indices)
         return cs
 
     def copy(self):
         """ Returns copy of ClusterSpace instance. """
-        structure = self._input_structure
-        cutoffs = self._cutoffs
-        chemical_symbols = self._input_chemical_symbols
-        cs_copy = ClusterSpace(structure, cutoffs, chemical_symbols)
+        cs_copy = ClusterSpace(structure=self._input_structure,
+                               cutoffs=self.cutoffs,
+                               chemical_symbols=self._input_chemical_symbols,
+                               symprec=self.symprec,
+                               position_tolerance=self.position_tolerance)
         for indices in self._pruning_history:
             cs_copy._prune_orbit_list(indices)
         return cs_copy
-
-
-def get_singlet_info(structure: Atoms,
-                     return_cluster_space: bool = False):
-    """
-    Retrieves information concerning the singlets in the input structure.
-
-    Parameters
-    ----------
-    structure
-        atomic configuration
-    return_cluster_space
-        if True return the cluster space created during the process
-
-    Returns
-    -------
-    list of dicts
-        each dictionary in the list represents one orbit
-    ClusterSpace object (optional)
-        cluster space created during the process
-    """
-    if not isinstance(structure, Atoms):
-        raise TypeError('Input configuration must be an ASE Atoms object'
-                        ', not type {}'.format(type(structure)))
-
-    # create dummy species and cutoffs
-    chemical_symbols = ['H', 'He']
-    cutoffs = [0.0]
-
-    cs = ClusterSpace(structure, cutoffs, chemical_symbols)
-
-    singlet_data = []
-
-    for i in range(1, len(cs)):
-        cluster_space_info = cs.get_cluster_space_info(i)
-        orbit_index = cluster_space_info[0]
-        cluster = cs.get_orbit(orbit_index).get_representative_cluster()
-        multiplicity = len(cs.get_orbit(orbit_index).get_equivalent_sites())
-        assert len(cluster) == 1, \
-            'Cluster space contains higher-order terms (beyond singlets)'
-
-        singlet = {}
-        singlet['orbit_index'] = orbit_index
-        singlet['sites'] = cs.get_orbit(orbit_index).get_equivalent_sites()
-        singlet['multiplicity'] = multiplicity
-        singlet['representative_site'] = cs.get_orbit(
-            orbit_index).get_representative_sites()
-        singlet_data.append(singlet)
-
-    if return_cluster_space:
-        return singlet_data, cs
-    else:
-        return singlet_data
-
-
-def get_singlet_configuration(structure: Atoms,
-                              to_primitive: bool = False) -> Atoms:
-    """
-    Returns the atomic configuration occupied with a different species for
-    each Wyckoff site. This is useful for visualization and analysis.
-
-    Parameters
-    ----------
-    structure
-        atomic configuration
-    to_primitive
-        if True the input structure will be reduced to its primitive unit cell
-        before processing
-
-    Returns
-    -------
-    structure with singlets highlighted by different chemical species
-    """
-    from ase.data import chemical_symbols
-    assert isinstance(structure, Atoms), \
-        'input configuration must be an ASE Atoms object'
-    cluster_data, cluster_space = get_singlet_info(structure,
-                                                   return_cluster_space=True)
-
-    if to_primitive:
-        structure_singlet = cluster_space.primitive_structure
-        for singlet in cluster_data:
-            for site in singlet['sites']:
-                symbol = chemical_symbols[singlet['orbit_index'] + 1]
-                atom_index = site[0].index
-                structure_singlet[atom_index].symbol = symbol
-    else:
-        structure_singlet = structure.copy()
-        orbit_list_supercell = \
-            cluster_space._orbit_list.get_supercell_orbit_list(structure_singlet)
-        for singlet in cluster_data:
-            for site in singlet['sites']:
-                symbol = chemical_symbols[singlet['orbit_index'] + 1]
-                sites = orbit_list_supercell.get_orbit(
-                    singlet['orbit_index']).get_equivalent_sites()
-                for lattice_site in sites:
-                    k = lattice_site[0].index
-                    structure_singlet[k].symbol = symbol
-
-    return structure_singlet
-
-
-def view_singlets(structure: Atoms, to_primitive: bool = False):
-    """
-    Visualizes singlets in a structure using the ASE graphical user interface.
-
-    Parameters
-    ----------
-    structure
-        atomic configuration
-    to_primitive
-        if True the input structure will be reduced to its primitive unit cell
-        before processing
-    """
-    from ase.visualize import view
-    assert isinstance(structure, Atoms), \
-        'input configuration must be an ASE Atoms object'
-    structure_singlet = get_singlet_configuration(structure, to_primitive=to_primitive)
-    view(structure_singlet)

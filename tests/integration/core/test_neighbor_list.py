@@ -12,7 +12,6 @@ both icet.NeighborList and ase.neighborlist modules.
 db = connect('structures_for_testing.db')
 
 neighbor_cutoff = 1.6
-
 for row in db.select('natoms>1'):
 
     structure_row = row.toatoms()
@@ -24,7 +23,7 @@ for row in db.select('natoms>1'):
 
     # icet neighbor_list
     nl = NeighborList(neighbor_cutoff)
-    nl.build(Structure.from_atoms(structure_row))
+    nl.build(Structure.from_atoms(structure_row), position_tolerance=1e-5)
     neighbors = nl.get_neighbors(1)
     indices = []
     offsets = []

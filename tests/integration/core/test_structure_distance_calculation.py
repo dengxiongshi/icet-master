@@ -9,12 +9,8 @@ TODO:
     Delete this after edit unittest/test_structure
 """
 
-""" Tolerance for comparing distances """
-DISTTOL = 1e-8
-
 """ Fetch structures from database """
 db = connect('structures_for_testing.db')
-
 for row in db.select():
     structure = row.toatoms()
     nl = ASENeighborList(len(structure) * [2.6], self_interaction=False)
@@ -25,7 +21,11 @@ for row in db.select():
             dvec = structure.positions[index] - structure.positions[i]
             dvec -= np.dot(offset, structure.get_cell())
             dist_ase = np.linalg.norm(dvec)
-            dist_struct = Structure.from_atoms(structure).get_distance(index, i, [0, 0, 0], offset)
+            dist_struct = Structure.from_atoms(structure).get_distance(
+                index,
+                i,
+                [0, 0, 0],
+                offset)
             msg = 'Testing distance calculator failed'
             msg += ' for structure {}'.format(row.tag)
-            assert dist_ase - dist_struct < DISTTOL, msg
+            assert dist_ase - dist_struct < 1e-8, msg
