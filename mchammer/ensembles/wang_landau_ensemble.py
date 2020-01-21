@@ -111,7 +111,7 @@ class WangLandauEnsemble(BaseEnsemble):
         E`. ``flatness_limit`` sets the parameter :math:`\\chi`.
     user_tag : str
         human-readable tag for ensemble [default: None]
-    data_container : str
+    dc_filename : str
         name of file the data container associated with the ensemble
         will be written to; if the file exists it will be read, the
         data container will be appended, and the file will be
@@ -165,7 +165,7 @@ class WangLandauEnsemble(BaseEnsemble):
         mc = WangLandauEnsemble(structure=structure,
                                 calculator=calculator,
                                 energy_spacing=1,
-                                data_container='ising_2d_run.dc')
+                                dc_filename='ising_2d_run.dc')
         mc.run(number_of_trial_steps=len(structure)*10000)  # carry out 10,000 MC sweeps
 
     """
@@ -181,6 +181,7 @@ class WangLandauEnsemble(BaseEnsemble):
                  flatness_check_interval: int = None,
                  flatness_limit: float = 0.8,
                  user_tag: str = None,
+                 dc_filename: str = None,
                  data_container: str = None,
                  random_seed: int = None,
                  data_container_write_period: float = 600,
@@ -250,6 +251,7 @@ class WangLandauEnsemble(BaseEnsemble):
             calculator=calculator,
             user_tag=user_tag,
             random_seed=random_seed,
+            dc_filename=dc_filename,
             data_container=data_container,
             data_container_class=WangLandauDataContainer,
             data_container_write_period=data_container_write_period,

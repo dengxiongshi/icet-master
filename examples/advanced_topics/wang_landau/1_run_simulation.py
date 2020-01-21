@@ -19,7 +19,7 @@ calculator = ClusterExpansionCalculator(structure, ce)
 mc = WangLandauEnsemble(structure=structure,
                         calculator=calculator,
                         energy_spacing=1,
-                        data_container='wl_n16.dc',
+                        dc_filename='wl_n16.dc',
                         ensemble_data_write_interval=len(structure)*10,
                         trajectory_write_interval=len(structure)*100,
                         data_container_write_period=120)

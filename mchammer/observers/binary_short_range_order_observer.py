@@ -67,7 +67,7 @@ class BinaryShortRangeOrderObserver(BaseObserver):
         # set up MC simulation
         calc = ClusterExpansionCalculator(structure, ce)
         mc = CanonicalEnsemble(structure=structure, calculator=calc, temperature=600,
-                               data_container='myrun_sro.dc')
+                               dc_filename='myrun_sro.dc')
 
         # set up observer and attach it to the MC simulation
         sro = BinaryShortRangeOrderObserver(cs, structure, interval=len(structure),

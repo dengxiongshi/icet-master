@@ -28,8 +28,7 @@ for temperature in [900, 300]:
             structure=structure,
             calculator=calculator,
             temperature=temperature,
-            data_container='{}/vcsgc-T{}-phi{:+.3f}.dc'
-                           .format(output_directory, temperature, phi),
+            dc_filename='{}/vcsgc-T{}-phi{:+.3f}.dc'.format(output_directory, temperature, phi),
             phis={'Pd': phi},
             kappa=200)
 

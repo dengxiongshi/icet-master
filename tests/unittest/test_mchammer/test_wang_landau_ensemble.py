@@ -362,7 +362,7 @@ class TestEnsemble(unittest.TestCase):
         dc_filename = 'my-test.dc'
         ens1 = WangLandauEnsemble(structure=self.structure,
                                   calculator=self.calculator,
-                                  data_container=dc_filename,
+                                  dc_filename=dc_filename,
                                   energy_spacing=self.energy_spacing,
                                   ensemble_data_write_interval=2)
         ens1.run(10)
@@ -370,7 +370,7 @@ class TestEnsemble(unittest.TestCase):
         # restart from file
         ens2 = WangLandauEnsemble(structure=self.structure,
                                   calculator=self.calculator,
-                                  data_container=dc_filename,
+                                  dc_filename=dc_filename,
                                   energy_spacing=self.energy_spacing)
         self.assertEqual(len(ens1.data_container.data), len(ens2.data_container.data))
         self.assertTrue(np.allclose(list(ens1.data_container.data.potential),

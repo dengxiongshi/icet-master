@@ -68,7 +68,7 @@ class SGCAnnealing(ThermodynamicBaseEnsemble):
     random_seed : int
         seed for the random number generator used in the Monte Carlo
         simulation
-    data_container : str
+    dc_filename : str
         name of file the data container associated with the ensemble
         will be written to; if the file exists it will be read, the
         data container will be appended, and the file will be
@@ -104,6 +104,7 @@ class SGCAnnealing(ThermodynamicBaseEnsemble):
                  boltzmann_constant: float = kB,
                  user_tag: str = None,
                  random_seed: int = None,
+                 dc_filename: str = None,
                  data_container: str = None,
                  data_container_write_period: float = 600,
                  ensemble_data_write_interval: int = None,
@@ -125,6 +126,7 @@ class SGCAnnealing(ThermodynamicBaseEnsemble):
             calculator=calculator,
             user_tag=user_tag,
             random_seed=random_seed,
+            dc_filename=dc_filename,
             data_container=data_container,
             data_container_class=DataContainer,
             data_container_write_period=data_container_write_period,

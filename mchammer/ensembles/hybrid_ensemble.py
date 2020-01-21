@@ -102,7 +102,7 @@ class HybridEnsemble(ThermodynamicBaseEnsemble):
     random_seed : int
         seed for the random number generator used in the Monte Carlo
         simulation
-    data_container : str
+    dc_filename : str
         name of file the data container associated with the
         ensemble will be written to; if the file
         exists it will be read, the data container will be appended,
@@ -175,7 +175,7 @@ class HybridEnsemble(ThermodynamicBaseEnsemble):
         mc = HybridEnsemble(structure=structure, calculator=calc,
                             ensemble_specs=ensemble_specs,
                             temperature=600, probabilities=probabilities,
-                            data_container='myrun_hybrid.dc')
+                            dc_filename='myrun_hybrid.dc')
         mc.run(100)  # carry out 100 trial steps
     """
 
@@ -188,6 +188,7 @@ class HybridEnsemble(ThermodynamicBaseEnsemble):
                  boltzmann_constant: float = kB,
                  user_tag: str = None,
                  random_seed: int = None,
+                 dc_filename: str = None,
                  data_container: str = None,
                  data_container_write_period: float = 600,
                  ensemble_data_write_interval: int = None,
@@ -214,6 +215,7 @@ class HybridEnsemble(ThermodynamicBaseEnsemble):
             user_tag=user_tag,
             random_seed=random_seed,
             boltzmann_constant=boltzmann_constant,
+            dc_filename=dc_filename,
             data_container=data_container,
             data_container_class=DataContainer,
             data_container_write_period=data_container_write_period,

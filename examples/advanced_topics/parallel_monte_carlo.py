@@ -22,7 +22,7 @@ def run_mc(args):
         structure=structure,
         calculator=calculator,
         temperature=temperature,
-        data_container='sgc-T{}-dmu{:+.3f}.dc'.format(temperature, dmu),
+        dc_filename='sgc-T{}-dmu{:+.3f}.dc'.format(temperature, dmu),
         chemical_potentials={'Ag': 0, 'Pd': dmu})
     mc.run(number_of_trial_steps=len(structure) * 30)
 

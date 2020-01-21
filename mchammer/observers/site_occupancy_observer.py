@@ -76,7 +76,7 @@ class SiteOccupancyObserver(BaseObserver):
         # set up MC simulation
         calc = ClusterExpansionCalculator(structure, ce)
         mc = CanonicalEnsemble(structure=structure, calculator=calc, temperature=600,
-                               data_container='myrun_sof.dc')
+                               dc_filename='myrun_sof.dc')
 
         # set up observer and attach it to the MC simulation
         sites = {'surface': [0, 9], 'subsurface': [1, 8],
@@ -133,7 +133,7 @@ class SiteOccupancyObserver(BaseObserver):
             allowed_species = {}
             for site, indices in self._sites.items():
                 allowed_species[site] = None
-                positions = supercell.get_positions()[np.array(indices)]
+                positions = supercell.positions[np.array(indices)]
                 lattice_sites =\
                     primitive_structure.find_lattice_sites_by_positions(
                         positions, cluster_space.fractional_position_tolerance)

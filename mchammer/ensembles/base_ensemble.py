@@ -2,6 +2,8 @@
 
 import os
 import random
+import warnings
+
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 from math import gcd
@@ -35,7 +37,7 @@ class BaseEnsemble(ABC):
     random_seed : int
         seed for the random number generator used in the Monte Carlo
         simulation
-    data_container : str
+    dc_filename : str
         name of file the data container associated with the ensemble
         will be written to; if the file exists it will be read, the
         data container will be appended, and the file will be
@@ -63,6 +65,7 @@ class BaseEnsemble(ABC):
                  calculator: BaseCalculator,
                  user_tag: str = None,
                  random_seed: int = None,
+                 dc_filename: str = None,
                  data_container: str = None,
                  data_container_class: BaseDataContainer = BaseDataContainer,
                  data_container_write_period: float = 600,
@@ -103,10 +106,15 @@ class BaseEnsemble(ABC):
 
         # data container
         self._data_container_write_period = data_container_write_period
-        self._data_container_filename = data_container
+        if data_container is not None:
+            warnings.simplefilter('always', DeprecationWarning)
+            warnings.warn('data_container is deprecated, use dc_filename', DeprecationWarning)
+            self._data_container_filename = data_container
+        else:
+            self._data_container_filename = dc_filename
 
-        if data_container is not None and os.path.isfile(data_container):
-            self._data_container = data_container_class.read(data_container)
+        if dc_filename is not None and os.path.isfile(dc_filename):
+            self._data_container = data_container_class.read(dc_filename)
 
             dc_ensemble_parameters = self.data_container.ensemble_parameters
             if not dicts_equal(self.ensemble_parameters,
@@ -117,9 +125,9 @@ class BaseEnsemble(ABC):
                                      set(self.ensemble_parameters.items())))
             self._restart_ensemble()
         else:
-            if data_container is not None:
+            if dc_filename is not None:
                 # check if path to file exists
-                filedir = os.path.dirname(data_container)
+                filedir = os.path.dirname(dc_filename)
                 if filedir and not os.path.isdir(filedir):
                     raise FileNotFoundError('Path to data container file does'
                                             ' not exist: {}'.format(filedir))

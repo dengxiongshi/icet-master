@@ -44,14 +44,14 @@ class DictObserver(BaseObserver):
 class ConcreteEnsemble(BaseEnsemble):
 
     def __init__(self, structure, calculator, temperature=None,
-                 user_tag=None, data_container=None,
+                 user_tag=None, dc_filename=None,
                  data_container_write_period=np.inf, random_seed=None,
                  ensemble_data_write_interval=None,
                  trajectory_write_interval=None):
         self._ensemble_parameters = dict(temperature=temperature)
         super().__init__(
             structure=structure, calculator=calculator, user_tag=user_tag,
-            data_container=data_container,
+            dc_filename=dc_filename,
             data_container_write_period=data_container_write_period,
             random_seed=random_seed,
             ensemble_data_write_interval=ensemble_data_write_interval,
@@ -106,7 +106,7 @@ class TestEnsemble(unittest.TestCase):
         with self.assertRaises(FileNotFoundError) as context:
             ConcreteEnsemble(structure=self.structure,
                              calculator=self.calculator,
-                             data_container='path/to/nowhere/mydc')
+                             dc_filename='path/to/nowhere/mydc')
 
         self.assertTrue('Path to data container file does not exist:'
                         ' path/to/nowhere' in str(context.exception))
@@ -223,7 +223,7 @@ class TestEnsemble(unittest.TestCase):
         ensemble = ConcreteEnsemble(structure=self.structure,
                                     calculator=self.calculator,
                                     user_tag='this-ensemble',
-                                    data_container='my-datacontainer.dc',
+                                    dc_filename='my-datacontainer.dc',
                                     data_container_write_period=1e-2,
                                     ensemble_data_write_interval=14,
                                     trajectory_write_interval=56)
@@ -254,7 +254,7 @@ class TestEnsemble(unittest.TestCase):
         ensemble_reloaded = \
             ConcreteEnsemble(structure=self.structure,
                              calculator=self.calculator,
-                             data_container=temp_container_file.name,
+                             dc_filename=temp_container_file.name,
                              ensemble_data_write_interval=14,
                              trajectory_write_interval=56)
 
@@ -292,7 +292,7 @@ class TestEnsemble(unittest.TestCase):
             ConcreteEnsemble(structure=self.structure,
                              calculator=self.calculator,
                              temperature=3000,
-                             data_container=ensemble_T1000.name)
+                             dc_filename=ensemble_T1000.name)
         self.assertIn("Ensemble parameters do not match those stored in"
                       " data container file: {('temperature', 1000)}",
                       str(context.exception))
@@ -318,7 +318,7 @@ class TestEnsemble(unittest.TestCase):
 
         # and now restart
         mc = ConcreteEnsemble(structure=structure, calculator=calculator,
-                              data_container=dc_file.name)
+                              dc_filename=dc_file.name)
         mc.run(10)
 
     def test_internal_run(self):

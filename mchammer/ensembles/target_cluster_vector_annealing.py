@@ -67,7 +67,7 @@ class TargetClusterVectorAnnealing:
                                                    user_tag='ensemble_{}'.format(
                                                        ens_id),
                                                    temperature=T_start,
-                                                   data_container=None))
+                                                   dc_filename=None))
         self._sub_ensembles = sub_ensembles
         self._current_score = self._sub_ensembles[0].calculator.calculate_total(
             self._sub_ensembles[0].configuration.occupations)
