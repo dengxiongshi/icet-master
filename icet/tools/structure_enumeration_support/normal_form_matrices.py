@@ -1,8 +1,169 @@
 """
-Handling of Smith Normal Form matrices
+Handling of Hermite Normal Form and Smith Normal Form matrices
 """
 
 import numpy as np
+from typing import List, Tuple, Dict
+
+
+class HermiteNormalForm(object):
+    """
+    Hermite Normal Form matrix.
+    """
+
+    def __init__(self, H: np.ndarray, rotations: np.ndarray,
+                 translations: np.ndarray, basis_shifts: np.ndarray):
+        self.H = H
+        self.snf = SmithNormalForm(H)
+        self.transformations = []
+        self.compute_transformations(rotations, translations, basis_shifts)
+
+    def compute_transformations(self, rotations: np.ndarray,
+                                translations: np.ndarray,
+                                basis_shifts: np.ndarray,
+                                tolerance: float = 1e-3) -> None:
+        """
+        Save transformations (based on rotations) that turns the supercell
+        into an equivalent supercell. Precompute these transformations,
+        consisting of permutation as well as translation and basis shift, for
+        later use.
+
+        Parameters
+        ----------
+        rotations
+            list of (rotational) symmetry operations
+        translations
+            list of translations that go together with the rotational operations
+        basis_shifts
+            corresponding to d_Nd in HarFor09
+        tolerance
+            tolerance applied when checking that matrices are all integers
+        """
+
+        for R, T, basis_shift in zip(rotations, translations,
+                                     basis_shifts):
+            check = np.dot(np.dot(np.linalg.inv(self.H), R), self.H)
+            check = check - np.round(check)
+            if (abs(check) < tolerance).all():
+                LRL = np.dot(self.snf.L, np.dot(R, np.linalg.inv(self.snf.L)))
+
+                # Should be an integer matrix
+                assert (abs(LRL - np.round(LRL)) < tolerance).all()
+                LRL = np.round(LRL).astype(np.int64)
+                LT = np.dot(T, self.snf.L.T)
+                self.transformations.append([LRL, LT, basis_shift])
+
+
+def yield_hermite_normal_forms(det: int, pbc: List[bool]) -> np.ndarray:
+    """
+    Yield all Hermite Normal Form matrices with determinant det.
+
+    Parameters
+    ----------
+    det
+        Target determinant of HNFs
+    pbc
+        Periodic boundary conditions of the primitive structure
+
+    Yields
+    ------
+    3x3 HNF matrix
+    """
+    # 1D
+    if sum(pbc) == 1:
+        hnf = np.eye(3, dtype=int)
+        for i, bc in enumerate(pbc):
+            if bc:
+                hnf[i, i] = det
+                break
+        yield hnf
+
+    # 2D
+    elif sum(pbc) == 2:
+        for a in range(1, det + 1):
+            if det % a == 0:
+                c = det // a
+                for b in range(0, c):
+                    if not pbc[0]:
+                        hnf = [[1, 0, 0],
+                               [0, a, 0],
+                               [0, b, c]]
+                    elif not pbc[1]:
+                        hnf = [[a, 0, 0],
+                               [0, 1, 0],
+                               [b, 0, c]]
+                    else:
+                        hnf = [[a, 0, 0],
+                               [b, c, 0],
+                               [0, 0, 1]]
+                    yield np.array(hnf)
+
+    # 3D
+    else:
+        for a in range(1, det + 1):
+            if det % a == 0:
+                for c in range(1, det // a + 1):
+                    if det // a % c == 0:
+                        f = det // (a * c)
+                        for b in range(0, c):
+                            for d in range(0, f):
+                                for e in range(0, f):
+                                    hnf = [[a, 0, 0],
+                                           [b, c, 0],
+                                           [d, e, f]]
+                                    yield np.array(hnf)
+
+
+def yield_reduced_hnfs(ncells: int, symmetries: Dict,
+                       pbc: List[bool], tolerance: float = 1e-3) -> HermiteNormalForm:
+    """
+    For a fixed determinant N (i.e., a number of atoms N), yield all
+    Hermite Normal Forms (HNF) that are inequivalent under symmetry
+    operations of the parent lattice.'
+
+    Parameters
+    ----------
+    ncells
+        Determinant of the HNF.
+    symmetries
+        Symmetry operations of the parent lattice.
+    pbc
+        Periodic boundary conditions of the primitive structure
+    tolerance
+        tolerance applied when checking that matrices are all integers
+
+    Yields
+    ------
+    HermiteNormalForm object, each one symmetrically distinct from the others
+    """
+    rotations = symmetries['rotations']
+    translations = symmetries['translations']
+    basis_shifts = symmetries['basis_shifts']
+    hnfs = []
+
+    for hnf in yield_hermite_normal_forms(ncells, pbc):
+
+        # Throw away HNF:s that yield equivalent supercells
+        hnf_inv = np.linalg.inv(hnf)
+        duplicate = False
+        for R in rotations:
+            HR = np.dot(hnf_inv, R)
+            for hnf_previous in hnfs:
+                check = np.dot(HR, hnf_previous.H)
+                check = check - np.round(check)
+                if (abs(check) < tolerance).all():
+                    duplicate = True
+                    break
+            if duplicate:
+                break
+        if duplicate:
+            continue
+
+        # If it's not a duplicate, save the hnf
+        # and the supercell so that it can be compared to
+        hnf = HermiteNormalForm(hnf, rotations, translations, basis_shifts)
+        hnfs.append(hnf)
+        yield hnf
 
 
 class SmithNormalForm(object):
@@ -10,7 +171,7 @@ class SmithNormalForm(object):
     Smith Normal Form matrix.
     """
 
-    def __init__(self, H):
+    def __init__(self, H: np.ndarray):
         self.compute_snf(H)
         self.S = tuple([self.S_matrix[i, i] for i in range(3)])
         self.ncells = self.S[0] * self.S[1] * self.S[2]
@@ -23,13 +184,13 @@ class SmithNormalForm(object):
             blocks.append(blocks[-1] // self.S[i])
         self.blocks = blocks
 
-    def compute_snf(self, H, tol=1e-3):
+    def compute_snf(self, H: np.ndarray) -> None:
         """
         Compute Smith Normal Form for 3x3 matrix. Note that H = L*S*R.
 
         Parameters
         ----------
-        H : ndarray
+        H
             3x3 matrix
         """
         A = H.copy()
@@ -66,20 +227,21 @@ class SmithNormalForm(object):
                 L[0] = L[0] + L[1]
             else:
                 break
-        assert (abs(np.dot(np.dot(L, H), R) - A) < tol).all()
+        assert (abs(np.dot(np.dot(L, H), R) - A) < 1e-5).all()
         self.S_matrix = A
         self.L = L
 
-    def add_hnf(self, hnf):
+    def add_hnf(self, hnf: HermiteNormalForm) -> None:
         """Add HNF to SNF.
 
         Paramaters
         ----------
-        hnf : HermiteNormalForm object
+        hnf
+            HermiteNormalForm object
         """
         self.hnfs.append(hnf)
 
-    def set_group_order(self):
+    def set_group_order(self) -> None:
         """
         Set group representation of an SNF matrix (the G matrix in HarFor08).
         """
@@ -91,23 +253,22 @@ class SmithNormalForm(object):
         self.group_order = group_order
 
 
-def _switch_rows(A, i, j):
+def _switch_rows(A: np.ndarray, i: int, j: int) -> np.ndarray:
     """
     Switch rows in matrix.
 
     Parameters
     ---------
-    A : ndarray
+    A
         Matrix in which rows will be swapped.
-    i : int
+    i
         Index of row 1 to be swapped.
-    j : int
+    j
         Index of row 2 to be swapped.
 
     Returns
     -------
-    ndarray
-        Matrix with swapped rows.
+    Matrix with swapped rows.
     """
     row = A[j].copy()
     A[j] = A[i]
@@ -115,7 +276,7 @@ def _switch_rows(A, i, j):
     return A
 
 
-def _switch_columns(A, i, j):
+def _switch_columns(A: np.ndarray, i: int, j: int):
     """
     Switch columns in matrix.
 
@@ -130,8 +291,7 @@ def _switch_columns(A, i, j):
 
     Returns
     -------
-    ndarray
-        Matrix with swapped columns.
+    Matrix with swapped columns.
     """
     col = A[:, j].copy()
     A[:, j] = A[:, i]
@@ -139,7 +299,7 @@ def _switch_columns(A, i, j):
     return A
 
 
-def _gcd_reduce_row(A, R, i):
+def _gcd_reduce_row(A: np.ndarray, R: np.ndarray, i: int) -> Tuple[np.ndarray, np.ndarray]:
     """
     Use column operations to make A[i, i] the greatest common
     denominator of the elements in row i and the other elements
@@ -147,18 +307,18 @@ def _gcd_reduce_row(A, R, i):
 
     Parameters
     ----------
-    A : ndarray
+    A
         Matrix whose row is to be cleared.
-    R : ndarray
+    R
         Matrix that should be subject to the same operations.
-    i : int
+    i
         Index of row to be treated.
 
     Returns
     -------
-    ndarray
+    A
         Treated matrix A.
-    ndarray
+    R
         Matrix that has been subject to the same operations.
     """
     for j in range(i, 3):
@@ -189,7 +349,7 @@ def _gcd_reduce_row(A, R, i):
     return A, R
 
 
-def _gcd_reduce_column(A, L, j):
+def _gcd_reduce_column(A: np.ndarray, L: np.ndarray, j: int) -> Tuple[np.ndarray, np.ndarray]:
     """
     Use row operations to make A[i, i] the greatest common
     denominator of the elements in column i and the other elements
@@ -197,18 +357,18 @@ def _gcd_reduce_column(A, L, j):
 
     Parameters
     ----------
-    A : ndarray
+    A
         Matrix whose column is to be cleared.
-    L : ndarray
+    L
         Matrix that should be subject to the same operations.
-    i : int
+    i
         Index of column to be treated.
 
     Returns
     -------
-    ndarray
+    A
         Treated matrix A.
-    ndarray
+    L
         Matrix that has been subject to the same operations.
     """
     for i in range(j, 3):
@@ -239,19 +399,19 @@ def _gcd_reduce_column(A, L, j):
     return A, L
 
 
-def get_unique_snfs(hnfs):
+def get_unique_snfs(hnfs: List[HermiteNormalForm]) -> List[SmithNormalForm]:
     """
     For a list of Hermite Normal Forms, obtain the set of unique Smith Normal
     Forms.
 
     Parameters
     ----------
-    hnfs : list of HermiteNormalForm objects
+    hnfs
+        List of HermiteNormalForm objects
 
     Returns
     -------
-    list of SmithNormalForm objects
-        The unique Smith Normal Form matrices.
+    The unique Smith Normal Form matrices in a list
     """
     snfs = []
     for hnf in hnfs:

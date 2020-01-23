@@ -1,5 +1,6 @@
 import itertools
 from collections import OrderedDict
+from typing import List, Tuple, Dict
 
 
 class LabelingGenerator():
@@ -45,12 +46,12 @@ class LabelingGenerator():
 
     Parameters
     ----------
-    iter_species : list of tuples of ints
-        allowed species on each site
-    concentrations : dict
+    iter_species
+        list of tuples of ints, each element in the list representing a site,
+        and each tuple containing the allowed species on that site
+    concentrations
         keys represent species (integers), values specify concentration ranges
-    tol : float
-        tolerance parameter used when comparing concentrations
+        as tuples of two floats
 
     Attribtues
     ----------
@@ -59,10 +60,9 @@ class LabelingGenerator():
         corresponding to that iter_species
     """
 
-    def __init__(self, iter_species, concentrations, tol=1e-5):
+    def __init__(self, iter_species: List[Tuple[int]], concentrations: Dict) -> None:
         self.iter_species = iter_species
         self.concentrations = concentrations
-        self.tol = tol
 
         if self.concentrations:
             self.site_groups = OrderedDict()
@@ -75,20 +75,19 @@ class LabelingGenerator():
                         iter_species_key, count)
                     count += 1
 
-    def yield_labelings(self, ncells):
+    def yield_labelings(self, ncells: int) -> Tuple[int]:
         """
         Yield labelings that comply with the concentration restrictions and,
         with `ncells` primitive cells.
 
         Parameters
         ----------
-        ncells : int
+        ncells
             Size of supercell
 
         Yields
         ------
-        tuple of ints
-            Labeling
+        Labelings
         """
 
         if self.concentrations:
@@ -101,17 +100,21 @@ class LabelingGenerator():
             for labeling in itertools.product(*self.iter_species * ncells):
                 yield labeling
 
-    def yield_products(self, ncells):
+    def yield_products(self, ncells: int) -> Tuple[Tuple[int]]:
         """
         Yield combinations (or rather products in the itertools terminology)
         of decorated site group combinations that comply with the concentration
         restrictions.
 
+        Parameters
+        ----------
+        ncells
+            Size of supercell
+
         Returns
         -------
-        tuple of tuples of ints
-            all unique combinations (products) of unordered iter_species
-            combinations,
+        all unique combinations (products) of unordered `iter_species`
+        combinations,
         """
         natoms = len(self.iter_species) * ncells
         combinations = [sg.combinations for sg in self.site_groups.values()]
@@ -122,15 +125,15 @@ class LabelingGenerator():
                     counts[species] += species_group.count(species)
             conc_restr_violation = False
             for species, conc_range in self.concentrations.items():
-                if counts[species] / natoms < conc_range[0] - self.tol or \
-                   counts[species] / natoms > conc_range[1] + self.tol:
+                if counts[species] / natoms < conc_range[0] - 1e-9 or \
+                   counts[species] / natoms > conc_range[1] + 1e-9:
                     conc_restr_violation = True
                     break
             if not conc_restr_violation:
                 yield product
 
-    def yield_unique_permutations(self, unique_species, permutation,
-                                  position):
+    def yield_unique_permutations(self, unique_species: Dict, permutation: List[int],
+                                  position: int) -> Tuple[int]:
         """
         Recursively generate all _unique_ permutations of a set of species
         with given multiplicities. The algorithm is inspired by the one given
@@ -138,20 +141,19 @@ class LabelingGenerator():
 
         Parameters
         ----------
-        unique_species : dict
+        unique_species
             keys represent species,values the corresponding multiplicity
-        permutation : list of ints
+        permutation
             permutation in process; should have length equal to the sum of all
             multiplicities
-        position : int
+        position
             position currently processed; should be the index of the last
             species of `permutation` upon initialization
 
         Yields
         ------
-        tuple with ints
-            permutation where each species occurs according to the multiplicity
-            specified in `unique_species`
+        permutation where each species occurs according to the multiplicity
+        specified in `unique_species`
         """
         if position < 0:
             # Finish recursion
@@ -168,23 +170,22 @@ class LabelingGenerator():
                         yield perm
                     unique_species[species] += 1
 
-    def yield_permutations(self, product, position):
+    def yield_permutations(self, product: Tuple[Tuple[int]], position: int) -> List[Tuple[int]]:
         """
         Recursively generate all combinations of unique permutations of the
         tuples in `product`.
 
         Parameters
         ----------
-        product : tuple of tuples of ints
+        product
             species allowed for each site group
-        position : int
+        position
             keeps track of the position where recursion occurs; set to 0 upon
             initialization.
 
         Yields
         ------
-        list of tuples of ints
-            unique combinations of unique permutations, ordered by site group
+        unique combinations of unique permutations, ordered by site group
         """
         unique_species = {species: product[position].count(species)
                           for species in set(product[position])}
@@ -199,7 +200,7 @@ class LabelingGenerator():
                                                                 position + 1):
                     yield [permutation] + permutation_rest
 
-    def sort_labeling(self, labeling, ncells):
+    def sort_labeling(self, labeling: List[Tuple[int]], ncells: int) -> Tuple[int]:
         """
         The elements in labeling are now given in site groups. We want just
         one labeling, ordered by site group, but one primitive cell at a time.
@@ -212,15 +213,14 @@ class LabelingGenerator():
 
         Parameters
         ----------
-        labeling : list of tuple of ints
+        labeling
             As given by yield_permutations
-        ncells : int
+        ncells
             Size of supercell
 
         Returns
         -------
-        tuple of ints
-            Labeling properly sorted, ready to be given to the enumeration code
+        Labeling properly sorted, ready to be given to the enumeration code
         """
         sorted_labeling = [0] * len(self.iter_species * ncells)
         count = 0
@@ -254,9 +254,9 @@ class SiteGroup():
 
     Parameters
     ----------
-    iter_species : tuple of ints
+    iter_species
         allowed species on these sites
-    position : int
+    position
         helps to keep track of when the first group occurred; the first
         site group encountered will have position = 0, the next 1 etc.
 
@@ -270,13 +270,13 @@ class SiteGroup():
         next to be added when the elements of a labeling are to be sorted
     """
 
-    def __init__(self, iter_species, position):
+    def __init__(self, iter_species: Tuple[int], position: int) -> None:
         self.iter_species = iter_species
         self.position = position
         self.multiplicity = 1
         self.next_to_add = 0  # Will keep count when reordering elements
 
-    def compute_all_combinations(self, ncells):
+    def compute_all_combinations(self, ncells: int) -> None:
         """
         Compute all combinations (without considering order) of the elements
         in the group.

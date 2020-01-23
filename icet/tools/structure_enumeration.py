@@ -9,10 +9,8 @@ from spglib import get_symmetry
 from spglib import niggli_reduce as spg_nigg_red
 
 from icet.tools.geometry import ase_atoms_to_spglib_cell
-from .structure_enumeration_support.hermite_normal_form \
-    import yield_reduced_hnfs, HermiteNormalForm
-from .structure_enumeration_support.smith_normal_form \
-    import get_unique_snfs, SmithNormalForm
+from .structure_enumeration_support.normal_form_matrices \
+    import HermiteNormalForm, yield_reduced_hnfs, SmithNormalForm, get_unique_snfs
 from .structure_enumeration_support.labeling_generation \
     import LabelingGenerator
 
@@ -252,8 +250,9 @@ def _labeling_to_ase_atoms(labeling: tuple, hnf: np.ndarray, cell: np.ndarray,
     return structure
 
 
-def get_symmetry_operations(structure: Atoms,
-                            tolerance: float = 1e-3) -> Dict[str, list]:
+def _get_symmetry_operations(structure: Atoms,
+                             symprec: float,
+                             position_tolerance: float) -> Dict[str, list]:
     """
     Returns symmetry operations permissable for a given structure as
     obtained via `spglib <https://atztogo.github.io/spglib/>`_. The
@@ -265,11 +264,12 @@ def get_symmetry_operations(structure: Atoms,
     ----------
     structure
         structure for which symmetry operations are sought
-    tolerance
-        numerical tolerance imposed during symmetry analysis
+    symprec
+        tolerance imposed when analyzing the symmetry using spglib
+    position_tolerance
+        tolerance applied when comparing positions in Cartesian coordinates
     """
-
-    symmetries = get_symmetry(ase_atoms_to_spglib_cell(structure), symprec=tolerance)
+    symmetries = get_symmetry(ase_atoms_to_spglib_cell(structure), symprec=symprec)
     assert symmetries, ('spglib.get_symmetry() failed. Please make sure that'
                         ' the structure object is sensible.')
     rotations = symmetries['rotations']
@@ -298,10 +298,10 @@ def get_symmetry_operations(structure: Atoms,
             # site_translation to t_Nd)
             site_translation = [0, 0, 0]
             for index in range(3):
-                while site_rot_trans[index] < -tolerance:
+                while site_rot_trans[index] < -position_tolerance:
                     site_rot_trans[index] += 1
                     site_translation[index] -= 1
-                while site_rot_trans[index] > 1 - tolerance:
+                while site_rot_trans[index] > 1 - position_tolerance:
                     site_rot_trans[index] -= 1
                     site_translation[index] += 1
             site_translations.append(site_translation)
@@ -313,10 +313,10 @@ def get_symmetry_operations(structure: Atoms,
 
                 # Make sure that they do not differ with a basis vector
                 for dist_comp_i, dist_comp in enumerate(distance):
-                    if abs(abs(dist_comp) - 1) < tolerance:
+                    if abs(abs(dist_comp) - 1) < position_tolerance:
                         distance[dist_comp_i] = 0
 
-                if (abs(distance) < tolerance).all():
+                if (abs(distance) < position_tolerance).all():
                     assert not found
                     basis_shifts[i, j] = basis_index
                     found = True
@@ -332,7 +332,9 @@ def get_symmetry_operations(structure: Atoms,
 def enumerate_structures(structure: Atoms, sizes: List[int],
                          chemical_symbols: list,
                          concentration_restrictions: dict = None,
-                         niggli_reduce: bool = None) -> Atoms:
+                         niggli_reduce: bool = None,
+                         symprec: float = 1e-5,
+                         position_tolerance: float = None) -> Atoms:
     """
     Yields a sequence of enumerated structures. The function generates
     *all* inequivalent structures that are permissible given a certain
@@ -370,6 +372,11 @@ def enumerate_structures(structure: Atoms, sizes: List[int],
         if True perform a Niggli reduction with spglib for each
         structure; the default is ``True`` if ``structure`` is periodic in
         all directions, ``False`` otherwise.
+    symprec
+        tolerance imposed when analyzing the symmetry using spglib
+    position_tolerance
+        tolerance applied when comparing positions in Cartesian coordinates;
+        by default this value is set equal to `symprec`
 
     Examples
     --------
@@ -378,27 +385,38 @@ def enumerate_structures(structure: Atoms, sizes: List[int],
     with up to 6 atoms in the unit cell for a binary alloy without any
     constraints::
 
-        from ase.build import bulk
-        prim = bulk('Ag')
-        enumerate_structures(structure=prim, sizes=range(1, 7),
-                             chemical_symbols=['Ag', 'Au'])
+        >>> from ase.build import bulk
+        >>> from icet.tools import enumerate_structures
+        >>> prim = bulk('Ag')
+        >>> for structure in enumerate_structures(structure=prim,
+        ...                                       sizes=range(1, 5),
+        ...                                       chemical_symbols=['Ag', 'Au']):
+        ...     pass # Do something with the structure
 
     To limit the concentration range to 10 to 40% Au the code should
     be modified as follows::
 
-        enumerate_structures(structure=prim, sizes=range(1, 7),
-                             chemical_symbols=['Ag', 'Au'],
-                             concentration_restrictions={'Au': (0.1, 0.4)})
+        >>> conc_restr = {'Au': (0.1, 0.4)}
+        >>> for structure in enumerate_structures(structure=prim,
+        ...                                       sizes=range(1, 5),
+        ...                                       chemical_symbols=['Ag', 'Au'],
+        ...                                       concentration_restrictions=conc_restr):
+        ...     pass # Do something with the structure
 
     Often one would like to consider mixing on only one
     sublattice. This can be achieved as illustrated for a
     Ga(1-x)Al(x)As alloy as follows::
 
-        prim = bulk('GaAs', crystalstructure='zincblende', a=5.65)
-        enumerate_structures(structure=prim, sizes=range(1, 9),
-                             chemical_symbols=[['Ga', 'Al'], ['As']])
+        >>> prim = bulk('GaAs', crystalstructure='zincblende', a=5.65)
+        >>> for structure in enumerate_structures(structure=prim,
+        ...                                       sizes=range(1, 9),
+        ...                                       chemical_symbols=[['Ga', 'Al'], ['As']]):
+        ...     pass # Do something with the structure
 
     """
+
+    if position_tolerance is None:
+        position_tolerance = symprec
 
     nsites = len(structure)
     basis = structure.get_scaled_positions()
@@ -445,7 +463,9 @@ def enumerate_structures(structure: Atoms, sizes: List[int],
     if niggli_reduce is None:
         niggli_reduce = (sum(structure.pbc) == 3)
 
-    symmetries = get_symmetry_operations(structure)
+    symmetries = _get_symmetry_operations(structure,
+                                          symprec=symprec,
+                                          position_tolerance=position_tolerance)
 
     # Loop over each cell size
     for ncells in sizes:
@@ -472,7 +492,9 @@ def enumerate_structures(structure: Atoms, sizes: List[int],
 
 
 def enumerate_supercells(structure: Atoms, sizes: List[int],
-                         niggli_reduce: bool = None) -> Atoms:
+                         niggli_reduce: bool = None,
+                         symprec: float = 1e-5,
+                         position_tolerance: float = None) -> Atoms:
     """
     Yields a sequence of enumerated supercells. The function generates
     *all* inequivalent supercells that are permissible given a certain
@@ -498,6 +520,11 @@ def enumerate_supercells(structure: Atoms, sizes: List[int],
         if True perform a Niggli reduction with spglib for each
         supercell; the default is ``True`` if ``structure`` is periodic in
         all directions, ``False`` otherwise.
+    symprec
+        tolerance imposed when analyzing the symmetry using spglib
+    position_tolerance
+        tolerance applied when comparing positions in Cartesian coordinates;
+        by default this value is set equal to `symprec`
 
     Examples
     --------
@@ -505,17 +532,26 @@ def enumerate_supercells(structure: Atoms, sizes: List[int],
     The following code snippet illustrates how to enumerate supercells
     with up to 6 atoms in the unit cell::
 
-        from ase.build import bulk
-        prim = bulk('Ag')
-        enumerate_supercells(structure=prim, sizes=range(1, 7))
+        >>> from ase.build import bulk
+        >>> from icet.tools import enumerate_supercells
+        >>> prim = bulk('Ag')
+        >>> for supercell in enumerate_supercells(structure=prim, sizes=range(1, 7)):
+        ...     pass # Do something with the supercell
+
     """
+
+    if position_tolerance is None:
+        position_tolerance = symprec
 
     # Niggli reduce by default if all directions have
     # periodic boundary conditions
     if niggli_reduce is None:
         niggli_reduce = (sum(structure.pbc) == 3)
 
-    symmetries = get_symmetry_operations(structure)
+    symmetries = _get_symmetry_operations(structure,
+                                          symprec=symprec,
+                                          position_tolerance=position_tolerance)
+
     for ncells in sizes:
         for hnf in yield_reduced_hnfs(ncells, symmetries, structure.pbc):
             supercell = make_supercell(structure, hnf.H.T)
