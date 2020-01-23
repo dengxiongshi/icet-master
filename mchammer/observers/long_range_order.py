@@ -64,9 +64,10 @@ def compute_structure_factor_lookup(atoms, q_points, Sq_lookup):
     for sym1, sym2 in pairs:
         inds1 = indices[sym1]
         inds2 = indices[sym2]
+        norm = 1 / np.sqrt(len(inds1) * len(inds2))
         Sq = np.zeros(len(q_points), dtype=np.complex128)
         for i in inds1:
-            Sq += Sq_lookup[i, inds2].sum(axis=0)
+            Sq += Sq_lookup[i, inds2].sum(axis=0) * norm
         assert np.max(np.abs(Sq.imag)) < 1e-6
         Sq_dict[(sym1, sym2)] = Sq
 
