@@ -5,6 +5,65 @@ from mchammer.observers.base_observer import BaseObserver
 
 class StructureFactorObserver(BaseObserver):
 
+    """
+
+    Parameters
+    ----------
+    atoms : ase.Atoms
+        a typical supercell, which is used to determine the allowed species
+    q_points
+        array of q_points
+    symbol_pairs
+        list of symbol pairs for which Sq will be computed,
+        e.g. [('Al', 'Si'), ('Al', 'Al')]
+    interval : int
+        the observation interval, defaults to None meaning that if the
+        observer is used in a Monte-simulation, then the Ensemble object
+        will set the interval.
+
+    Example snippet::
+        import numpy as np
+        from icet import ClusterSpace, ClusterExpansion
+        from mchammer.calculators import ClusterExpansionCalculator
+        from mchammer.ensembles import CanonicalEnsemble
+        from mchammer.observers import StructureFactorObserver
+
+        from ase.build import bulk
+
+        # parameters
+        size = 4
+        a0 = 4.0
+        symbols = ['Al', 'Si']
+
+        # setup
+        prim = bulk('Al', a=a0)
+        cs = ClusterSpace(prim, [5.0], symbols)
+        ce = ClusterExpansion(cs, np.random.random(len(cs)))
+
+        # make supercell
+        supercell = bulk('Al', a=a0, cubic=True).repeat(size)
+        n2 = int(len(supercell) / 2)
+        supercell.set_chemical_symbols(['Al'] * n2 + ['Si'] * n2)
+
+        # q-points
+        q_point = 2 * np.pi / a0 * np.array([1, 0, 0])
+        q_points = np.array([q_point * i for i in np.linspace(0, 1, size+1)[1:]])
+        q_norms = np.linalg.norm(q_points, axis=1) / (2 * np.pi / a0)
+
+        sfo = StructureFactorObserver(supercell, q_points, [symbols])
+
+        calc = ClusterExpansionCalculator(supercell, ce)
+        mc = CanonicalEnsemble(supercell, calc, 300)
+        mc.attach_observer(sfo)
+        mc.run(5000)
+
+
+        dc = mc.data_container
+        print(dc.data.columns)
+
+
+    """
+
     def __init__(self, atoms, q_points, symbol_pairs, interval=None):
         super().__init__(interval=interval, return_type=dict, tag='StructureFactorObserver')
 
@@ -95,43 +154,3 @@ def compute_structure_factor_naive(atoms, q_points):
         Sq_dict[(sym1, sym2)] = Sq
 
     return Sq_dict
-
-
-if __name__ == '__main__':
-
-    import numpy as np
-    from icet import ClusterSpace, ClusterExpansion
-    from mchammer.calculators import ClusterExpansionCalculator
-    from mchammer.ensembles import CanonicalEnsemble
-    from mchammer.observers import StructureFactorObserver
-    from ase.build import bulk
-
-    # parameters
-    size = 4
-    a0 = 4.0
-    symbols = ['Al', 'Si']
-
-    # setup
-    prim = bulk('Al', a=a0)
-    cs = ClusterSpace(prim, [5.0], symbols)
-    ce = ClusterExpansion(cs, np.random.random(len(cs)))
-
-    # make supercell
-    supercell = prim.repeat(4)
-    n2 = int(len(supercell) / 2)
-    supercell.set_chemical_symbols(['Al'] * n2 + ['Si'] * n2)
-
-    # q-points
-    q_point = 2 * np.pi / a0 * np.array([1, 0, 0])
-    q_points = np.array([q_point * i for i in np.linspace(0, 1, size+1)[1:]])
-    q_norms = np.linalg.norm(q_points, axis=1) / (2 * np.pi / a0)
-
-    sfo = StructureFactorObserver(supercell, q_points, [symbols])
-
-    calc = ClusterExpansionCalculator(supercell, ce)
-    mc = CanonicalEnsemble(supercell, calc, 300)
-    mc.attach_observer(sfo)
-    mc.run(5000)
-
-    dc = mc.data_container
-    print(dc.data.columns)
