@@ -36,6 +36,7 @@ def compute_structure_factor_naive(atoms, q_points):
 
 def get_Sq_lookup_data(atoms, q_points):
     # pre-compute lookuo
+    n_atoms = len(atoms)
     dist_vectors = atoms.get_all_distances(mic=True, vector=True)
     Sq_lookup = np.zeros((n_atoms, n_atoms, len(q_points)))
     for i in range(n_atoms):
