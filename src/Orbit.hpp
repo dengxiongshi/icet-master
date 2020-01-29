@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <set>
 
 #include "Cluster.hpp"
 #include "LatticeSite.hpp"
@@ -155,10 +156,8 @@ public:
 
         if (rep_sites_this.size() != rep_sites_rhs.size())
         {
-            throw std::runtime_error("Error: Orbit order is not equal in function: Orbit &operator+= ");
+            throw std::runtime_error("Orbit order is not equal (Orbit &operator+=)");
         }
-        // The offsets between the offsets of the two rep. eq. sites
-        Vector3d offsetOfOffsets;
 
         const auto rhsEquivalentSites = orbit_rhs.getEquivalentSites();
         const auto rhsEquivalentSitesPermutations = orbit_rhs.getPermutationsOfEquivalentSites();

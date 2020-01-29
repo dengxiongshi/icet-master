@@ -48,9 +48,9 @@ class ClusterCountObserver(BaseObserver):
 
         self._cluster_space = cluster_space
         local_orbit_list_generator = LocalOrbitListGenerator(
-            cluster_space.orbit_list,
-            Structure.from_atoms(structure),
-            cluster_space.fractional_position_tolerance)
+            orbit_list=cluster_space.orbit_list,
+            structure=Structure.from_atoms(structure),
+            fractional_position_tolerance=cluster_space.fractional_position_tolerance)
 
         self._full_orbit_list = local_orbit_list_generator.generate_full_orbit_list()
         self._cluster_counts_cpp = _ClusterCounts()

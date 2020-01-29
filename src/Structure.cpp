@@ -173,6 +173,7 @@ LatticeSite Structure::findLatticeSiteByPosition(const Vector3d &position, const
             return LatticeSite(i, latticeVector);
         }
     }
+
     Vector3d fractionalPosition = _cell.transpose().partialPivLu().solve(position);
     std::ostringstream msg;
     msg << "Failed to find site by position (findLatticeSiteByPosition)." << std::endl;

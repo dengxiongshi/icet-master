@@ -26,6 +26,8 @@ standard_tests:
   dependencies:
     - build_linux
   script:
+    - xdoctest icet
+    - xdoctest mchammer
     - coverage run tests/main.py
     - coverage report -m
     - coverage html
@@ -63,8 +65,7 @@ style_check:
   tags:
     - linux
   script:
-    - python3 tests/check_flake8__.py
-  allow_failure: true
+    - flake8 icet/ mchammer/ tests/ benchmark/ doc/ examples/
 
 
 test_documentation:
@@ -78,9 +79,10 @@ test_documentation:
     - doxygen Doxyfile
     - cd ../..
     - mv doc/apidoc/html/ public/apidoc/
+    # check examples in documentation via doctest
+    - sphinx-build -b doctest -W doc/userguide/source/ public/
     # user guide (sphinx)
     - sphinx-build -W doc/userguide/source/ public/
-  allow_failure: true
   except:
    - master
   artifacts:

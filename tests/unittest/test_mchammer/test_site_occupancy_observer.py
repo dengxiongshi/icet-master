@@ -6,8 +6,7 @@ from random import sample
 from ase.build import bulk
 from ase.db import connect
 from icet import ClusterSpace
-from mchammer.observers.site_occupancy_observer import \
-    SiteOccupancyObserver
+from mchammer.observers.site_occupancy_observer import SiteOccupancyObserver
 
 
 def _assertAlmostEqualDict(self, retval, target, places=6):
@@ -58,7 +57,7 @@ class TestSOFObserverOneSite(unittest.TestCase):
     def setUp(self):
         """Set up observer before each test."""
         self.observer = SiteOccupancyObserver(
-            self.cs, self.sites, self.structure, interval=1)
+            self.cs, self.structure, self.sites, interval=1)
 
     def test_property_interval(self):
         """Tests property interval."""
@@ -114,7 +113,7 @@ class TestSOFObserverMultipleSites(unittest.TestCase):
     def setUp(self):
         """Set up observer before each test."""
         self.observer = SiteOccupancyObserver(
-            self.cs, self.sites, self.structure, interval=1)
+            self.cs, self.structure, self.sites, interval=1)
 
     def test_allowed_species(self):
         """Tests allowed species."""
@@ -162,7 +161,7 @@ class TestSOFObserverClathrate(unittest.TestCase):
     def setUp(self):
         """Set up observer before each test."""
         self.observer = SiteOccupancyObserver(
-            self.cs, self.sites, self.structure_prim, interval=1)
+            self.cs, self.structure_prim, self.sites, interval=1)
 
     def test_allowed_species(self):
         """Tests allowed species."""

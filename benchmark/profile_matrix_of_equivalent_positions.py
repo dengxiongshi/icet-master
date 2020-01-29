@@ -16,10 +16,16 @@ if __name__ == '__main__':
     symprec = 1e-5
     start = time.process_time()
     pm, prim_structure, _ = matrix_of_equivalent_positions_from_structure(
-        structure, cutoff, position_tolerance, symprec)
+        structure=structure,
+        cutoff=cutoff,
+        position_tolerance=position_tolerance,
+        symprec=symprec)
 
     pm_lattice_sites = get_lattice_site_matrix_of_equivalent_positions(
-        prim_structure, pm, fractional_position_tolerance, prune=True)
+        structure=prim_structure,
+        matrix_of_equivalent_positions=pm,
+        fractional_position_tolerance=fractional_position_tolerance,
+        prune=True)
     elapsed_time = time.process_time() - start
 
     print('Time to initialize matrix of equivalent positions with cutoff: {}, {:.6} sec'

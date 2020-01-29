@@ -4,7 +4,7 @@ import spglib
 
 from ase.build import bulk
 
-from icet import Structure
+from icet.core.structure import Structure
 from icet.core.neighbor_list import NeighborList
 from icet.core.matrix_of_equivalent_positions import (
     MatrixOfEquivalentPositions, matrix_of_equivalent_positions_from_structure)

@@ -372,11 +372,11 @@ def _concentrations_fit_atom_count(atom_count: int,
     Parameters
     ----------
     atom_count
-        How many atoms?
+        how many atoms?
     concentrations
-        What concentrations? Example: ``{'Ag': 0.3, 'Au': 0.7}``
+        which concentrations, e.g., ``{'Ag': 0.3, 'Au': 0.7}``
     tol
-        Numerical tolerance
+        numerical tolerance
     """
     for conc in concentrations.values():
         n_symbol = conc * atom_count
@@ -396,13 +396,13 @@ def _concentrations_fit_structure(structure: Atoms,
     Parameters
     ----------
     structure
-        ASE Atoms object to be checked
+        atomic configuration to be checked
     cluster_space
         corresponding cluster space
     concentrations
-        What concentrations? Example: ``{'Ag': 0.3, 'Au': 0.7}``
+        which concentrations, e.g., ``{'Ag': 0.3, 'Au': 0.7}``
     tol
-        Numerical tolerance
+        numerical tolerance
     """
     # Check that concentrations are OK in each sublattice
     for sublattice in cluster_space.get_sublattices(structure):
@@ -428,10 +428,10 @@ def _get_sqs_cluster_vector(cluster_space: ClusterSpace,
     Parameters
     ----------
     cluster_space
-        The kind of lattice to be occupied
+        the kind of lattice to be occupied
     target_concentrations
         concentration of each species in the target structure (for
-        example `{'Ag': 0.5, 'Pd': 0.5}`
+        example `{'Ag': 0.5, 'Pd': 0.5}`)
 
         Concentrations are always expressed with respect to all atoms in
         the supercell, which implies that the sum of all concentrations

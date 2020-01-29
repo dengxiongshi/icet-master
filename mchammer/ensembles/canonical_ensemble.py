@@ -100,30 +100,29 @@ class CanonicalEnsemble(ThermodynamicBaseEnsemble):
     example that can be run without modification. In practice, one should of
     course use a proper cluster expansion::
 
-        from ase.build import bulk
-        from icet import ClusterExpansion, ClusterSpace
-        from mchammer.calculators import ClusterExpansionCalculator
-        from mchammer.ensembles import CanonicalEnsemble
+        >>> from ase.build import bulk
+        >>> from icet import ClusterExpansion, ClusterSpace
+        >>> from mchammer.calculators import ClusterExpansionCalculator
 
-        # prepare cluster expansion
-        # the setup emulates a second nearest-neighbor (NN) Ising model
-        # (zerolet and singlet ECIs are zero; only first and second neighbor
-        # pairs are included)
-        prim = bulk('Au')
-        cs = ClusterSpace(prim, cutoffs=[4.3], chemical_symbols=['Ag', 'Au'])
-        ce = ClusterExpansion(cs, [0, 0, 0.1, -0.02])
+        >>> # prepare cluster expansion
+        >>> # the setup emulates a second nearest-neighbor (NN) Ising model
+        >>> # (zerolet and singlet ECIs are zero; only first and second neighbor
+        >>> # pairs are included)
+        >>> prim = bulk('Au')
+        >>> cs = ClusterSpace(prim, cutoffs=[4.3], chemical_symbols=['Ag', 'Au'])
+        >>> ce = ClusterExpansion(cs, [0, 0, 0.1, -0.02])
 
-        # prepare initial configuration
-        structure = prim.repeat(3)
-        for k in range(5):
-            structure[k].symbol = 'Ag'
+        >>> # prepare initial configuration
+        >>> structure = prim.repeat(3)
+        >>> for k in range(5):
+        >>>     structure[k].symbol = 'Ag'
 
-        # set up and run MC simulation
-        calc = ClusterExpansionCalculator(structure, ce)
-        mc = CanonicalEnsemble(structure=structure, calculator=calc,
-                               temperature=600,
-                               dc_filename='myrun_canonical.dc')
-        mc.run(100)  # carry out 100 trial swaps
+        >>> # set up and run MC simulation
+        >>> calc = ClusterExpansionCalculator(structure, ce)
+        >>> mc = CanonicalEnsemble(structure=structure, calculator=calc,
+        ...                        temperature=600,
+        ...                        dc_filename='myrun_canonical.dc')
+        >>> mc.run(100)  # carry out 100 trial swaps
     """
 
     def __init__(self,

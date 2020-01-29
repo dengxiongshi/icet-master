@@ -92,7 +92,7 @@ libraries, including
 `scitkit-learn <http://scikit-learn.org/>`_, and
 `spglib <https://atztogo.github.io/spglib/>`_.
 The :program:`icet` C++ core library depends on
-`Eigen <eigen.tuxfamily.org/>`_,
+`Eigen <https://eigen.tuxfamily.org/>`_,
 `boost <https://www.boost.org/>`_, and
 `pybind11 <https://pybind11.readthedocs.io/>`_,
 which are included in the distribution as third-party libraries.

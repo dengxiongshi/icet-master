@@ -40,9 +40,9 @@ of interest, such as the free energy derivative as a function of concentration.
   curves are noisy due to insufficient sampling).
 
 A gap in the semi-grand canonical (SGC) data around 85% Pd indicates a
-very asymmetric miscibility gap, which agrees with `experimental
+very asymmetric miscibility gap, which agrees with `previous
 assessments of the phase diagram
-<http://resource.npl.co.uk/mtdata/phdiagrams/agpd.htm>`_. It is
+<https://sites.google.com/site/atdinsdale/ag-pd>`_. It is
 possible to sample across the miscibility gap using the
 variance-constrained semi-grand canonical (VCSGC) ensemble for
 sampling. The latter, however, might require longer simulation times

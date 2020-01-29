@@ -29,8 +29,6 @@ extensions = [
     'sphinx_sitemap',
 ]
 
-# html_show_sourcelink = False
-
 graphviz_output_format = 'svg'
 templates_path = ['_templates']
 source_suffix = '.rst'

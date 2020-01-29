@@ -61,23 +61,27 @@ class OrbitList(_OrbitList):
         logger.info('Done getting matrix_of_equivalent_positions.')
 
         # Get a list of neighbor-lists
-        neighbor_lists = get_neighbor_lists(prim_structure, cutoffs, position_tolerance)
+        neighbor_lists = get_neighbor_lists(structure=prim_structure, cutoffs=cutoffs,
+                                            position_tolerance=position_tolerance)
 
         logger.info('Done getting neighbor lists.')
 
         # Transform matrix_of_equivalent_positions to be in lattice site format
-        pm_lattice_sites \
-            = _get_lattice_site_matrix_of_equivalent_positions(prim_structure,
-                                                               matrix_of_equivalent_positions,
-                                                               fractional_position_tolerance,
-                                                               prune=True)
+        pm_lattice_sites = _get_lattice_site_matrix_of_equivalent_positions(
+            structure=prim_structure,
+            matrix_of_equivalent_positions=matrix_of_equivalent_positions,
+            fractional_position_tolerance=fractional_position_tolerance,
+            prune=True)
 
         logger.info('Transformation of matrix of equivalent positions'
                     ' to lattice neighbor format completed.')
 
-        _OrbitList.__init__(
-            self, prim_structure, pm_lattice_sites, neighbor_lists, position_tolerance)
-        self.check_equivalent_clusters(position_tolerance)
+        _OrbitList.__init__(self,
+                            structure=prim_structure,
+                            matrix_of_equivalent_sites=pm_lattice_sites,
+                            neighbor_lists=neighbor_lists,
+                            position_tolerance=position_tolerance)
+        self.check_equivalent_clusters(position_tolerance=position_tolerance)
         logger.info('Finished construction of orbit list.')
 
     @property
@@ -100,7 +104,7 @@ class OrbitList(_OrbitList):
 
     def get_supercell_orbit_list(self,
                                  structure: Atoms,
-                                 position_tolerance: float):
+                                 fractional_position_tolerance: float):
         """
         Returns an orbit list for a supercell structure.
 
@@ -108,13 +112,14 @@ class OrbitList(_OrbitList):
         ----------
         structure
             supercell atomic structure
-        position_tolerance : float
-            tolerance applied when comparing positions in Cartesian coordinates
+        fractional_position_tolerance : float
+            tolerance applied when comparing positions in fractional coordinates
         """
-        log = LocalOrbitListGenerator(self, Structure.from_atoms(structure), position_tolerance)
-
-        supercell_orbit_list = log.generate_full_orbit_list()
-
+        lolg = LocalOrbitListGenerator(
+            self,
+            structure=Structure.from_atoms(structure),
+            fractional_position_tolerance=fractional_position_tolerance)
+        supercell_orbit_list = lolg.generate_full_orbit_list()
         return supercell_orbit_list
 
     def remove_inactive_orbits(self,

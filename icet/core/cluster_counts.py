@@ -11,7 +11,7 @@ from ase import Atoms
 from _icet import ClusterCounts as _ClusterCounts
 from _icet import Cluster
 from icet.core.orbit_list import OrbitList
-from icet import Structure
+from icet.core.structure import Structure
 from .local_orbit_list_generator import LocalOrbitListGenerator
 
 
@@ -46,7 +46,8 @@ class ClusterCounts(_ClusterCounts):
         self._structure = Structure.from_atoms(structure)
         # call (base) C++ constructor
         _ClusterCounts.__init__(self)
-        self.cluster_counts = self._count_clusters(fractional_position_tolerance)
+        self.cluster_counts = self._count_clusters(
+            fractional_position_tolerance=fractional_position_tolerance)
 
     def _count_clusters(self,
                         fractional_position_tolerance: float,
@@ -67,7 +68,9 @@ class ClusterCounts(_ClusterCounts):
         """
 
         local_orbit_list_generator = LocalOrbitListGenerator(
-            self._orbit_list, self._structure, fractional_position_tolerance)
+            orbit_list=self._orbit_list,
+            structure=self._structure,
+            fractional_position_tolerance=fractional_position_tolerance)
 
         for i in range(
                 local_orbit_list_generator.get_number_of_unique_offsets()):

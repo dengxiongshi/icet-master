@@ -1,7 +1,7 @@
 import spglib as spg
 from ase.neighborlist import NeighborList as ASENeighborList
 from ase.db import connect
-from icet import Structure
+from icet.core.structure import Structure
 from _icet import NeighborList
 
 """

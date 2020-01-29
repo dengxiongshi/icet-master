@@ -2,7 +2,7 @@ import unittest
 from ase.build import bulk, make_supercell
 import numpy as np
 
-from icet import OrbitList, Structure
+from icet.core.orbit_list import OrbitList, Structure
 from icet.core.lattice_site import LatticeSite
 from icet.core.local_orbit_list_generator import LocalOrbitListGenerator
 

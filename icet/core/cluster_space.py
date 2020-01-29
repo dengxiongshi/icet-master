@@ -12,6 +12,7 @@ from math import log10, floor
 from typing import List, Union
 
 import numpy as np
+import spglib
 
 from _icet import ClusterSpace as _ClusterSpace
 from ase import Atoms
@@ -20,7 +21,8 @@ from ase.io import write as ase_write
 from icet.core.orbit_list import OrbitList
 from icet.core.structure import Structure
 from icet.core.sublattices import Sublattices
-from icet.tools.geometry import get_occupied_primitive_structure
+from icet.tools.geometry import (ase_atoms_to_spglib_cell,
+                                 get_occupied_primitive_structure)
 
 
 class ClusterSpace(_ClusterSpace):
@@ -68,33 +70,33 @@ class ClusterSpace(_ClusterSpace):
     --------
     The following snippets illustrate several common situations::
 
-        from ase.build import bulk
-        from ase.io import read
-        from icet import ClusterSpace
+        >>> from ase.build import bulk
+        >>> from ase.io import read
+        >>> from icet import ClusterSpace
 
-        # AgPd alloy with pairs up to 7.0 A and triplets up to 4.5 A
-        prim = bulk('Ag')
-        cs = ClusterSpace(structure=prim, cutoffs=[7.0, 4.5],
-                          chemical_symbols=[['Ag', 'Pd']])
-        print(cs)
+        >>> # AgPd alloy with pairs up to 7.0 A and triplets up to 4.5 A
+        >>> prim = bulk('Ag')
+        >>> cs = ClusterSpace(structure=prim, cutoffs=[7.0, 4.5],
+        ...                   chemical_symbols=[['Ag', 'Pd']])
+        >>> print(cs)
 
-        # (Mg,Zn)O alloy on rocksalt lattice with pairs up to 8.0 A
-        prim = bulk('MgO', crystalstructure='rocksalt', a=6.0)
-        cs = ClusterSpace(structure=prim, cutoffs=[8.0],
-                          chemical_symbols=[['Mg', 'Zn'], ['O']])
-        print(cs)
+        >>> # (Mg,Zn)O alloy on rocksalt lattice with pairs up to 8.0 A
+        >>> prim = bulk('MgO', crystalstructure='rocksalt', a=6.0)
+        >>> cs = ClusterSpace(structure=prim, cutoffs=[8.0],
+        ...                   chemical_symbols=[['Mg', 'Zn'], ['O']])
+        >>> print(cs)
 
-        # (Ga,Al)(As,Sb) alloy with pairs, triplets, and quadruplets
-        prim = bulk('GaAs', crystalstructure='zincblende', a=6.5)
-        cs = ClusterSpace(structure=prim, cutoffs=[7.0, 6.0, 5.0],
-                          chemical_symbols=[['Ga', 'Al'], ['As', 'Sb']])
-        print(cs)
+        >>> # (Ga,Al)(As,Sb) alloy with pairs, triplets, and quadruplets
+        >>> prim = bulk('GaAs', crystalstructure='zincblende', a=6.5)
+        >>> cs = ClusterSpace(structure=prim, cutoffs=[7.0, 6.0, 5.0],
+        ...                   chemical_symbols=[['Ga', 'Al'], ['As', 'Sb']])
+        >>> print(cs)
 
-        # PdCuAu alloy with pairs and triplets
-        prim = bulk('Pd')
-        cs = ClusterSpace(structure=prim, cutoffs=[7.0, 5.0],
-                          chemical_symbols=[['Au', 'Cu', 'Pd']])
-        print(cs)
+        >>> # PdCuAu alloy with pairs and triplets
+        >>> prim = bulk('Pd')
+        >>> cs = ClusterSpace(structure=prim, cutoffs=[7.0, 5.0],
+        ...                   chemical_symbols=[['Au', 'Cu', 'Pd']])
+        >>> print(cs)
 
     """
 
@@ -110,6 +112,8 @@ class ClusterSpace(_ClusterSpace):
                             ', not type {}'.format(type(structure)))
         if not all(structure.pbc):
             raise ValueError('Input structure must have periodic boundary conditions')
+        if symprec <= 0:
+            raise ValueError('symprec must be a positive number')
 
         self._config = {'symprec': symprec}
         self._cutoffs = cutoffs.copy()
@@ -129,25 +133,29 @@ class ClusterSpace(_ClusterSpace):
         if position_tolerance is None:
             self._config['position_tolerance'] = symprec
         else:
+            if position_tolerance <= 0:
+                raise ValueError('position_tolerance must be a positive number')
             self._config['position_tolerance'] = position_tolerance
         effective_box_size = abs(np.linalg.det(occupied_primitive.cell)) ** (1 / 3)
         tol = self.position_tolerance / effective_box_size
+        tol = min(tol, self._config['position_tolerance'] / 5)
         self._config['fractional_position_tolerance'] = round(tol, -int(floor(log10(abs(tol)))))
 
         # set up orbit list
-        self._orbit_list = OrbitList(occupied_primitive,
-                                     self._cutoffs,
-                                     self.symprec,
-                                     self.position_tolerance,
-                                     self.fractional_position_tolerance)
+        self._orbit_list = OrbitList(
+            structure=occupied_primitive,
+            cutoffs=self._cutoffs,
+            symprec=self.symprec,
+            position_tolerance=self.position_tolerance,
+            fractional_position_tolerance=self.fractional_position_tolerance)
         self._orbit_list.remove_inactive_orbits(primitive_chemical_symbols)
 
         # call (base) C++ constructor
         _ClusterSpace.__init__(self,
-                               primitive_chemical_symbols,
-                               self._orbit_list,
-                               self.position_tolerance,
-                               self.fractional_position_tolerance)
+                               chemical_symbols=primitive_chemical_symbols,
+                               orbit_list=self._orbit_list,
+                               position_tolerance=self.position_tolerance,
+                               fractional_position_tolerance=self.fractional_position_tolerance)
 
     def _get_chemical_symbols(self):
         """ Returns chemical symbols using input structure and
@@ -237,6 +245,7 @@ class ClusterSpace(_ClusterSpace):
         width = len(repr_orbit(prototype_orbit))
         s = []  # type: List
         s += ['{s:=^{n}}'.format(s=' Cluster Space ', n=width)]
+        s += [' {:38} : {}'.format('space group', self.space_group)]
         s += [' {:38} : {}'
               .format('chemical species', self._get_chemical_symbol_representation())]
         s += [' {:38} : {}'.format('cutoffs', ' '
@@ -305,6 +314,12 @@ class ClusterSpace(_ClusterSpace):
     def fractional_position_tolerance(self) -> float:
         """ tolerance applied when comparing positions in fractional coordinates """
         return self._config['fractional_position_tolerance']
+
+    @property
+    def space_group(self) -> str:
+        """ space group of the primitive structure in international notion (via spglib) """
+        structure_as_tuple = ase_atoms_to_spglib_cell(self.primitive_structure)
+        return spglib.get_spacegroup(structure_as_tuple, symprec=self._config['symprec'])
 
     @property
     def orbit_data(self) -> List[dict]:
@@ -387,9 +402,10 @@ class ClusterSpace(_ClusterSpace):
             raise TypeError('Input structure must be an ASE Atoms object')
 
         try:
-            cv = _ClusterSpace.get_cluster_vector(self,
-                                                  Structure.from_atoms(structure),
-                                                  self.fractional_position_tolerance)
+            cv = _ClusterSpace.get_cluster_vector(
+                self,
+                structure=Structure.from_atoms(structure),
+                fractional_position_tolerance=self.fractional_position_tolerance)
         except Exception as e:
             self.assert_structure_compatibility(structure)
             raise(e)
@@ -472,7 +488,7 @@ class ClusterSpace(_ClusterSpace):
         sl = Sublattices(self.chemical_symbols,
                          self.primitive_structure,
                          structure,
-                         self.fractional_position_tolerance)
+                         fractional_position_tolerance=self.fractional_position_tolerance)
         return sl
 
     def assert_structure_compatibility(self, structure: Atoms, vol_tol: float = 1e-5) -> None:
@@ -503,7 +519,7 @@ class ClusterSpace(_ClusterSpace):
         if not all(structure.pbc):
             raise ValueError('Input structure must have periodic boundary conditions')
 
-    def is_supercell_self_correlated(self, structure: Atoms) -> bool:
+    def is_supercell_self_interacting(self, structure: Atoms) -> bool:
         """
         Checks whether an structure has self-interactions via periodic
         boundary conditions.
@@ -519,7 +535,9 @@ class ClusterSpace(_ClusterSpace):
             If True, the structure contains self-interactions via periodic
             boundary conditions, otherwise False.
         """
-        ol = self.orbit_list.get_supercell_orbit_list(structure, self.position_tolerance)
+        ol = self.orbit_list.get_supercell_orbit_list(
+            structure=structure,
+            fractional_position_tolerance=self.fractional_position_tolerance)
         orbit_indices = set()
         for orbit in ol.orbits:
             for sites in orbit.get_equivalent_sites():

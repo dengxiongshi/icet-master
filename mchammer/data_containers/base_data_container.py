@@ -147,10 +147,11 @@ class BaseDataContainer:
                 if observer.return_type is dict:
                     for key, value in observer.get_observable(structure).items():
                         record[key] = value
+                        self._observables.add(key)
                 else:
                     record[observer.tag] = observer.get_observable(structure)
+                    self._observables.add(observer.tag)
                 row_data.update(record)
-                self._observables.add(observer.tag)
 
     def get(self, *input_tags, start: int = 0) \
             -> Union[np.ndarray, List[Atoms], Tuple[np.ndarray, List[Atoms]]]:
@@ -176,20 +177,53 @@ class BaseDataContainer:
 
         Examples
         --------
+        Below the `get` method is illustrated but first we require a data container.
+
+            >>> from ase.build import bulk
+            >>> from icet import ClusterExpansion, ClusterSpace
+            >>> from mchammer.calculators import ClusterExpansionCalculator
+            >>> from mchammer.ensembles import CanonicalEnsemble
+
+            >>> # prepare cluster expansion
+            >>> prim = bulk('Au')
+            >>> cs = ClusterSpace(prim, cutoffs=[4.3], chemical_symbols=['Ag', 'Au'])
+            >>> ce = ClusterExpansion(cs, [0, 0, 0.1, -0.02])
+
+            >>> # prepare initial configuration
+            >>> structure = prim.repeat(3)
+            >>> for k in range(5):
+            ...     structure[k].symbol = 'Ag'
+
+            >>> # set up and run MC simulation
+            >>> calc = ClusterExpansionCalculator(structure, ce)
+            >>> mc = CanonicalEnsemble(structure=structure, calculator=calc,
+            ...                        temperature=600,
+            ...                        dc_filename='myrun_canonical.dc')
+            >>> mc.run(100)  # carry out 100 trial swaps
+
+        We can now access the data container by reading it from file by using
+        the `read` method. For the purpose of this example, however, we access
+        the data container associated with the ensemble directly.
+
+            >>> dc = mc.data_container
+
         The following lines illustrate how to use the `get` method
-        for extracting data from the trajectory::
+        for extracting data from the data container.
 
-            # obtain all values of the potential represented by
-            # the cluster expansion along the trajectory
-            p = dc.get('potential')
+            >>> # obtain all values of the potential represented by
+            >>> # the cluster expansion along the trajectory
+            >>> p = dc.get('potential')
 
-            # as above but this time the MC trial step and the temperature
-            # are included as well
-            s, p, t = dc.get('mctrial', 'potential', 'temperature')
+            >>> import matplotlib.pyplot as plt
+            >>> # as above but this time the MC trial step and the temperature
+            >>> # are included as well
+            >>> s, p = dc.get('mctrial', 'potential')
+            >>> _ = plt.plot(s, p)
+            >>> plt.show()
 
-            # obtain configurations along the trajectory along with
-            # their potential
-            p, confs = dc.get('potential', 'trajectory'
+            >>> # obtain configurations along the trajectory along with
+            >>> # their potential
+            >>> p, confs = dc.get('potential', 'trajectory')
         """
 
         if len(input_tags) == 0:

@@ -1,5 +1,5 @@
 import numpy as np
-from icet import Structure
+from icet.core.structure import Structure
 from ase.db import connect
 from ase.neighborlist import NeighborList as ASENeighborList
 

@@ -1,32 +1,11 @@
 .. index::
-   single: Function reference; Structures
-   single: Class reference; Structures
+   single: Function reference; Structure containers
+   single: Class reference; Structure containers
 
-Structures
-==========
-
-
-.. index::
-   single: Function reference; Structure container
-   single: Class reference; Structure container
-
-StructureContainer
-------------------
+Structure containers
+====================
 
 .. autoclass:: icet.StructureContainer
-   :members:
-   :undoc-members:
-   :inherited-members:
-
-
-.. index::
-   single: Function reference; Structure
-   single: Class reference; Structure
-
-Structure
----------
-
-.. autoclass:: icet.Structure
    :members:
    :undoc-members:
    :inherited-members:

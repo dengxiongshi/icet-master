@@ -92,7 +92,7 @@ class Sublattices:
         sublattice_to_indices = [[] for _ in range(len(self._allowed_species))]
         for index, position in enumerate(structure.positions):
             lattice_site = cpp_prim_structure.find_lattice_site_by_position(
-                position, fractional_position_tolerance)
+                position=position, fractional_position_tolerance=fractional_position_tolerance)
 
             # Get allowed species on this site
             species = allowed_species[lattice_site.index]

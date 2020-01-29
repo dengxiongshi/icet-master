@@ -123,31 +123,27 @@ class SemiGrandCanonicalEnsemble(ThermodynamicBaseEnsemble):
     obtain an example that can be run without modification. In practice, one
     should of course use a proper cluster expansion::
 
-        from ase.build import bulk
-        from icet import ClusterExpansion, ClusterSpace
-        from mchammer.calculators import ClusterExpansionCalculator
-        from mchammer.ensembles import SemiGrandCanonicalEnsemble
+        >>> from ase.build import bulk
+        >>> from icet import ClusterExpansion, ClusterSpace
+        >>> from mchammer.calculators import ClusterExpansionCalculator
 
-        # prepare cluster expansion
-        # the setup emulates a second nearest-neighbor (NN) Ising model
-        # (zerolet and singlet ECIs are zero; only first and second neighbor
-        # pairs are included)
-        prim = bulk('Au')
-        cs = ClusterSpace(prim, cutoffs=[4.3], chemical_symbols=['Ag', 'Au'])
-        ce = ClusterExpansion(cs, [0, 0, 0.1, -0.02])
+        >>> # prepare cluster expansion
+        >>> # the setup emulates a second nearest-neighbor (NN) Ising model
+        >>> # (zerolet and singlet ECIs are zero; only first and second neighbor
+        >>> # pairs are included)
+        >>> prim = bulk('Au')
+        >>> cs = ClusterSpace(prim, cutoffs=[4.3], chemical_symbols=['Ag', 'Au'])
+        >>> ce = ClusterExpansion(cs, [0, 0, 0.1, -0.02])
 
-        # set up and run MC simulation (T=600 K, delta_mu=0.8 eV/atom)
-        structure = prim.repeat(3)
-        calc = ClusterExpansionCalculator(structure, ce)
-        mc = SemiGrandCanonicalEnsemble(structure=structure, calculator=calc,
-                                        temperature=600,
-                                        dc_filename='myrun_sgc.dc',
-                                        chemical_potentials={'Ag': 0, 'Au': 0.8})
-        mc.run(100)  # carry out 100 trial swaps
+        >>> # set up and run MC simulation (T=600 K, delta_mu=0.8 eV/atom)
+        >>> structure = prim.repeat(3)
+        >>> calc = ClusterExpansionCalculator(structure, ce)
+        >>> mc = SemiGrandCanonicalEnsemble(structure=structure, calculator=calc,
+        ...                                temperature=600,
+        ...                                dc_filename='myrun_sgc.dc',
+        ...                                chemical_potentials={'Ag': 0, 'Au': 0.8})
+        >>> mc.run(100)  # carry out 100 trial swaps
 
-    TODO
-    ----
-    * add check that chemical symbols in chemical potentials are allowed
     """
 
     def __init__(self,
@@ -168,6 +164,7 @@ class SemiGrandCanonicalEnsemble(ThermodynamicBaseEnsemble):
         self._ensemble_parameters = dict(temperature=temperature)
 
         # add chemical potentials to ensemble parameters
+        # TODO: add check that chemical symbols in chemical potentials are allowed
         self._chemical_potentials = get_chemical_potentials(chemical_potentials)
         for atnum, chempot in self.chemical_potentials.items():
             mu_sym = 'mu_{}'.format(chemical_symbols[atnum])

@@ -3,7 +3,7 @@ import unittest
 import random
 import numpy as np
 from ase.build import bulk
-from icet import Structure
+from icet.core.structure import Structure
 from icet.core.lattice_site import LatticeSite
 
 

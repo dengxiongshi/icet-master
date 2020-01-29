@@ -386,7 +386,6 @@ def enumerate_structures(structure: Atoms, sizes: List[int],
     constraints::
 
         >>> from ase.build import bulk
-        >>> from icet.tools import enumerate_structures
         >>> prim = bulk('Ag')
         >>> for structure in enumerate_structures(structure=prim,
         ...                                       sizes=range(1, 5),
@@ -533,7 +532,6 @@ def enumerate_supercells(structure: Atoms, sizes: List[int],
     with up to 6 atoms in the unit cell::
 
         >>> from ase.build import bulk
-        >>> from icet.tools import enumerate_supercells
         >>> prim = bulk('Ag')
         >>> for supercell in enumerate_supercells(structure=prim, sizes=range(1, 7)):
         ...     pass # Do something with the supercell

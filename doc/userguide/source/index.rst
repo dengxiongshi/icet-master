@@ -1,6 +1,6 @@
 .. raw:: html
 
-  <p>  
+  <p>
   <a href="https://badge.fury.io/py/icet"><img src="https://badge.fury.io/py/icet.svg" alt="PyPI version" height="18"></a>
   </p>
 
@@ -20,15 +20,40 @@ portability.
 
 The following snippet provides a minimal example for its usage:
 
-.. code-block:: python
+.. testsetup::
 
-   cs = ClusterSpace(primitive_cell, cutoffs, species)
-   sc = StructureContainer(cs)
-   for structure in training_structures:
-       sc.add_structure(structure)
-   opt = Optimizer(sc.get_fit_data())
-   opt.train()
-   ce = ClusterExpansion(cs, opt.parameters)
+   from ase.build import bulk
+   from icet import ClusterExpansion, ClusterSpace, Optimizer, StructureContainer
+   primitive_cell = bulk('Au', a=1.0, crystalstructure='fcc')
+   cutoffs = [1.1]
+   species = ['Au', 'Ag']
+
+   training_structures, energies = [], []
+
+   s = primitive_cell.repeat(1)
+   training_structures.append(s)
+   energies.append(-1.0)
+
+   s = primitive_cell.repeat(2)
+   s[0].symbol = 'Ag'
+   training_structures.append(s)
+   energies.append(-4.0)
+
+   s = primitive_cell.repeat(2)
+   s[0].symbol = 'Ag'
+   s[1].symbol = 'Ag'
+   training_structures.append(s)
+   energies.append(-5.0)
+
+.. doctest::
+
+   >>> cs = ClusterSpace(primitive_cell, cutoffs, species)
+   >>> sc = StructureContainer(cs)
+   >>> for structure, energy in zip(training_structures, energies):
+   ...     sc.add_structure(structure, properties={'energy': energy})
+   >>> opt = Optimizer(sc.get_fit_data())
+   >>> opt.train()
+   >>> ce = ClusterExpansion(cs, opt.parameters)
 
 :program:`icet` has been developed at the `Department of Physics
 <https://www.chalmers.se/en/departments/physics/Pages/default.aspx>`_
@@ -61,7 +86,6 @@ team can also be reached by email via icet@materialsmodeling.org.
 
    moduleref_icet/index
    moduleref_mchammer/index
-   coreref/index
 
 .. toctree::
    :maxdepth: 2

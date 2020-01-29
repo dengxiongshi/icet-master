@@ -735,6 +735,16 @@ Orbit OrbitList::getSuperCellOrbit(const Structure &supercell,
     {
         for (auto &site : sites)
         {
+            // Technically we should use the fractional position tolerance
+            // corresponding to the cell metric of the supercell structure.
+            // This is, however, not uniquely defined. Moreover, the difference
+            // would only matter for very large supercells. We (@angqvist,
+            // @erikfransson, @erhart) therefore decide to defer this issue
+            // until someone encounters the problem in a practical situation.
+            // In principle, one should not handle coordinates (floats) at this
+            // level anymore. Rather one should transform any (supercell)
+            // structure into an effective representation in terms of lattice
+            // sites before any further operations.
             transformSiteToSupercell(site, supercell, primToSuperMap, fractionalPositionTolerance);
         }
     }

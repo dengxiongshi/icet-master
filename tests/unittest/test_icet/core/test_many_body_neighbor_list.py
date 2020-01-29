@@ -1,7 +1,7 @@
 import unittest
 
 from ase.build import bulk
-from icet import Structure
+from icet.core.structure import Structure
 from icet.core.lattice_site import LatticeSite
 from icet.core.neighbor_list import get_neighbor_lists
 from icet.core.many_body_neighbor_list import (

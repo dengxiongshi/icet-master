@@ -4,7 +4,7 @@ import unittest
 from ase.build import bulk
 from ase.neighborlist import NeighborList as ASENeighborList
 from icet.core.neighbor_list import NeighborList, get_neighbor_lists
-from icet import Structure
+from icet.core.structure import Structure
 
 
 class TestNeighborList(unittest.TestCase):

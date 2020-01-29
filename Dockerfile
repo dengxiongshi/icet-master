@@ -12,12 +12,18 @@ RUN \
     doxygen \
     graphviz \
     zip
+# Packages for testing
+# Packages needed for icet
+# Packages for building documentation
 RUN \
+  pip3 install --upgrade \
+    pip \
+  && \
   pip3 install --upgrade \
     coverage \
     flake8 \
     mypy \
-&& \
+  && \
   pip3 install --upgrade \
     ase \
     mip \
@@ -26,7 +32,8 @@ RUN \
     scikit-learn \
     scipy \
     spglib \
-&& \
+    xdoctest \
+  && \
   pip3 install --upgrade \
     breathe \
     cloud_sptheme \

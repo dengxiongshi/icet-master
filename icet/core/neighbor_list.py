@@ -40,6 +40,6 @@ def get_neighbor_lists(structure: Union[Atoms, Structure],
 
     # build the neighbor lists
     for nl in neighbor_lists:
-        nl.build(structure, position_tolerance)
+        nl.build(structure=structure, position_tolerance=position_tolerance)
 
     return neighbor_lists

@@ -45,22 +45,34 @@ generated/scipy.spatial.ConvexHull.html>`_.
     A `ConvexHull` object is easily initialized by providing lists of
     concentrations and energies::
 
-        hull = ConvexHull(data['concentration'], data['mixing_energy'])
+        >>> data = {'concentration': [0,    0.2,  0.2,  0.3,  0.4,  0.5,  0.8,  1.0],
+        ...         'mixing_energy': [0.1, -0.2, -0.1, -0.2,  0.2, -0.4, -0.2, -0.1]}
+        >>> hull = ConvexHull(data['concentration'], data['mixing_energy'])
 
-    after which one can for example plot the data (assuming a
-    matplotlib axis object ``ax``)::
+    Now one can for example access the points along the convex hull directly::
 
-        ax.plot(hull.concentrations, hull.energies)
+        >>> for c, e in zip(hull.concentrations, hull.energies):
+        ...     print(c, e)
+        0.0 0.1
+        0.2 -0.2
+        0.5 -0.4
+        1.0 -0.1
 
-    or extract structures at or close to the convex hull::
+    or plot the convex hull along with the original data using e.g., matplotlib::
 
-        low_energy_structures = hull.extract_low_energy_structures(
-            data['concentration'], data['mixing_energy'],
-            energy_tolerance=0.005)
+        >>> import matplotlib.pyplot as plt
+        >>> plt.scatter(data['concentration'], data['mixing_energy'], color='darkred')
+        >>> plt.plot(hull.concentrations, hull.energies)
+        >>> plt.show()
+
+    It is also possible to extract structures at or close to the convex hull::
+
+        >>> low_energy_structures = hull.extract_low_energy_structures(
+        ...     data['concentration'], data['mixing_energy'],
+        ...     energy_tolerance=0.005)
 
     A complete example can be found in the :ref:`basic tutorial
     <tutorial_enumerate_structures>`.
-
     """
 
     def __init__(self,

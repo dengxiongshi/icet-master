@@ -3,7 +3,7 @@
 import unittest
 
 from ase.build import bulk
-from icet import Structure
+from icet.core.structure import Structure
 from icet.core.cluster import Cluster
 from icet.core.orbit_list import OrbitList
 from icet.core.cluster_counts import ClusterCounts

@@ -1,7 +1,7 @@
 import time
 from ase.build import bulk
 import ase.neighborlist as asenl
-from icet import Structure
+from icet.core.structure import Structure
 from icet.core.neighbor_list import NeighborList
 
 
@@ -11,7 +11,7 @@ def build_neighbor_list_cpp(structure, cutoff):
     """
     position_tolerance = 1e-5
     nl = NeighborList(cutoff)
-    nl.build(structure, position_tolerance)
+    nl.build(structure=structure, position_tolerance=position_tolerance)
 
 
 def build_neighbor_list_python(atoms, cutoff):

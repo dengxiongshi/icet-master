@@ -66,7 +66,7 @@ def matrix_of_equivalent_positions_from_structure(structure: Atoms,
     # create neighbor_lists from the different cutoffs
     prim_icet_structure = Structure.from_atoms(structure_prim)
     neighbor_list = NeighborList(cutoff)
-    neighbor_list.build(prim_icet_structure, position_tolerance)
+    neighbor_list.build(structure=prim_icet_structure, position_tolerance=position_tolerance)
 
     # get fractional positions for neighbor_list
     frac_positions = get_fractional_positions_from_neighbor_list(
@@ -110,13 +110,13 @@ def _get_lattice_site_matrix_of_equivalent_positions(
         positions = _fractional_to_cartesian(row, structure.cell)
         lattice_sites = []
         if np.all(structure.pbc):
-            lattice_sites = \
-                structure.find_lattice_sites_by_positions(positions, fractional_position_tolerance)
+            lattice_sites = structure.find_lattice_sites_by_positions(
+                positions=positions, fractional_position_tolerance=fractional_position_tolerance)
         else:
             for pos in positions:
                 try:
-                    lattice_site = \
-                        structure.find_lattice_site_by_position(pos, fractional_position_tolerance)
+                    lattice_site = structure.find_lattice_site_by_position(
+                        position=pos, fractional_position_tolerance=fractional_position_tolerance)
                 except RuntimeError:
                     continue
                 lattice_sites.append(lattice_site)

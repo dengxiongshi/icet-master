@@ -2,7 +2,7 @@ import unittest
 
 from ase.build import bulk
 from icet import ClusterExpansion, ClusterSpace
-from icet import Structure
+from icet.core.structure import Structure
 from mchammer.calculators.cluster_expansion_calculator import \
     ClusterExpansionCalculator
 from _icet import _ClusterExpansionCalculator

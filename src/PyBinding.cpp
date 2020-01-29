@@ -200,7 +200,8 @@ PYBIND11_MODULE(_icet, m)
              -------
              list(int)
          )pbdoc")
-        .def("set_number_of_allowed_species", (void (Structure::*)(const std::vector<int> &)) & Structure::setNumberOfAllowedSpecies,
+        .def("set_number_of_allowed_species",
+             (void (Structure::*)(const std::vector<int> &)) & Structure::setNumberOfAllowedSpecies,
              py::arg("numbersOfAllowedSpecies"),
              R"pbdoc(
              Sets the number of allowed species on each site.
@@ -289,8 +290,6 @@ PYBIND11_MODULE(_icet, m)
              )pbdoc")
         .def("find_lattice_site_by_position",
              &Structure::findLatticeSiteByPosition,
-             py::arg("position"),
-             py::arg("fractional_position_tolerance"),
              R"pbdoc(
              Returns the lattice site that matches the position.
 
@@ -305,11 +304,11 @@ PYBIND11_MODULE(_icet, m)
              -------
              _icet.LatticeSite
                  lattice site
-             )pbdoc")
+             )pbdoc",
+             py::arg("position"),
+             py::arg("fractional_position_tolerance"))
         .def("find_lattice_sites_by_positions",
              &Structure::findLatticeSitesByPositions,
-             py::arg("positions"),
-             py::arg("fractional_position_tolerance"),
              R"pbdoc(
              Returns the lattice sites that match the positions.
 
@@ -324,20 +323,23 @@ PYBIND11_MODULE(_icet, m)
              -------
              list(_icet.LatticeSite)
                  list of lattice sites
-             )pbdoc")
+             )pbdoc",
+             py::arg("positions"),
+             py::arg("fractional_position_tolerance"))
         .def("__len__", &Structure::size);
 
-    py::class_<NeighborList>(m, "NeighborList")
-        .def(py::init<const double>(),
-             py::arg("cutoff"),
-             R"pbdoc(
-             Initializes a neighbor list instance.
+    py::class_<NeighborList>(m, "NeighborList",
+        R"pbdoc(
+        This class handles a neighbor list.
 
-             Parameters
-             ----------
-             cutoff : float
-                 cutoff to be used for constructing the neighbor list
-             )pbdoc")
+        Parameters
+        ----------
+        cutoff : float
+            cutoff to be used for constructing the neighbor list
+        )pbdoc")
+        .def(py::init<const double>(),
+             "Initializes a neighbor list instance.",
+	     py::arg("cutoff"))
         .def("build",
              &NeighborList::build,
              py::arg("structure"),
@@ -371,30 +373,34 @@ PYBIND11_MODULE(_icet, m)
         .def("__len__", &NeighborList::size);
 
     // @todo document ManyBodyNeighborList in pybindings
-    py::class_<ManyBodyNeighborList>(m, "ManyBodyNeighborList")
+    py::class_<ManyBodyNeighborList>(m, "ManyBodyNeighborList",
+	R"pbdoc(
+        This class handles a many-body neighbor list.
+        )pbdoc")
         .def(py::init<>())
         .def("calculate_intersection", &ManyBodyNeighborList::getIntersection)
         .def("build", &ManyBodyNeighborList::build);
 
-    py::class_<Cluster>(m, "Cluster")
+    py::class_<Cluster>(m, "Cluster",
+	R"pbdoc(
+        This class handles a many-body neighbor list.
+
+        Parameters
+        ----------
+        structure : icet Structure instance
+            atomic configuration
+        lattice_sites : list(int)
+            list of lattice sites that form the cluster
+        tag : int
+            cluster tag
+        )pbdoc")
         .def(py::init<const Structure &,
                       const std::vector<LatticeSite> &,
                       const int>(),
+             "Initializes a cluster instance.",
              py::arg("structure"),
              py::arg("lattice_sites"),
-             py::arg("tag") = 0,
-             R"pbdoc(
-             Initializes a cluster instance.
-
-             Parameters
-             ----------
-             structure : icet Structure instance
-                 atomic configuration
-             lattice_sites : list(int)
-                 list of lattice sites that form the cluster
-             tag : int
-                 cluster tag
-             )pbdoc")
+             py::arg("tag") = 0)
         .def_property_readonly(
              "distances",
              &Cluster::distances,
@@ -443,7 +449,7 @@ PYBIND11_MODULE(_icet, m)
              This class handles a matrix of equivalent positions. Each row
              corresponds to a set of symmetry equivalent positions. The entry in the
              first column is commonly treated as the representative position.
-    
+
              Parameters
              ----------
              translations : list(list(float))
@@ -453,12 +459,11 @@ PYBIND11_MODULE(_icet, m)
              )pbdoc")
         .def(py::init<const std::vector<Vector3d> &,
                       const std::vector<Matrix3d> &>(),
+             "Initializes a matrix of equivalent positions.",
              py::arg("translations"),
-             py::arg("rotations"),
-             R"pbdoc(Initializes a matrix of equivalent positions.)pbdoc")
+             py::arg("rotations"))
         .def("build",
              &MatrixOfEquivalentPositions::build,
-             py::arg("fractional_positions"),
              R"pbdoc(Generates the matrix of symmetry equivalent positions given a set of input
              coordinates. To this end, the function uses the rotational and translational
              symmetries provided when initializing the object.
@@ -468,14 +473,26 @@ PYBIND11_MODULE(_icet, m)
 			 fractional_positions : list(list(float))
 			 	positions of sites in fractional coordinates
 
-             )pbdoc")
+             )pbdoc",
+             py::arg("fractional_positions"))
         .def("get_equivalent_positions",
              &MatrixOfEquivalentPositions::getEquivalentPositions,
         	 "Returns the matrix of symmetry equivalent positions.")
     ;
 
-    py::class_<LatticeSite>(m, "LatticeSite")
-        .def(py::init<const int, const Vector3d &>())
+    py::class_<LatticeSite>(m, "LatticeSite",
+	R"pbdoc(
+        This class handles a lattice site.
+
+        Parameters
+        ----------
+
+        )pbdoc")
+        .def(py::init<const int,
+	              const Vector3d &>(),
+	     "Initializes a LatticeSite object.",
+	     py::arg("site_index"),
+	     py::arg("unitcell_offset"))
         .def_property(
              "index",
              &LatticeSite::index,
@@ -493,8 +510,13 @@ PYBIND11_MODULE(_icet, m)
     ;
 
     // @todo document ClusterCounts in pybindings
-    py::class_<ClusterCounts>(m, "ClusterCounts")
-        .def(py::init<>())
+    py::class_<ClusterCounts>(m, "ClusterCounts",
+ 	R"pbdoc(
+        This class provides functionality for counting the number of times
+        clusters appear in a structure taking into account decoration.
+        )pbdoc")
+        .def(py::init<>(),
+	     "Initializes a ClusterCounts object.")
         .def("count",
              (void (ClusterCounts::*)(const Structure &,
                                       const std::vector<std::vector<LatticeSite>> &,
@@ -747,26 +769,28 @@ PYBIND11_MODULE(_icet, m)
         .def(py::self < py::self)
         .def(py::self + Eigen::Vector3d());
 
-    py::class_<OrbitList>(m, "_OrbitList")
+    py::class_<OrbitList>(m, "_OrbitList",
+	R"pbdoc(
+        This class manages an orbit list. The orbit list is constructed for the given
+        structure using the matrix of equivalent sites and a list of neighbor lists.
+
+        Parameters
+        ----------
+        structure : _icet.Structure
+            (supercell) structure for which to generate orbit list
+        matrix_of_equivalent_sites : list(list(_icet.LatticeSite))
+            matrix of symmetry equivalent sites
+        neighbor_lists : list(icet.NeighborList)
+            neighbor lists for each (cluster) order
+        position_tolerance
+            tolerance applied when comparing positions in Cartesian coordinates
+        )pbdoc")
         .def(py::init<>())
         .def(py::init<const Structure &,
                       const std::vector<std::vector<LatticeSite>> &,
                       const std::vector<NeighborList> &,
                       const double>(),
-             R"pbdoc(
-             Constructs an OrbitList object from a matrix of equivalent sites.
-
-             Parameters
-             ----------
-             structure : _icet.Structure
-                 (supercell) structure for which to generate orbit list
-             matrix_of_equivalent_sites : list(list(_icet.LatticeSite))
-                 matrix of symmetry equivalent sites
-             neighbor_lists : list(icet.NeighborList)
-                 neighbor lists for each (cluster) order
-             position_tolerance
-                 tolerance applied when comparing positions in Cartesian coordinates
-             )pbdoc",
+             "Constructs an OrbitList object from a matrix of equivalent sites.",
              py::arg("structure"),
              py::arg("matrix_of_equivalent_sites"),
              py::arg("neighbor_lists"),
@@ -880,25 +904,28 @@ PYBIND11_MODULE(_icet, m)
              "list(list(_icet.LatticeSite)) : matrix_of_equivalent_positions")
         ;
 
-    py::class_<LocalOrbitListGenerator>(m, "LocalOrbitListGenerator")
+    py::class_<LocalOrbitListGenerator>(m, "LocalOrbitListGenerator",
+	R"pbdoc(
+        This class handles the generation of local orbit lists, which are used in
+        the computation of cluster vectors of supercells of the primitive structure.
+        Upon initialization a LocalOrbitListGenerator object is constructed from an
+        orbit list and a supercell structure.
+
+        Parameters
+        ----------
+        orbit_list : _icet.OrbitList
+            an orbit list set up from a primitive structure
+        structure : _icet.Structure
+            supercell build up from the same primitive structure used to set the input orbit list
+        fractional_position_tolerance : float
+            tolerance for positions in fractional coordinates
+        )pbdoc")
         .def(py::init<const OrbitList &,
                       const Structure &,
                       const double>(),
-             R"pbdoc(
-             Constructs a LocalOrbitListGenerator object from an orbit list
-             and a structure.
-
-             Parameters
-             ----------
-             orbit_list : _icet.OrbitList
-                 an orbit list set up from a primitive structure
-             supercell : _icet.Structure
-                 supercell build up from the same primitive structure used to set the input orbit list
-             fractional_position_tolerance : float
-                 tolerance for positions in fractional coordinates
-             )pbdoc",
+             "Constructs a LocalOrbitListGenerator object from an orbit list and a structure.",
              py::arg("orbit_list"),
-             py::arg("supercell"),
+             py::arg("structure"),
              py::arg("fractional_position_tolerance"))
         .def("generate_local_orbit_list",
              (OrbitList(LocalOrbitListGenerator::*)(const size_t)) & LocalOrbitListGenerator::getLocalOrbitList,
@@ -919,7 +946,7 @@ PYBIND11_MODULE(_icet, m)
 
              Parameters
              ----------
-             unique_offset : NumPy array
+             unique_offset : numpy.ndarray
                  offset of the primitive structure
              )pbdoc",
              py::arg("unique_offset"))
@@ -948,7 +975,12 @@ PYBIND11_MODULE(_icet, m)
         .def(py::init<std::vector<std::vector<std::string>> &,
                       const OrbitList,
                       const double,
-                      const double>())
+                      const double>(),
+             "Initializes an icet ClusterSpace instance.",
+	     py::arg("chemical_symbols"),
+	     py::arg("orbit_list"),
+	     py::arg("position_tolerance"),
+	     py::arg("fractional_position_tolerance"))
         .def("get_cluster_vector",
              [](const ClusterSpace &clusterSpace,
                 const Structure &structure,
@@ -993,7 +1025,13 @@ PYBIND11_MODULE(_icet, m)
         .def("__len__", &ClusterSpace::getClusterSpaceSize);
 
     py::class_<ClusterExpansionCalculator>(m, "_ClusterExpansionCalculator")
-        .def(py::init<const ClusterSpace &, const Structure &, const double>())
+        .def(py::init<const ClusterSpace &,
+	              const Structure &,
+	              const double>(),
+             "Initializes an icet ClusterExpansionCalculator instance.",
+	     py::arg("cluster_space"),
+	     py::arg("structure"),
+	     py::arg("fractional_position_tolerance"))
         .def("get_local_cluster_vector",
              [](ClusterExpansionCalculator &calc,
                 const std::vector<int> &occupations,

@@ -137,36 +137,35 @@ class WangLandauEnsemble(BaseEnsemble):
         The list must contain as many elements as there are sublattices
         and it needs to sum up to 1.
 
-    Examples
-    --------
+    Example
+    -------
     The following snippet illustrates how to carry out a Wang-Landau
     simulation. For the purpose of demonstration, the parameters of
     the cluster expansion are set to obtain a two-dimensional square
     Ising model, one of the systems studied in the original work by
     Wang and Landau::
 
-        from ase import Atoms
-        from icet import ClusterExpansion, ClusterSpace
-        from mchammer.calculators import ClusterExpansionCalculator
-        from mchammer.ensembles import WangLandauEnsemble
+        >>> from ase import Atoms
+        >>> from icet import ClusterExpansion, ClusterSpace
+        >>> from mchammer.calculators import ClusterExpansionCalculator
 
-        # prepare cluster expansion
-        prim = Atoms('Au', positions=[[0, 0, 0]], cell=[1, 1, 10], pbc=True)
-        cs = ClusterSpace(prim, cutoffs=[1.1], chemical_symbols=['Ag', 'Au'])
-        ce = ClusterExpansion(cs, [0, 0, 2])
+        >>> # prepare cluster expansion
+        >>> prim = Atoms('Au', positions=[[0, 0, 0]], cell=[1, 1, 10], pbc=True)
+        >>> cs = ClusterSpace(prim, cutoffs=[1.1], chemical_symbols=['Ag', 'Au'])
+        >>> ce = ClusterExpansion(cs, [0, 0, 2])
 
-        # prepare initial configuration
-        structure = prim.repeat((4, 4, 1))
-        for k in range(8):
-            structure[k].symbol = 'Ag'
+        >>> # prepare initial configuration
+        >>> structure = prim.repeat((4, 4, 1))
+        >>> for k in range(8):
+        ...     structure[k].symbol = 'Ag'
 
-        # set up and run Wang-Landau simulation
-        calculator = ClusterExpansionCalculator(structure, ce)
-        mc = WangLandauEnsemble(structure=structure,
-                                calculator=calculator,
-                                energy_spacing=1,
-                                dc_filename='ising_2d_run.dc')
-        mc.run(number_of_trial_steps=len(structure)*10000)  # carry out 10,000 MC sweeps
+        >>> # set up and run Wang-Landau simulation
+        >>> calculator = ClusterExpansionCalculator(structure, ce)
+        >>> mc = WangLandauEnsemble(structure=structure,
+        ...                         calculator=calculator,
+        ...                         energy_spacing=1,
+        ...                         dc_filename='ising_2d_run.dc')
+        >>> mc.run(number_of_trial_steps=len(structure)*1000)  # in practice one requires more steps
 
     """
 

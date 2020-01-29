@@ -6,8 +6,8 @@ from ase.db import connect as ase_connect
 from icet.core.lattice_site import LatticeSite
 from icet.core.cluster import Cluster
 from icet.core.orbit import Orbit
-from icet import OrbitList
-from icet import Structure
+from icet.core.orbit_list import OrbitList
+from icet.core.structure import Structure
 from icet.tools.geometry import get_permutation
 from icet.core.matrix_of_equivalent_positions import \
     _get_lattice_site_matrix_of_equivalent_positions, \

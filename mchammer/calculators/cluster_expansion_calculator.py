@@ -5,7 +5,8 @@ import numpy as np
 from _icet import _ClusterExpansionCalculator
 from icet.input_output.logging_tools import logger
 from ase import Atoms
-from icet import ClusterExpansion, Structure
+from icet import ClusterExpansion
+from icet.core.structure import Structure
 from icet.core.sublattices import Sublattices
 from mchammer.calculators.base_calculator import BaseCalculator
 
@@ -51,7 +52,7 @@ class ClusterExpansionCalculator(BaseCalculator):
         structure_cpy = structure.copy()
         cluster_expansion.prune()
 
-        if cluster_expansion._cluster_space.is_supercell_self_correlated(structure):
+        if cluster_expansion._cluster_space.is_supercell_self_interacting(structure):
             logger.warning('The ClusterExpansionCalculator self-interacts, '
                            'which may lead to erroneous results. To avoid '
                            'self-interaction, use a larger supercell or a '
@@ -60,9 +61,9 @@ class ClusterExpansionCalculator(BaseCalculator):
         self.use_local_energy_calculator = use_local_energy_calculator
         if self.use_local_energy_calculator:
             self.cpp_calc = _ClusterExpansionCalculator(
-                cluster_expansion.get_cluster_space_copy(),
-                Structure.from_atoms(structure_cpy),
-                cluster_expansion.fractional_position_tolerance)
+                cluster_space=cluster_expansion.get_cluster_space_copy(),
+                structure=Structure.from_atoms(structure_cpy),
+                fractional_position_tolerance=cluster_expansion.fractional_position_tolerance)
 
         self._cluster_expansion = cluster_expansion
         if scaling is None:

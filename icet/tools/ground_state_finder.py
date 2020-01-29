@@ -75,26 +75,25 @@ class GroundStateFinder:
     example that can be run without modification. In practice, one should of
     course use a proper cluster expansion::
 
-        from ase.build import bulk
-        from icet import ClusterExpansion, ClusterSpace
-        from icet.tools.ground_state_finder import GroundStateFinder
+        >>> from ase.build import bulk
+        >>> from icet import ClusterExpansion, ClusterSpace
 
-        # prepare cluster expansion
-        # the setup emulates a second nearest-neighbor (NN) Ising model
-        # (zerolet and singlet ECIs are zero; only first and second neighbor
-        # pairs are included)
-        prim = bulk('Au')
-        chemical_symbols = ['Ag', 'Au']
-        cs = ClusterSpace(prim, cutoffs=[4.3], chemical_symbols=chemical_symbols)
-        ce = ClusterExpansion(cs, [0, 0, 0.1, -0.02])
+        >>> # prepare cluster expansion
+        >>> # the setup emulates a second nearest-neighbor (NN) Ising model
+        >>> # (zerolet and singlet ECIs are zero; only first and second neighbor
+        >>> # pairs are included)
+        >>> prim = bulk('Au')
+        >>> chemical_symbols = ['Ag', 'Au']
+        >>> cs = ClusterSpace(prim, cutoffs=[4.3], chemical_symbols=chemical_symbols)
+        >>> ce = ClusterExpansion(cs, [0, 0, 0.1, -0.02])
 
-        # prepare initial configuration
-        structure = prim.repeat(3)
+        >>> # prepare initial configuration
+        >>> structure = prim.repeat(3)
 
-        # set up the ground state finder and calculate the ground state energy
-        gsf = GroundStateFinder(ce, structure)
-        ground_state = gsf.get_ground_state({'Ag': 5})
-        print('Ground state energy:', ce.predict(ground_state))
+        >>> # set up the ground state finder and calculate the ground state energy
+        >>> gsf = GroundStateFinder(ce, structure)
+        >>> ground_state = gsf.get_ground_state({'Ag': 5})
+        >>> print('Ground state energy:', ce.predict(ground_state))
     """
 
     def __init__(self,
@@ -136,9 +135,10 @@ class GroundStateFinder:
 
         # Generate full orbit list
         self._orbit_list = cluster_space.orbit_list
-        lolg = LocalOrbitListGenerator(self._orbit_list,
-                                       Structure.from_atoms(primitive_structure),
-                                       self._fractional_position_tolerance)
+        lolg = LocalOrbitListGenerator(
+            orbit_list=self._orbit_list,
+            structure=Structure.from_atoms(primitive_structure),
+            fractional_position_tolerance=self._fractional_position_tolerance)
         self._full_orbit_list = lolg.generate_full_orbit_list()
 
         # Transform the ECIs
@@ -251,9 +251,10 @@ class GroundStateFinder:
             atomic configuration
         """
         # Generate full orbit list
-        lolg = LocalOrbitListGenerator(self._orbit_list,
-                                       Structure.from_atoms(structure),
-                                       self._fractional_position_tolerance)
+        lolg = LocalOrbitListGenerator(
+            orbit_list=self._orbit_list,
+            structure=Structure.from_atoms(structure),
+            fractional_position_tolerance=self._fractional_position_tolerance)
         full_orbit_list = lolg.generate_full_orbit_list()
 
         # Create maps of site indices and orbits for all clusters

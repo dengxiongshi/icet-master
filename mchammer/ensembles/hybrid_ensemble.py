@@ -133,50 +133,49 @@ class HybridEnsemble(ThermodynamicBaseEnsemble):
     modification. In practice, one should of course use a proper cluster
     expansion::
 
-        from ase.build import bulk
-        from icet import ClusterExpansion, ClusterSpace
-        from mchammer.calculators import ClusterExpansionCalculator
-        from mchammer.ensembles import HybridEnsemble
+        >>> from ase.build import bulk
+        >>> from icet import ClusterExpansion, ClusterSpace
+        >>> from mchammer.calculators import ClusterExpansionCalculator
 
-        # prepare cluster expansion
-        # the setup emulates a second nearest-neighbor (NN) Ising model
-        # (zerolet and singlet ECIs are zero; only first and second neighbor
-        # pairs are included)
-        prim = bulk('Au')
-        cs = ClusterSpace(prim, cutoffs=[4.3],
-                          chemical_symbols=['Ag', 'Au', 'Pd'])
-        ce = ClusterExpansion(
-            cs, [0, 0, 0, 0.1, 0.1, 0.1, -0.02, -0.02, -0.02])
+        >>> # prepare cluster expansion
+        >>> # the setup emulates a second nearest-neighbor (NN) Ising model
+        >>> # (zerolet and singlet ECIs are zero; only first and second neighbor
+        >>> # pairs are included)
+        >>> prim = bulk('Au')
+        >>> cs = ClusterSpace(prim, cutoffs=[4.3],
+        ...                  chemical_symbols=['Ag', 'Au', 'Pd'])
+        >>> ce = ClusterExpansion(
+        ...    cs, [0, 0, 0, 0.1, 0.1, 0.1, -0.02, -0.02, -0.02])
 
         # define structure object
-        structure = prim.repeat(3)
-        for i, atom in enumerate(structure):
-            if i % 2 == 0:
-                atom.symbol = 'Ag'
-            elif i % 3 == 0:
-                atom.symbol = 'Pd'
+        >>> structure = prim.repeat(3)
+        >>> for i, atom in enumerate(structure):
+        >>>    if i % 2 == 0:
+        >>>        atom.symbol = 'Ag'
+        >>>    elif i % 3 == 0:
+        >>>        atom.symbol = 'Pd'
 
         # the default probabilities for this case would be [0.5, 0.5], but
         # since the VCSGC ensemble only performs flips on a subset of all
         # sites on the sublattice, namely those originally occupied by Ag
         # and Pd atoms, specific values will be provided
-        weights = [len(structure),
-                   len([s for s in structure.get_chemical_symbols() if s != 'Au'])]
-        norm = sum(weights)
-        probabilities = [w / norm for w in weights]
+        >>> weights = [len(structure),
+        ...           len([s for s in structure.get_chemical_symbols() if s != 'Au'])]
+        >>> norm = sum(weights)
+        >>> probabilities = [w / norm for w in weights]
 
         # set up and run MC simulation
-        calc = ClusterExpansionCalculator(structure, ce)
-        ensemble_specs = [
-            {'ensemble': 'canonical', 'sublattice_index': 0},
-            {'ensemble': 'vcsgc', 'sublattice_index': 0,
-             'phis': {'Ag': -0.2}, 'kappa': 200,
-             'allowed_symbols':['Ag', 'Pd']}]
-        mc = HybridEnsemble(structure=structure, calculator=calc,
-                            ensemble_specs=ensemble_specs,
-                            temperature=600, probabilities=probabilities,
-                            dc_filename='myrun_hybrid.dc')
-        mc.run(100)  # carry out 100 trial steps
+        >>> calc = ClusterExpansionCalculator(structure, ce)
+        >>> ensemble_specs = [
+        ...    {'ensemble': 'canonical', 'sublattice_index': 0},
+        ...    {'ensemble': 'vcsgc', 'sublattice_index': 0,
+        ...     'phis': {'Ag': -0.2}, 'kappa': 200,
+        ...     'allowed_symbols':['Ag', 'Pd']}]
+        >>> mc = HybridEnsemble(structure=structure, calculator=calc,
+        ...                    ensemble_specs=ensemble_specs,
+        ...                    temperature=600, probabilities=probabilities,
+        ...                    dc_filename='myrun_hybrid.dc')
+        >>> mc.run(100)  # carry out 100 trial steps
     """
 
     def __init__(self,

@@ -13,8 +13,11 @@ if __name__ == '__main__':
     fractional_position_tolerance = 2e-6
 
     t = time.process_time()
-    orbit = OrbitList(structure, cutoffs, symprec, position_tolerance,
-                      fractional_position_tolerance)  # noqa
+    orbit = OrbitList(structure=structure,
+                      cutoffs=cutoffs,
+                      symprec=symprec,
+                      position_tolerance=position_tolerance,
+                      fractional_position_tolerance=fractional_position_tolerance)  # noqa
     elapsed_time = time.process_time() - t
 
     print('Time to initialize OrbitList with cutoffs: {}, {:.6} sec'

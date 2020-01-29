@@ -34,23 +34,25 @@ class StructureContainer:
     data needed to train a cluster expansion, i.e., a sensing
     matrix and target energies::
 
-        from ase.build import bulk
-        from icet import ClusterSpace, StructureContainer
-        from icet.tools import enumerate_structures
-        import numpy as np
+        >>> from ase.build import bulk
+        >>> from icet import ClusterSpace, StructureContainer
+        >>> from icet.tools import enumerate_structures
+        >>> from random import random
 
-        # create cluster space
-        prim = bulk('Au')
-        cs = ClusterSpace(prim, cutoffs=[7.0, 5.0],
-                          chemical_symbols=[['Au', 'Pd']])
+        >>> # create cluster space
+        >>> prim = bulk('Au')
+        >>> cs = ClusterSpace(prim, cutoffs=[7.0, 5.0],
+        ...                   chemical_symbols=[['Au', 'Pd']])
 
-        sc = StructureContainer(cs)
-        for structure in enumerate_structures(prim, range(5), ['Au', 'Pd']):
-            sc.add_structure(structure,
-                             properties={'my_random_energy': np.random.rand()})
-        print(sc)
+        >>> # build structure container
+        >>> sc = StructureContainer(cs)
+        >>> for structure in enumerate_structures(prim, range(5), ['Au', 'Pd']):
+        >>>     sc.add_structure(structure,
+        ...                      properties={'my_random_energy': random()})
+        >>> print(sc)
 
-        sensing_matrix, target_energies = sc.get_fit_data(key='my_random_energy')
+        >>> # fetch sensing matrix and target energies
+        >>> A, y = sc.get_fit_data(key='my_random_energy')
     """
 
     def __init__(self, cluster_space: ClusterSpace):

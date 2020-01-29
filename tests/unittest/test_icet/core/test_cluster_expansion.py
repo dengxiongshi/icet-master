@@ -190,11 +190,12 @@ class TestClusterExpansion(unittest.TestCase):
 
         target = """
 ========================================== Cluster Expansion ===========================================
+ space group                            : Fm-3m (225)
  chemical species                       : ['Au', 'Pd'] (sublattice A)
  cutoffs                                : 3.0000 3.0000 3.0000
  total number of parameters             : 5
  number of parameters by order          : 0= 1  1= 1  2= 1  3= 1  4= 1
- fractional_position_tolerance          : 4e-06
+ fractional_position_tolerance          : 2e-06
  position_tolerance                     : 1e-05
  symprec                                : 1e-05
  total number of nonzero parameters     : 4
@@ -220,11 +221,12 @@ index | order |  radius  | multiplicity | orbit_index | multi_component_vector |
 
         target = """
 ========================================== Cluster Expansion ===========================================
+ space group                            : Fm-3m (225)
  chemical species                       : ['Au', 'Pd'] (sublattice A)
  cutoffs                                : 3.0000 3.0000 3.0000
  total number of parameters             : 5
  number of parameters by order          : 0= 1  1= 1  2= 1  3= 1  4= 1
- fractional_position_tolerance          : 4e-06
+ fractional_position_tolerance          : 2e-06
  position_tolerance                     : 1e-05
  symprec                                : 1e-05
  total number of nonzero parameters     : 4
