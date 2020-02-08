@@ -9,7 +9,7 @@ import tarfile
 import tempfile
 from collections import OrderedDict
 from math import log10, floor
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple, Dict
 
 import numpy as np
 import spglib
@@ -547,6 +547,19 @@ class ClusterSpace(_ClusterSpace):
         # check pbc
         if not all(structure.pbc):
             raise ValueError('Input structure must have periodic boundary conditions')
+
+
+    def merge_orbits(self, equivalent_orbits: Dict[int, List[int]]) -> None:
+        orbit_to_delete = []
+        for k1, orbit_indices in equivalent_orbits.items():
+            for k2 in orbit_indices:
+                self.merge_orbit(k1, k2)
+                orbit_to_delete.append(k2)
+
+        
+        # update merge/prune history
+        self._prune_orbit_list(orbit_to_delete)
+
 
     def is_supercell_self_interacting(self, structure: Atoms) -> bool:
         """

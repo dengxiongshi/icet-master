@@ -767,7 +767,8 @@ PYBIND11_MODULE(_icet, m)
                  return msg.str();
              })
         .def(py::self < py::self)
-        .def(py::self + Eigen::Vector3d());
+        .def(py::self + Eigen::Vector3d())
+        .def(py::self += py::self);
 
     py::class_<OrbitList>(m, "_OrbitList",
 	R"pbdoc(
@@ -800,7 +801,7 @@ PYBIND11_MODULE(_icet, m)
              &OrbitList::getOrbits,
              "list(_icet.Orbit) : list of orbits")
         .def("get_orbit_list", &OrbitList::getOrbits,
-             "Returns the list of orbits")
+             "Returns the list of orbits")             
         .def("check_equivalent_clusters",
              &OrbitList::checkEquivalentClusters,
              R"pbdoc(
@@ -1004,6 +1005,12 @@ PYBIND11_MODULE(_icet, m)
              )pbdoc",
              py::arg("structure"),
              py::arg("fractional_position_tolerance"))
+          .def("merge_orbit", [](ClusterSpace &clusterSpace,
+                int index1, int index2)
+             {
+                clusterSpace._orbitList._orbits[index1] += clusterSpace._orbitList._orbits[index2];
+              })
+
         .def("_get_orbit_list", &ClusterSpace::getOrbitList)
         .def("get_orbit", &ClusterSpace::getOrbit)
         .def_property_readonly("species_maps", &ClusterSpace::getSpeciesMaps)
