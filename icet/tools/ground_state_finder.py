@@ -289,12 +289,16 @@ class GroundStateFinder:
                 # Add the the list of sites and the orbit to the respective
                 # cluster maps
                 cluster_sites = [site.index for site in cluster]
-                for site in cluster_sites:
-                    if site not in self._active_indices:
-                        active = False
-                        break
-                else:
-                    active = True
+                active = False
+                for site_index in cluster_sites:
+                    if site_index not in self._active_indices:
+                        site = self._sites[site_index]
+                        var = self._symbol_to_variable[site.sublattice_index][structure[site_index].symbol]
+                        if var == 0:
+                            active = False
+                            break
+                    else:
+                        active = True
 
                 cluster = MIPCluster(orbit_index=orb_index,
                                      cluster_sites=cluster_sites,
