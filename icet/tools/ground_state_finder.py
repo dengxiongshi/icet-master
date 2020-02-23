@@ -233,9 +233,15 @@ class GroundStateFinder:
                         constraint_count += 1
 
             if len(cluster.cluster_sites) < 2 or ECI > 0:  # no "upwards" pressure
-                variable_sum = mip.xsum(self._sites[i].variable for i in cluster.cluster_sites)
+                site_variables = []
+                inactive_count = 0
+                for site in cluster.cluster_sites:
+                    if site in self._active_indices:
+                        site_variables.append(model.var_by_name('atom_{}'.format(site)))
+                    else:
+                        inactive_count += self._symbol_to_variable[structure[site].symbol]
                 model.add_constr(cluster.variable >= 1 - len(cluster.cluster_sites) +
-                                 variable_sum,
+                                 + inactive_count + mip.xsum(site_variables),
                                  'Decoration -> cluster {}'.format(constraint_count))
                 constraint_count += 1
 
@@ -298,7 +304,6 @@ class GroundStateFinder:
                         name='cluster_{}'.format(len(clusters)), var_type=BINARY)
                 else:
                     cluster.variable = min([self._symbol_to_variable[structure[site]] for site in cluster_sites])
-
                 clusters.append(cluster)
                 nclusters_per_orbit[-1] += 1
 
@@ -313,11 +318,10 @@ class GroundStateFinder:
             for i in sublattice.indices:
                 if i in self._active_indices:
                     active = True
-                    x = model.add_var(
-                        name='atom_{}'.format(i), var_type=BINARY)
+                    x = model.add_var(name='atom_{}'.format(i), var_type=BINARY)
                 else:
                     active = False
-                    x = self._symbol_to_variable[structure[i]]   
+                    x = self._symbol_to_variable[structure[i]]
                 site = MIPSite(site_index=i, sublattice_index=j,
                                variable=x, allowed_symbols=self._active_species[j],
                                active=active)
