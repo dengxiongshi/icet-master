@@ -35,11 +35,12 @@ class MIPCluster:
 
 class MIPSite:
 
-    def __init__(self, site_index, sublattice_index, variable, allowed_symbols):
+    def __init__(self, site_index, sublattice_index, variable, allowed_symbols, active):
         self.site_index = site_index
         self.sublattice_index = sublattice_index
         self.variable = variable
         self.allowed_symbols = allowed_symbols
+        self.active = active
 
 
 class GroundStateFinder:
@@ -117,6 +118,7 @@ class GroundStateFinder:
     def __init__(self,
                  cluster_expansion: ClusterExpansion,
                  structure: Atoms,
+                 active_indices: List[int] = None,
                  solver_name: str = None,
                  verbose: bool = True) -> None:
         # Check that there is only one active sublattice
@@ -128,6 +130,11 @@ class GroundStateFinder:
         sublattices = cluster_space.get_sublattices(structure)
         self._active_sublattices = sublattices.active_sublattices
 
+        if active_indices is None:
+            self._active_indices = [atom.index for atom in structure]
+        else:
+            self._active_indices = active_indices
+
         # Check that there are no more than two allowed species
         active_species = [
             subl.chemical_symbols for subl in self._active_sublattices]
@@ -135,8 +142,6 @@ class GroundStateFinder:
             raise NotImplementedError('Currently, systems with more than two allowed species on '
                                       'any sublattice are not supported.')
         self._active_species = active_species
-        self._active_indices = [
-            subl.indices for subl in self._active_sublattices]
 
         # Define cluster functions for elements
         self._symbol_to_variable = []
@@ -145,9 +150,11 @@ class GroundStateFinder:
             for species_map in cluster_space.species_maps:
                 symbols = [periodic_table[n] for n in species_map.keys()]
                 if set(symbols) == set(species):
-                    sym_to_var = {periodic_table[n]: 1 - species_map[n] for n in species_map.keys()}
+                    sym_to_var = {periodic_table[
+                        n]: 1 - species_map[n] for n in species_map.keys()}
                     self._symbol_to_variable.append(sym_to_var)
-                    self._variable_to_symbol.append({value: key for key, value in sym_to_var.items()})
+                    self._variable_to_symbol.append(
+                        {value: key for key, value in sym_to_var.items()})
                     break
 
         # Generate full orbit list
@@ -212,19 +219,23 @@ class GroundStateFinder:
         # TODO: don't create cluster constraints for singlets
         constraint_count = 0
         for cluster in self._clusters:
+            if not cluster.active:
+                continue
+
             ECI = self._transformed_parameters[cluster.orbit_index + 1]
             assert ECI != 0
 
             if len(cluster.cluster_sites) < 2 or ECI < 0:  # no "downwards" pressure
                 for site in cluster.cluster_sites:
-                    model.add_constr(cluster.variable <= model.var_by_name('atom_{}'.format(site)),
+                    if site in self._active_indices:
+                        model.add_constr(cluster.variable <= model.var_by_name('atom_{}'.format(site)),
                                      'Decoration -> cluster {}'.format(constraint_count))
-                    constraint_count += 1
+                        constraint_count += 1
 
             if len(cluster.cluster_sites) < 2 or ECI > 0:  # no "upwards" pressure
+                variable_sum = mip.xsum(self._sites[i].variable for i in cluster.cluster_sites)
                 model.add_constr(cluster.variable >= 1 - len(cluster.cluster_sites) +
-                                 mip.xsum(model.var_by_name('atom_{}'.format(site))
-                                          for site in cluster.cluster_sites),
+                                 variable_sum,
                                  'Decoration -> cluster {}'.format(constraint_count))
                 constraint_count += 1
 
@@ -271,19 +282,22 @@ class GroundStateFinder:
                 # Add the the list of sites and the orbit to the respective
                 # cluster maps
                 cluster_sites = [site.index for site in cluster]
-                # for site in cluster_sites:
-                #    if site not in self.active_sites:
-                #        active = False
-                #        break
-                # else:
-                #    active = True
+                for site in cluster_sites:
+                    if site not in self._active_indices:
+                        active = False
+                        break
+                else:
+                    active = True
                 active = True
 
                 cluster = MIPCluster(orbit_index=orb_index,
                                      cluster_sites=cluster_sites,
                                      active=active)
-                cluster.variable = model.add_var(
-                    name='cluster_{}'.format(len(clusters)), var_type=BINARY)
+                if active:
+                    cluster.variable = model.add_var(
+                        name='cluster_{}'.format(len(clusters)), var_type=BINARY)
+                else:
+                    cluster.variable = min([self._symbol_to_variable[structure[site]] for site in cluster_sites])
 
                 clusters.append(cluster)
                 nclusters_per_orbit[-1] += 1
@@ -295,15 +309,19 @@ class GroundStateFinder:
 
         # Spin variables (remapped) for all atoms in the structure
         sites = []
-        for i in range(len(structure)):
-            for j, indices in enumerate(self._active_indices):
-                if i in indices:
+        for j, sublattice in enumerate(self._active_sublattices):
+            for i in sublattice.indices:
+                if i in self._active_indices:
+                    active = True
                     x = model.add_var(
                         name='atom_{}'.format(i), var_type=BINARY)
-                    site = MIPSite(site_index=i, sublattice_index=j,
-                                   variable=x, allowed_symbols=self._active_species[j])
-                    sites.append(site)
-                    break
+                else:
+                    active = False
+                    x = self._symbol_to_variable[structure[i]]   
+                site = MIPSite(site_index=i, sublattice_index=j,
+                               variable=x, allowed_symbols=self._active_species[j],
+                               active=active)
+                sites.append(site)
         self._sites = sites
 
     def _get_total_energy(self) -> List[float]:
