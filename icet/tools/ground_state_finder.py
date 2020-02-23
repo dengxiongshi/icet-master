@@ -35,8 +35,7 @@ class MIPCluster:
 
 class MIPSite:
 
-    def __init__(self, site_index, sublattice_index, variable, allowed_symbols, active):
-        self.site_index = site_index
+    def __init__(self, sublattice_index, variable, allowed_symbols, active):
         self.sublattice_index = sublattice_index
         self.variable = variable
         self.allowed_symbols = allowed_symbols
@@ -239,7 +238,9 @@ class GroundStateFinder:
                     if site in self._active_indices:
                         site_variables.append(model.var_by_name('atom_{}'.format(site)))
                     else:
-                        inactive_count += self._symbol_to_variable[structure[site].symbol]
+                        mip_site = self._sites[site]
+                        inactive_count += mip_site.variable
+                        print('hej', inactive_count)
                 model.add_constr(cluster.variable >= 1 - len(cluster.cluster_sites) +
                                  + inactive_count + mip.xsum(site_variables),
                                  'Decoration -> cluster {}'.format(constraint_count))
@@ -294,16 +295,19 @@ class GroundStateFinder:
                         break
                 else:
                     active = True
-                active = True
 
                 cluster = MIPCluster(orbit_index=orb_index,
                                      cluster_sites=cluster_sites,
                                      active=active)
                 if active:
-                    cluster.variable = model.add_var(
+                    var = model.add_var(
                         name='cluster_{}'.format(len(clusters)), var_type=BINARY)
                 else:
-                    cluster.variable = min([self._symbol_to_variable[structure[site]] for site in cluster_sites])
+                    var = 1
+                    for site_index in cluster_sites:
+                        site = self._sites[site_index]
+                        var *= self._symbol_to_variable[site.sublattice_index][structure[site_index].symbol]
+                cluster.variable = var
                 clusters.append(cluster)
                 nclusters_per_orbit[-1] += 1
 
@@ -313,7 +317,7 @@ class GroundStateFinder:
     def _create_mip_sites(self, structure, model):
 
         # Spin variables (remapped) for all atoms in the structure
-        sites = []
+        sites = {}
         for j, sublattice in enumerate(self._active_sublattices):
             for i in sublattice.indices:
                 if i in self._active_indices:
@@ -321,11 +325,11 @@ class GroundStateFinder:
                     x = model.add_var(name='atom_{}'.format(i), var_type=BINARY)
                 else:
                     active = False
-                    x = self._symbol_to_variable[structure[i]]
-                site = MIPSite(site_index=i, sublattice_index=j,
+                    x = self._symbol_to_variable[j][structure[i].symbol]
+                site = MIPSite(sublattice_index=j,
                                variable=x, allowed_symbols=self._active_species[j],
                                active=active)
-                sites.append(site)
+                sites[i] = site
         self._sites = sites
 
     def _get_total_energy(self) -> List[float]:
@@ -417,7 +421,8 @@ class GroundStateFinder:
         for variables in self._symbol_to_variable:
             for sym, variable in variables.items():
                 if sym in species_to_count:
-                    xs_symbol = [site.variable for site in self._sites if sym in site.allowed_symbols]
+                    xs_symbol = [site.variable for site in self._sites.values()
+                        if sym in site.allowed_symbols]
                     if variable == 1:
                         xcount = species_count[symbol]
                     else:
@@ -430,7 +435,6 @@ class GroundStateFinder:
         # Optimize the model
         self._optimization_status = model.optimize(max_seconds=max_seconds)
 
-        print(self._optimization_status)
         # The status of the solution is printed to the screen
         if str(self._optimization_status) != 'OptimizationStatus.OPTIMAL':
             if str(self._optimization_status) == 'OptimizationStatus.FEASIBLE':
@@ -440,9 +444,10 @@ class GroundStateFinder:
 
         # Translate solution to Atoms object
         gs = self.structure.copy()
-        for site in self._sites:
-            gs[site.site_index].symbol = self._variable_to_symbol[
-                site.sublattice_index][site.variable.x]
+        for site_index, site in self._sites.items():
+            if site.active:
+                gs[site_index].symbol = self._variable_to_symbol[
+                    site.sublattice_index][site.variable.x]
 
         # Assert that the solution agrees with the prediction
         prediction = self._cluster_expansion.predict(gs)
