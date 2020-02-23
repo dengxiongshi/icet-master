@@ -187,13 +187,11 @@ class GroundStateFinder:
 
         # Spin variables (remapped) for all atoms in the structure
         xs = []
-        site_to_active_index_map = {}
         symbol_to_active_indices = {count_symbol: [] for count_symbol in self._count_symbols}
         active_index_to_sublattice_map = {}
         for i in range(len(structure)):
             for j, indices in enumerate(self._active_indices):
                 if i in indices:
-                    site_to_active_index_map[i] = len(xs)
                     symbol_to_active_indices[self._count_symbols[j]].append(len(xs))
                     active_index_to_sublattice_map[i] = j
                     xs.append(model.add_var(name='atom_{}'.format(i), var_type=BINARY))
@@ -218,13 +216,13 @@ class GroundStateFinder:
 
             if len(cluster) < 2 or ECI < 0:  # no "downwards" pressure
                 for atom in cluster:
-                    model.add_constr(ys[i] <= xs[site_to_active_index_map[atom]],
+                    model.add_constr(ys[i] <= model.var_by_name('atom_{}'.format(atom)),
                                      'Decoration -> cluster {}'.format(constraint_count))
                     constraint_count += 1
 
             if len(cluster) < 2 or ECI > 0:  # no "upwards" pressure
                 model.add_constr(ys[i] >= 1 - len(cluster) +
-                                 mip.xsum(xs[site_to_active_index_map[atom]]
+                                 mip.xsum(model.var_by_name('atom_{}'.format(atom))
                                           for atom in cluster),
                                  'Decoration -> cluster {}'.format(constraint_count))
                 constraint_count += 1
