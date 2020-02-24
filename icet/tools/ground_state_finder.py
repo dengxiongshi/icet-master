@@ -228,7 +228,6 @@ class GroundStateFinder:
                     else:
                         mip_site = self._sites[site]
                         inactive_count += mip_site.variable
-                        print('hej', inactive_count)
                 model.addConstr(cluster.variable >= 1 - len(cluster.cluster_sites) +
                                  + inactive_count + grp.quicksum(site_variables),
                                  'Decoration -> cluster {}'.format(constraint_count))
