@@ -10,18 +10,8 @@ from ..core.structure import Structure
 from .variable_transformation import transform_ECIs
 from ..input_output.logging_tools import logger
 from pkg_resources import VersionConflict
-
-try:
-    import mip
-    from mip.constants import BINARY
-    from distutils.version import LooseVersion
-
-    if LooseVersion(mip.constants.VERSION) < '1.6.3':
-        raise VersionConflict('Python-MIP version 1.6.3 or later is required in order to use the '
-                              'ground state finder.')
-except ImportError:
-    raise ImportError('Python-MIP (https://python-mip.readthedocs.io/en/latest/) is required in '
-                      'order to use the ground state finder.')
+import gurobipy as grp
+from gurobipy import GRB
 
 
 class MIPCluster:
@@ -181,7 +171,7 @@ class GroundStateFinder:
     def _build_model(self,
                      structure: Atoms,
                      solver_name: str,
-                     verbose: bool) -> mip.Model:
+                     verbose: bool):
         """
         Build a Python-MIP model based on the provided structure
 
@@ -197,13 +187,10 @@ class GroundStateFinder:
         """
 
         # Initiate MIP model
-        model = mip.Model('CE', solver_name=solver_name)
-        model.solver.set_mip_gap(0)   # avoid stopping prematurely
-        model.solver.set_emphasis(2)  # focus on finding optimal solution
-        model.preprocess = 2          # maximum preprocessing
-
-        # Set verbosity
-        model.verbose = int(verbose)
+        model = grp.Model('CE')
+        model.setParam('MIPGap', 0)   # avoid stopping prematurely
+        model.setParam('MIPFocus', 2)
+        model.setParam('Presolve', 2)          # maximum preprocessing
 
         # Create sites
         self._create_mip_sites(structure, model)
@@ -212,8 +199,9 @@ class GroundStateFinder:
         self._create_mip_clusters(structure, model)
 
         # The objective function is added to 'model' first
-        model.objective = mip.minimize(mip.xsum(self._get_total_energy()))
+        model.setObjective(grp.quicksum(self._get_total_energy()), GRB.MINIMIZE)
 
+        model.update()
         # The five constraints are entered
         # TODO: don't create cluster constraints for singlets
         constraint_count = 0
@@ -227,7 +215,7 @@ class GroundStateFinder:
             if len(cluster.cluster_sites) < 2 or ECI < 0:  # no "downwards" pressure
                 for site in cluster.cluster_sites:
                     if site in self._active_indices:
-                        model.add_constr(cluster.variable <= model.var_by_name('atom_{}'.format(site)),
+                        model.addConstr(cluster.variable <= model.getVarByName('atom_{}'.format(site)),
                                      'Decoration -> cluster {}'.format(constraint_count))
                         constraint_count += 1
 
@@ -236,19 +224,18 @@ class GroundStateFinder:
                 inactive_count = 0
                 for site in cluster.cluster_sites:
                     if site in self._active_indices:
-                        site_variables.append(model.var_by_name('atom_{}'.format(site)))
+                        site_variables.append(model.getVarByName('atom_{}'.format(site)))
                     else:
                         mip_site = self._sites[site]
                         inactive_count += mip_site.variable
                         print('hej', inactive_count)
-                model.add_constr(cluster.variable >= 1 - len(cluster.cluster_sites) +
-                                 + inactive_count + mip.xsum(site_variables),
+                model.addConstr(cluster.variable >= 1 - len(cluster.cluster_sites) +
+                                 + inactive_count + grp.quicksum(site_variables),
                                  'Decoration -> cluster {}'.format(constraint_count))
                 constraint_count += 1
 
         # Update the model so that variables and constraints can be queried
-        if model.solver_name.upper() in ['GRB', 'GUROBI']:
-            model.solver.update()
+        model.update()
         return model
 
     def _create_mip_clusters(self, structure: Atoms, model) -> None:
@@ -304,8 +291,8 @@ class GroundStateFinder:
                                      cluster_sites=cluster_sites,
                                      active=active)
                 if active:
-                    var = model.add_var(
-                        name='cluster_{}'.format(len(clusters)), var_type=BINARY)
+                    var = model.addVar(
+                        name='cluster_{}'.format(len(clusters)), vtype=GRB.BINARY)
                 else:
                     var = 1
                     for site_index in cluster_sites:
@@ -326,7 +313,8 @@ class GroundStateFinder:
             for i in sublattice.indices:
                 if i in self._active_indices:
                     active = True
-                    x = model.add_var(name='atom_{}'.format(i), var_type=BINARY)
+                    x = model.addVar(name='atom_{}'.format(i), vtype=GRB.BINARY)
+                    x.start = self._symbol_to_variable[j][structure[i].symbol]
                 else:
                     active = False
                     x = self._symbol_to_variable[j][structure[i].symbol]
@@ -431,40 +419,34 @@ class GroundStateFinder:
                         xcount = species_count[symbol]
                     else:
                         xcount = len(xs_symbol) - species_count[symbol]
-                    model.add_constr(mip.xsum(xs_symbol) == xcount, '{} count'.format(sym))
+                    model.addConstr(grp.quicksum(xs_symbol) == xcount, '{} count'.format(sym))
 
         # Set the number of threads
-        model.threads = threads
+        model.setParam('threads', threads)
+        model.setParam('TimeLimit', max_seconds)
 
         # Optimize the model
-        self._optimization_status = model.optimize(max_seconds=max_seconds)
-
-        # The status of the solution is printed to the screen
-        if str(self._optimization_status) != 'OptimizationStatus.OPTIMAL':
-            if str(self._optimization_status) == 'OptimizationStatus.FEASIBLE':
-                logger.warning('Solution optimality not proven.')
-            else:
-                raise Exception('No solution found.')
+        model.optimize()
 
         # Translate solution to Atoms object
         gs = self.structure.copy()
         for site_index, site in self._sites.items():
             if site.active:
                 gs[site_index].symbol = self._variable_to_symbol[
-                    site.sublattice_index][site.variable.x]
+                    site.sublattice_index][int(round(site.variable.X))]
 
         # Assert that the solution agrees with the prediction
         prediction = self._cluster_expansion.predict(gs)
-        assert abs(model.objective_value - prediction) < 1e-6
+        assert abs(model.objVal - prediction) < 1e-6
 
         return gs
 
     @property
-    def optimization_status(self) -> mip.OptimizationStatus:
+    def optimization_status(self):
         """Optimization status"""
         return self._optimization_status
 
     @property
-    def model(self) -> mip.Model:
+    def model(self):
         """Python-MIP model"""
         return self._model.copy()
