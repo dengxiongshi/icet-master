@@ -55,7 +55,7 @@ keep the Cl lattice fixed it can be achived via
     >>> chemical_symbols = [['Na', 'Li'], ['Cl']]
     >>> cs = ClusterSpace(atoms, [7.0, 5.0], chemical_symbols)
 
-
+.. _2Dsystems:
 
 2D systems
 ``````````

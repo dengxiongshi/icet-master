@@ -1,6 +1,5 @@
 from math import inf
 import numpy as np
-import collections
 from typing import List, Dict
 
 from ase import Atoms
@@ -14,7 +13,7 @@ from pkg_resources import VersionConflict
 
 try:
     import mip
-    from mip.constants import BINARY
+    from mip.constants import BINARY, INTEGER
     from distutils.version import LooseVersion
 
     if LooseVersion(mip.constants.VERSION) < '1.6.3':
@@ -29,7 +28,7 @@ class GroundStateFinder:
     """
     This class provides functionality for determining the ground states
     using a binary cluster expansion. This is efficiently achieved through the
-    use of mixed integer programming (MIP) as shown by Larsen *et al.* in
+    use of mixed integer programming (MIP) as developed by Larsen *et al.* in
     `Phys. Rev. Lett. 120, 256101 (2018)
     <https://doi.org/10.1103/PhysRevLett.120.256101>`_.
 
@@ -121,10 +120,9 @@ class GroundStateFinder:
         self._reverse_id_maps = []
         for species in active_species:
             for species_map in cluster_space.species_maps:
-                symbols = [periodic_table[n] for n in species_map.keys()]
+                symbols = [periodic_table[n] for n in species_map]
                 if set(symbols) == species:
-                    reverse_id_map = {1 - species_map[n]: periodic_table[n]
-                                      for n in species_map.keys()}
+                    reverse_id_map = {1 - species_map[n]: periodic_table[n] for n in species_map}
                     self._reverse_id_maps.append(reverse_id_map)
                     break
         self._count_symbols = [reverse_id_map[1] for reverse_id_map in self._reverse_id_maps]
@@ -190,7 +188,7 @@ class GroundStateFinder:
         # The objective function is added to 'model' first
         model.objective = mip.minimize(mip.xsum(self._get_total_energy(ys)))
 
-        # The five constraints are entered
+        # Connect cluster variables to spin variables with cluster constraints
         # TODO: don't create cluster constraints for singlets
         constraint_count = 0
         for i, cluster in enumerate(self._cluster_to_sites_map):
@@ -211,15 +209,17 @@ class GroundStateFinder:
                                  'Decoration -> cluster {}'.format(constraint_count))
                 constraint_count += 1
 
-        # Set species constraint
-        sublattice_xs = collections.defaultdict(list)
-        for j, subl in enumerate(self._active_sublattices):
-            for i in subl.indices:
-                count_symbol = self._count_symbols[j]
-                sublattice_xs[count_symbol].append(xs[i])
+        for sym, subl in zip(self._count_symbols, self._active_sublattices):
+            # Create slack variable
+            slack = model.add_var(name='slackvar_{}'.format(sym), var_type=INTEGER,
+                                  lb=0, ub=len(subl.indices))
 
-        for sym in self._count_symbols:
-            model.add_constr(mip.xsum(sublattice_xs[sym]) == -1, '{} count'.format(sym))
+            # Add slack constraint
+            model.add_constr(slack <= -1, name='{} slack'.format(sym))
+
+            # Set species constraint
+            model.add_constr(mip.xsum([xs[i] for i in subl.indices]) + slack == -1,
+                             name='{} count'.format(sym))
 
         # Update the model so that variables and constraints can be queried
         if model.solver_name.upper() in ['GRB', 'GUROBI']:
@@ -305,7 +305,7 @@ class GroundStateFinder:
         return E
 
     def get_ground_state(self,
-                         species_count: Dict[str, int],
+                         species_count: Dict[str, int] = None,
                          max_seconds: float = inf,
                          threads: int = 0) -> Atoms:
         """
@@ -318,7 +318,8 @@ class GroundStateFinder:
         ----------
         species_count
             dictionary with count for one of the species on each active
-            sublattice
+            sublattice. If no count is provided for a sublattice, the
+            concentration is allowed to vary.
         max_seconds
             maximum runtime in seconds (default: inf)
         threads
@@ -327,45 +328,48 @@ class GroundStateFinder:
             configuration is used while -1 corresponds to all available
             processing cores.
         """
+        if species_count is None:
+            species_count = {}
+
         # Check that the species_count is consistent with the cluster space
         all_active_species = set.union(*self._active_species)
-        for symbol in species_count.keys():
+        for symbol in species_count:
             if symbol not in all_active_species:
                 raise ValueError('The species {} is not present on any of the active sublattices'
                                  ' ({})'.format(symbol, self._active_species))
-
-        species_constr_xcount = {}
-        for i, species in enumerate(self._active_species):
-            symbols_to_add = [sym for sym in species_count if sym in species]
-            if len(symbols_to_add) != 1:
-                raise ValueError('Provide counts for one of the species on each active sublattice '
-                                 '({}), not {}!'.format(self._active_species,
-                                                        list(species_count.keys())))
-
-            sym = symbols_to_add[0]
-            count = species_count[sym]
-            max_count = len(self._active_sublattices[i].indices)
-            if count < 0 or count > max_count:
-                raise ValueError('The count for species {} ({}) must be a positive integer and '
-                                 'cannot exceed the number of sites on the active sublattice '
-                                 '({})'.format(sym, count, max_count))
-
-            count_symbol = self._count_symbols[i]
-            if sym == count_symbol:
-                xcount = count
-            else:
-                xcount = max_count - count
-
-            species_constr = '{} count'.format(count_symbol)
-            species_constr_xcount[species_constr] = xcount
 
         # The model is solved using python-MIPs choice of solver, which is
         # Gurobi, if available, and COIN-OR Branch-and-Cut, otherwise.
         model = self._model
 
         # Update the species counts
-        for species_constr, xcount in species_constr_xcount.items():
-            model.constr_by_name(species_constr).rhs = xcount
+        for i, species in enumerate(self._active_species):
+            count_symbol = self._count_symbols[i]
+            max_count = len(self._active_sublattices[i].indices)
+
+            symbols_to_add = set.intersection(set(species_count), set(species))
+            if len(symbols_to_add) > 1:
+                raise ValueError('Provide counts for at most one of the species on each active '
+                                 'sublattice ({}), not {}!'.format(self._active_species,
+                                                                   list(species_count)))
+            elif len(symbols_to_add) == 1:
+                sym = symbols_to_add.pop()
+                count = species_count[sym]
+                if count < 0 or count > max_count:
+                    raise ValueError('The count for species {} ({}) must be a positive integer and'
+                                     ' cannot exceed the number of sites on the active sublattice '
+                                     '({})'.format(sym, count, max_count))
+                if sym == count_symbol:
+                    xcount = count
+                else:
+                    xcount = max_count - count
+
+                max_slack = 0
+            else:
+                xcount = max_slack = max_count
+
+            model.constr_by_name('{} count'.format(count_symbol)).rhs = xcount
+            model.constr_by_name('{} slack'.format(count_symbol)).rhs = max_slack
 
         # Set the number of threads
         model.threads = threads
@@ -378,7 +382,7 @@ class GroundStateFinder:
             if str(self._optimization_status) == 'OptimizationStatus.FEASIBLE':
                 logger.warning('Solution optimality not proven.')
             else:
-                raise Exception('No solution found.')
+                raise Exception('Optimization failed ({0})'.format(str(self._optimization_status)))
 
         # Each of the variables is printed with it's resolved optimum value
         gs = self.structure.copy()
@@ -394,7 +398,6 @@ class GroundStateFinder:
         # Assert that the solution agrees with the prediction
         prediction = self._cluster_expansion.predict(gs)
         assert abs(model.objective_value - prediction) < 1e-6
-
         return gs
 
     @property

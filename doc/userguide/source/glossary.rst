@@ -136,6 +136,10 @@ Cluster expansions
          A Monte Carlo sweep (MCS) is defined as :math:`N_{sites}` MC trial
          steps, where :math:`N_{sites}` is the number of sites in the system.
 
+   SQS   
+         Special quasirandom structures, alloy supercells that mimic a
+         random alloy using few atoms [ZunWeiFer90]_.
+
    WL
          The `Wang-Landau (WL) algorithm
          <https://en.wikipedia.org/wiki/Wang_and_Landau_algorithm>`_
