@@ -13,7 +13,7 @@ class BaseObserver(ABC):
     ----------
     interval : int
         the observation interval, defaults to None meaning that if the
-        observer is used in a Monte-simulation, then the Ensemble object
+        observer is used in a Monte Carlo simulation, then the Ensemble object
         will set the interval.
     tag : str
         human readable tag used for identifying the observer

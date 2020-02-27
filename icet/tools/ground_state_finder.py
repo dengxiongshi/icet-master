@@ -1,5 +1,6 @@
 from math import inf
 import numpy as np
+import collections
 from typing import List, Dict
 
 from ase import Atoms
@@ -107,28 +108,23 @@ class GroundStateFinder:
         self.structure = structure
         cluster_space = self._cluster_expansion.get_cluster_space_copy()
         primitive_structure = cluster_space.primitive_structure
-        sublattices = cluster_space.get_sublattices(structure)
-        self._active_sublattices = sublattices.active_sublattices
+        self._active_sublattices = cluster_space.get_sublattices(structure).active_sublattices
 
         # Check that there are no more than two allowed species
-        active_species = [subl.chemical_symbols for subl in self._active_sublattices]
+        active_species = [set(subl.chemical_symbols) for subl in self._active_sublattices]
         if any(len(species) > 2 for species in active_species):
             raise NotImplementedError('Currently, systems with more than two allowed species on '
                                       'any sublattice are not supported.')
         self._active_species = active_species
-        self._active_indices = [subl.indices for subl in self._active_sublattices]
-        self._all_active_species = [symbol for species in active_species for symbol in species]
 
         # Define cluster functions for elements
-        self._id_maps = []
         self._reverse_id_maps = []
         for species in active_species:
             for species_map in cluster_space.species_maps:
                 symbols = [periodic_table[n] for n in species_map.keys()]
-                if set(symbols) == set(species):
-                    id_map = {periodic_table[n]: 1 - species_map[n] for n in species_map.keys()}
-                    reverse_id_map = {value: key for key, value in id_map.items()}
-                    self._id_maps.append(id_map)
+                if set(symbols) == species:
+                    reverse_id_map = {1 - species_map[n]: periodic_table[n]
+                                      for n in species_map.keys()}
                     self._reverse_id_maps.append(reverse_id_map)
                     break
         self._count_symbols = [reverse_id_map[1] for reverse_id_map in self._reverse_id_maps]
@@ -186,24 +182,10 @@ class GroundStateFinder:
         model.verbose = int(verbose)
 
         # Spin variables (remapped) for all atoms in the structure
-        xs = []
-        site_to_active_index_map = {}
-        symbol_to_active_indices = {count_symbol: [] for count_symbol in self._count_symbols}
-        active_index_to_sublattice_map = {}
-        for i in range(len(structure)):
-            for j, indices in enumerate(self._active_indices):
-                if i in indices:
-                    site_to_active_index_map[i] = len(xs)
-                    symbol_to_active_indices[self._count_symbols[j]].append(len(xs))
-                    active_index_to_sublattice_map[i] = j
-                    xs.append(model.add_var(name='atom_{}'.format(i), var_type=BINARY))
-                    break
-        self.xs = xs
-        self._active_index_to_sublattice_map = active_index_to_sublattice_map
-
-        ys = []
-        for i in range(len(self._cluster_to_orbit_map)):
-            ys.append(model.add_var(name='cluster_{}'.format(i), var_type=BINARY))
+        xs = {i: model.add_var(name='atom_{}'.format(i), var_type=BINARY)
+              for subl in self._active_sublattices for i in subl.indices}
+        ys = [model.add_var(name='cluster_{}'.format(i), var_type=BINARY)
+              for i in range(len(self._cluster_to_orbit_map))]
 
         # The objective function is added to 'model' first
         model.objective = mip.minimize(mip.xsum(self._get_total_energy(ys)))
@@ -218,21 +200,26 @@ class GroundStateFinder:
 
             if len(cluster) < 2 or ECI < 0:  # no "downwards" pressure
                 for atom in cluster:
-                    model.add_constr(ys[i] <= xs[site_to_active_index_map[atom]],
+                    model.add_constr(ys[i] <= xs[atom],
                                      'Decoration -> cluster {}'.format(constraint_count))
                     constraint_count += 1
 
             if len(cluster) < 2 or ECI > 0:  # no "upwards" pressure
                 model.add_constr(ys[i] >= 1 - len(cluster) +
-                                 mip.xsum(xs[site_to_active_index_map[atom]]
+                                 mip.xsum(xs[atom]
                                           for atom in cluster),
                                  'Decoration -> cluster {}'.format(constraint_count))
                 constraint_count += 1
 
         # Set species constraint
+        sublattice_xs = collections.defaultdict(list)
+        for j, subl in enumerate(self._active_sublattices):
+            for i in subl.indices:
+                count_symbol = self._count_symbols[j]
+                sublattice_xs[count_symbol].append(xs[i])
+
         for sym in self._count_symbols:
-            xs_symbol = [xs[i] for i in symbol_to_active_indices[sym]]
-            model.add_constr(mip.xsum(xs_symbol) == -1, '{} count'.format(sym))
+            model.add_constr(mip.xsum(sublattice_xs[sym]) == -1, '{} count'.format(sym))
 
         # Update the model so that variables and constraints can be queried
         if model.solver_name.upper() in ['GRB', 'GUROBI']:
@@ -341,36 +328,35 @@ class GroundStateFinder:
             processing cores.
         """
         # Check that the species_count is consistent with the cluster space
+        all_active_species = set.union(*self._active_species)
         for symbol in species_count.keys():
-            if symbol not in self._all_active_species:
+            if symbol not in all_active_species:
                 raise ValueError('The species {} is not present on any of the active sublattices'
                                  ' ({})'.format(symbol, self._active_species))
-        species_to_count = []
+
+        species_constr_xcount = {}
         for i, species in enumerate(self._active_species):
             symbols_to_add = [sym for sym in species_count if sym in species]
             if len(symbols_to_add) != 1:
                 raise ValueError('Provide counts for one of the species on each active sublattice '
                                  '({}), not {}!'.format(self._active_species,
                                                         list(species_count.keys())))
-            species_to_count += symbols_to_add
-        for i, species in enumerate(species_to_count):
-            count = species_count[species]
+
+            sym = symbols_to_add[0]
+            count = species_count[sym]
             max_count = len(self._active_sublattices[i].indices)
             if count < 0 or count > max_count:
                 raise ValueError('The count for species {} ({}) must be a positive integer and '
                                  'cannot exceed the number of sites on the active sublattice '
-                                 '({})'.format(species, count, max_count))
+                                 '({})'.format(sym, count, max_count))
 
-        # Determine the maximum species count for each sublattice
-        species_constr_xcount = {}
-        for j, id_map in enumerate(self._id_maps):
-            if id_map[species_to_count[j]] == 1:
-                xcount = species_count[species_to_count[j]]
+            count_symbol = self._count_symbols[i]
+            if sym == count_symbol:
+                xcount = count
             else:
-                active_count = len([i for i in range(len(self.structure)) if i in
-                                    self._active_indices[j]])
-                xcount = active_count - species_count[species_to_count[j]]
-            species_constr = '{} count'.format(self._count_symbols[j])
+                xcount = max_count - count
+
+            species_constr = '{} count'.format(count_symbol)
             species_constr_xcount[species_constr] = xcount
 
         # The model is solved using python-MIPs choice of solver, which is
@@ -397,11 +383,13 @@ class GroundStateFinder:
         # Each of the variables is printed with it's resolved optimum value
         gs = self.structure.copy()
 
+        active_index_to_sublattice_map = {i: j for j, subl in enumerate(self._active_sublattices)
+                                          for i in subl.indices}
         for v in model.vars:
             if 'atom' in v.name:
                 index = int(v.name.split('_')[-1])
-                gs[index].symbol = self._reverse_id_maps[
-                    self._active_index_to_sublattice_map[index]][int(v.x)]
+                sublattice_index = active_index_to_sublattice_map[index]
+                gs[index].symbol = self._reverse_id_maps[sublattice_index][int(v.x)]
 
         # Assert that the solution agrees with the prediction
         prediction = self._cluster_expansion.predict(gs)

@@ -72,11 +72,25 @@ trial swaps and can be expected to run for a minute or so.
 
 .. literalinclude:: ../../../../examples/advanced_topics/sqs_generation.py
    :start-after: # Generate SQS for binary fcc
+   :end-before: # Generate SQS for binary fcc with specified supercells
+
+If for some reason a particular supercell is needed, there is another function
+:func:`generate_sqs_from_supercells
+<icet.tools.structure_generation.generate_sqs_from_supercells>`
+that works similarly, but in which it is possible to explicitly provide
+the accepted supercell. The code will then look for the optimal SQS among
+the provided supercells.
+
+.. literalinclude:: ../../../../examples/advanced_topics/sqs_generation.py
+   :start-after: # Generate SQS for binary fcc with specified supercells
    :end-before: # Use enumeration
 
-In this simple case, in which the target structure size is very small, it is
-more efficient to generate the best SQS cell by exhaustive enumeration of all
-binary :term:`FCC` structures having up to 8 atoms in the supercell:
+Generate SQS cells by enumeration
+---------------------------------
+
+In the above simple case, in which the target structure size is very small, it
+is more efficient to generate the best SQS cell by exhaustive enumeration of
+all binary :term:`FCC` structures having up to 8 atoms in the supercell:
 
 .. literalinclude:: ../../../../examples/advanced_topics/sqs_generation.py
    :start-after: # Use enumeration
@@ -93,13 +107,44 @@ Generate SQS cells for a system with sublattices
 It is possible to generate SQS cells also for systems with sublattices. In the
 below example, an SQS cell is generated for a system with two sublattices; one
 :term:`FCC` sublattice on which Au, Cu, and Pd are allowed, and another
-:term:`FCC` sublattice on which H and vacancies (V) are allowed. Note that
-target concentrations are specified with respect to *all* atoms, which means
-that the concentrations must always sum up to 1. The example generates an SQS
-cell for a supercell that is 16 times larger than the primitive cell, in total
-32 atoms. The keyword ``include_smaller_cells=False`` guarantees that the
-generated structure has 32 atoms (otherwise the structure search would have
-been carried out among structures having 32 atoms *or less*).
+:term:`FCC` sublattice on which H and vacancies (V) are allowed. Target
+concentrations are specified per sublattice. The sublattices are defined by
+the letters shown at the top of the printout of a `ClusterSpace`. 
+
+.. literalinclude:: ../../../../examples/advanced_topics/sqs_generation.py
+   :start-after: # Generate SQS for a system with two sublattices
+   :end-before: # Target concentrations are specified per sublattice
+
+This should result in something similar to this::
+
+  ====================================== Cluster Space =======================================
+   space group                            : Fm-3m (225)
+   chemical species                       : ['Au', 'Cu', 'Pd'] (sublattice A), ['H', 'V'] (sublattice B)
+   cutoffs                                : 7.0000
+   total number of parameters             : 40
+   number of parameters by order          : 0= 1  1= 3  2= 36
+   fractional_position_tolerance          : 2e-06
+   position_tolerance                     : 1e-05
+   symprec                                : 1e-05
+  --------------------------------------------------------------------------------------------
+  index | order |  radius  | multiplicity | orbit_index | multi_component_vector | sublattices
+  --------------------------------------------------------------------------------------------
+     0  |   0   |   0.0000 |        1     |      -1     |           .            |      .     
+     1  |   1   |   0.0000 |        1     |       0     |          [0]           |      A     
+     2  |   1   |   0.0000 |        1     |       0     |          [1]           |      A     
+     3  |   1   |   0.0000 |        1     |       1     |          [0]           |      B     
+     4  |   2   |   1.0000 |        6     |       2     |         [0, 0]         |     A-B 
+  ...
+
+Here we see that the sublattice with Au, Cu and Pd is sublattice `A`, while H
+and V are on sublattice B. These letters can now be used when the target
+concentrations are specified.
+
+In the below example, an SQS cell is generated for a supercell that is 16
+times larger than the primitive cell, in total 32 atoms. The keyword
+``include_smaller_cells=False`` guarantees that the generated structure has 32
+atoms (otherwise the structure search would have been carried out among
+structures having 32 atoms *or less*).
 
 In this example, the number of trial steps is manually set to 50,000. This
 number may be insufficient, but will most likely provide a reasonable SQS
@@ -109,7 +154,7 @@ increases quickly with the size of the supercell.
 
 
 .. literalinclude:: ../../../../examples/advanced_topics/sqs_generation.py
-   :start-after: # fcc lattices with Au, Cu, Pd on one lattice and H, V on another
+   :start-after: # Target concentrations are specified per sublattice
    :end-before: # Generate structure with a specified cluster vector
 
 Generate a structure matching an arbitrary cluster vector

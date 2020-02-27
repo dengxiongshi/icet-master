@@ -351,8 +351,6 @@ class ClusterExpansion:
         # TODO: remove if condition once metadata is firmly established
         if 'metadata' in items:
             ce._metadata = items['metadata']
-        else:
-            del ce._metadata
 
         assert list(items['parameters']) == list(ce.parameters)
         return ce

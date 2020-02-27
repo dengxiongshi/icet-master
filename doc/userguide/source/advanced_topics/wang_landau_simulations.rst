@@ -8,7 +8,7 @@ Wang-Landau simulations
 
 This example illustrates how to carry out `Wang-Landau (WL)
 <https://en.wikipedia.org/wiki/Wang_and_Landau_algorithm>`_ simulations with
-:program:`icet`. Compared to :term:`Monte-Carlo (MC) <MC>` simulations in
+:program:`icet`. Compared to :term:`Monte Carlo (MC) <MC>` simulations in
 conventional thermodynamic ensembles there are a few differences to be aware
 of. It is therefore strongly recommended to work through this entire example
 before running your own :term:`WL` simulations.

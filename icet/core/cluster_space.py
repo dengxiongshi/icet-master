@@ -9,7 +9,7 @@ import tarfile
 import tempfile
 from collections import OrderedDict
 from math import log10, floor
-from typing import List, Union
+from typing import List, Union, Tuple
 
 import numpy as np
 import spglib
@@ -22,7 +22,8 @@ from icet.core.orbit_list import OrbitList
 from icet.core.structure import Structure
 from icet.core.sublattices import Sublattices
 from icet.tools.geometry import (ase_atoms_to_spglib_cell,
-                                 get_occupied_primitive_structure)
+                                 get_occupied_primitive_structure,
+                                 get_position_from_lattice_site)
 
 
 class ClusterSpace(_ClusterSpace):
@@ -410,6 +411,34 @@ class ClusterSpace(_ClusterSpace):
             self.assert_structure_compatibility(structure)
             raise(e)
         return cv
+
+    def get_coordinates_of_representative_cluster(self, orbit_index: int) -> List[Tuple[float]]:
+        """
+        Returns the positions of atoms in the selected orbit
+
+        Parameters
+        ----------
+        orbit_index
+            index of the orbit from which to calculate the positions of the atoms
+
+        Returns
+        -------
+        list of positions of atoms in the selected orbit
+
+        """
+        # Raise exception if chosen orbit index not in current list of orbit indices
+        if not (orbit_index in range(len(self._orbit_list))):
+            raise ValueError('The input orbit index is not in the list of possible values.')
+
+        lattice_sites = self._orbit_list.get_orbit(orbit_index).representative_sites
+        positions = []
+
+        for site in lattice_sites:
+            pos = get_position_from_lattice_site(structure=self.primitive_structure,
+                                                 lattice_site=site)
+            positions.append(pos)
+
+        return positions
 
     def _prune_orbit_list(self, indices: List[int]) -> None:
         """

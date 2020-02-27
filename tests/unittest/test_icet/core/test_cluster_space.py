@@ -342,6 +342,30 @@ index | order |  radius  | multiplicity | orbit_index | multi_component_vector |
             self.cs.get_cluster_vector(structure)
         self.assertIn('Failed to find site by position', str(cm.exception))
 
+    def test_get_coordinates_of_representative_cluster(self):
+        """ Tests get_coordinates_of_representative_cluster functionality """
+        cs = ClusterSpace(self.primitive_structure, self.cutoffs, self.chemical_symbols)
+
+        # check calculation of positions for all the orbit indices for the Cluster Space
+        for orbit_index in range(len(cs.orbit_list)):
+            # check number of positions for each orbit index
+            self.assertEqual(len(cs.get_coordinates_of_representative_cluster(orbit_index)),
+                             orbit_index+1)
+
+        # check positions of each atom for largest value of orbit_index
+        positions_for_last_orbit_index = [[0., -2.045, -2.045], [-2.045,  0., -2.045],
+                                          [-2.045, -2.045,  0.], [0., 0., 0.]]
+
+        for i in range(len(positions_for_last_orbit_index)):
+            self.assertAlmostEqualList(cs.get_coordinates_of_representative_cluster(3)[i].tolist(),
+                                       positions_for_last_orbit_index[i])
+
+        # check raised exception if orbit_index outside of the list of possible values
+        with self.assertRaises(ValueError) as cm:
+            cs.get_coordinates_of_representative_cluster(4)
+        self.assertTrue('The input orbit index is not in the list of possible values.'
+                        in str(cm.exception))
+
     def test_cutoffs(self):
         """Tests cutoffs property."""
         self.assertEqual(self.cs.cutoffs, self.cutoffs)
