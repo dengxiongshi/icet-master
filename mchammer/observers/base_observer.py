@@ -3,6 +3,8 @@ Definition of the base observer class.
 """
 
 from abc import ABC, abstractmethod
+from typing import Any
+from ase import Atoms
 
 
 class BaseObserver(ABC):
@@ -37,7 +39,7 @@ class BaseObserver(ABC):
         return self._return_type
 
     @abstractmethod
-    def get_observable(self):
+    def get_observable(self, structure: Atoms) -> Any:
         """
         Method used for extracting data.
 

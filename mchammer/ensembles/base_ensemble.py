@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from collections import OrderedDict
 from math import gcd
 from time import time
-from typing import BinaryIO, Dict, List, TextIO, Union, Type, Any
+from typing import Any, Dict, List, Optional, Type, Union
 
 import numpy as np
 
@@ -116,7 +116,7 @@ class BaseEnsemble(ABC):
             self._data_container_filename = dc_filename
 
         if dc_filename is not None and os.path.isfile(dc_filename):
-            self._data_container = data_container_class.read(dc_filename)
+            self._data_container = data_container_class.read(dc_filename)  # type: BaseDataContainer
 
             dc_ensemble_parameters = self.data_container.ensemble_parameters
             if not dicts_equal(self.ensemble_parameters,
@@ -279,6 +279,7 @@ class BaseEnsemble(ABC):
 
         # Observer data
         for observer in self.observers.values():
+            assert isinstance(observer.interval, int), 'interval is not an int'
             if step % observer.interval == 0:
                 if observer.return_type is dict:
                     for key, value in observer.get_observable(self.calculator.structure).items():
@@ -294,7 +295,7 @@ class BaseEnsemble(ABC):
         pass
 
     @property
-    def user_tag(self) -> str:
+    def user_tag(self) -> Optional[str]:
         """ tag used for labeling the ensemble """
         return self._user_tag
 
@@ -325,6 +326,7 @@ class BaseEnsemble(ABC):
         if self._trajectory_write_interval is not np.inf:
             intervals.append(self._trajectory_write_interval)
         if intervals:
+            assert all([isinstance(k, int) for k in intervals]), 'intervals must be ints'
             self._observer_interval = self._get_gcd(intervals)
 
     def _get_gcd(self, values: List[int]) -> int:
@@ -461,7 +463,7 @@ class BaseEnsemble(ABC):
         # Restart state of random number generator
         random.setstate(self.data_container._last_state['random_state'])
 
-    def write_data_container(self, outfile: Union[str, BinaryIO, TextIO]):
+    def write_data_container(self, outfile: Union[str, bytes]):
         """Updates last state of the Monte Carlo simulation and
         writes data container to file.
 

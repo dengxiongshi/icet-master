@@ -2,7 +2,7 @@
 
 from warnings import warn
 from collections import Counter, OrderedDict
-from typing import Dict, List, Tuple, Union
+from typing import Any, Counter as CounterType, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -74,7 +74,7 @@ class WangLandauDataContainer(BaseDataContainer):
     @property
     def fill_factor(self) -> float:
         """ final value of the fill factor in the Wang-Landau algorithm """
-        return self._last_state['fill_factor']
+        return float(self._last_state['fill_factor'])
 
     @property
     def fill_factor_history(self) -> DataFrame:
@@ -121,7 +121,9 @@ class WangLandauDataContainer(BaseDataContainer):
         return df
 
 
-def get_density_of_states_wl(dcs: Union[BaseDataContainer, dict]) -> Tuple[DataFrame, dict]:
+def get_density_of_states_wl(dcs: Union[WangLandauDataContainer,
+                                        Dict[Any, WangLandauDataContainer]]) \
+        -> Tuple[DataFrame, dict]:
     """Returns a pandas DataFrame with the total density of states from a
     :ref:`Wang-Landau simulation <wang_landau_ensemble>`. If a dict of data
     containers is provided the function also returns a dictionary that
@@ -150,7 +152,7 @@ def get_density_of_states_wl(dcs: Union[BaseDataContainer, dict]) -> Tuple[DataF
     """
 
     # preparations
-    if hasattr(dcs, 'get_entropy'):
+    if isinstance(dcs, WangLandauDataContainer):
         # fetch raw entropy data from data container
         df = dcs.get_entropy()
         errors = None
@@ -158,7 +160,7 @@ def get_density_of_states_wl(dcs: Union[BaseDataContainer, dict]) -> Tuple[DataF
             warn('The data container appears to contain data from an'
                  ' underconverged Wang-Landau simulation.')
 
-    elif isinstance(dcs, dict) and isinstance(dcs[next(iter(dcs))], BaseDataContainer):
+    elif isinstance(dcs, dict) and isinstance(dcs[next(iter(dcs))], WangLandauDataContainer):
         # minimal consistency checks
         tags = list(dcs.keys())
         tagref = tags[0]
@@ -207,9 +209,9 @@ def get_density_of_states_wl(dcs: Union[BaseDataContainer, dict]) -> Tuple[DataF
             entropies[tag2].entropy = entropies[tag2].entropy - offset
 
         # compile entropy over the entire energy range
-        data = {}
+        data = {}  # type: Dict[float, float]
         indices = {}
-        counts = Counter()
+        counts = Counter()  # type: CounterType[float]
         for df in entropies.values():
             for index, en, ent in zip(df.index, df.energy, df.entropy):
                 data[en] = data.get(en, 0) + ent
@@ -235,7 +237,8 @@ def get_density_of_states_wl(dcs: Union[BaseDataContainer, dict]) -> Tuple[DataF
     return df, errors
 
 
-def get_average_observables_wl(dcs: Union[BaseDataContainer, dict],
+def get_average_observables_wl(dcs: Union[WangLandauDataContainer,
+                                          Dict[Any, WangLandauDataContainer]],
                                temperatures: List[float],
                                observables: List[str] = None,
                                boltzmann_constant: float = kB) -> DataFrame:
@@ -270,7 +273,7 @@ def get_average_observables_wl(dcs: Union[BaseDataContainer, dict],
         if data container(s) do(es) not contain requested observable
     """
 
-    def check_observables(dc: BaseDataContainer, observables: List[str]) -> None:
+    def check_observables(dc: WangLandauDataContainer, observables: Optional[List[str]]) -> None:
         """ Helper function that checks that observables are available in data frame. """
         if observables is None:
             return
@@ -286,11 +289,11 @@ def get_average_observables_wl(dcs: Union[BaseDataContainer, dict],
 
     # check that observables are available in data container
     # and prepare comprehensive data frame with relevant information
-    if hasattr(dcs, 'get_entropy'):
+    if isinstance(dcs, WangLandauDataContainer):
         check_observables(dcs, observables)
         df_combined = dcs.data.filter(columns_to_keep)
         dcref = dcs
-    elif isinstance(dcs, dict):
+    elif isinstance(dcs, dict) and isinstance(dcs[next(iter(dcs))], WangLandauDataContainer):
         for dc in dcs.values():
             check_observables(dc, observables)
         df_combined = pd_concat([dc.data for dc in dcs.values()],
@@ -344,7 +347,7 @@ def get_average_observables_wl(dcs: Union[BaseDataContainer, dict],
     return DataFrame.from_dict(averages)
 
 
-def get_average_cluster_vectors_wl(dcs: Union[BaseDataContainer, dict],
+def get_average_cluster_vectors_wl(dcs: Union[WangLandauDataContainer, dict],
                                    cluster_space: ClusterSpace,
                                    temperatures: List[float],
                                    boltzmann_constant: float = kB) -> DataFrame:
@@ -368,10 +371,10 @@ def get_average_cluster_vectors_wl(dcs: Union[BaseDataContainer, dict],
     """
 
     # fetch potential and structures
-    if hasattr(dcs, 'get_entropy'):
+    if isinstance(dcs, WangLandauDataContainer):
         potential, trajectory = dcs.get('potential', 'trajectory')
         energy_spacing = dcs.ensemble_parameters['energy_spacing']
-    elif isinstance(dcs, dict):
+    elif isinstance(dcs, dict) and isinstance(dcs[next(iter(dcs))], WangLandauDataContainer):
         potential, trajectory = [], []
         for dc in dcs.values():
             p, t = dc.get('potential', 'trajectory')

@@ -10,7 +10,7 @@ import warnings
 
 from collections import OrderedDict
 from datetime import datetime
-from typing import BinaryIO, Dict, List, TextIO, Tuple, Union
+from typing import Any, BinaryIO, Dict, List, Set, TextIO, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -60,10 +60,10 @@ class BaseDataContainer:
         self._ensemble_parameters = ensemble_parameters
         self._metadata = metadata
         self._add_default_metadata()
-        self._last_state = {}
+        self._last_state = {}  # type: Dict[str, Any]
 
-        self._observables = set()
-        self._data_list = []
+        self._observables = set()  # type: Set[str]
+        self._data_list = []  # type: List[Dict[str, Any]]
 
     def append(self, mctrial: int, record: Dict[str, Union[int, float, list]]):
         """
@@ -106,7 +106,7 @@ class BaseDataContainer:
         self._data_list.append(row_data)
 
     def _update_last_state(self, last_step: int, occupations: List[int],
-                           accepted_trials: int, random_state: tuple):
+                           accepted_trials: int, random_state: Any):
         """Updates last state of the simulation: last step, occupation vector
         and number of accepted trial steps.
 
@@ -289,7 +289,7 @@ class BaseDataContainer:
         """ metadata associated with data container """
         return self._metadata
 
-    def write(self, outfile: Union[str, BinaryIO, TextIO]):
+    def write(self, outfile: Union[bytes, str]):
         """
         Writes BaseDataContainer object to file.
 
@@ -312,17 +312,17 @@ class BaseDataContainer:
                           'data_container_type': data_container_type}
 
         reference_data_file = tempfile.NamedTemporaryFile()
-        with open(reference_data_file.name, 'w') as handle:
-            json.dump(reference_data, handle, cls=Int64Encoder)
+        with open(reference_data_file.name, 'w') as fileobj:
+            json.dump(reference_data, fileobj, cls=Int64Encoder)
 
         # Save runtime data
         runtime_data_file = tempfile.NamedTemporaryFile()
         np.savez_compressed(runtime_data_file, self._data_list)
 
-        with tarfile.open(outfile, mode='w') as handle:
-            handle.add(reference_structure_file.name, arcname='atoms')
-            handle.add(reference_data_file.name, arcname='reference_data')
-            handle.add(runtime_data_file.name, arcname='runtime_data')
+        with tarfile.open(outfile, mode='w') as tf:
+            tf.add(reference_structure_file.name, arcname='atoms')
+            tf.add(reference_data_file.name, arcname='reference_data')
+            tf.add(runtime_data_file.name, arcname='runtime_data')
         runtime_data_file.close()
 
     def _add_default_metadata(self):
@@ -382,22 +382,19 @@ class BaseDataContainer:
         if not tarfile.is_tarfile(filename):
             raise TypeError('{} is not a tar file'.format(filename))
 
-        reference_structure_file = tempfile.NamedTemporaryFile()
-        reference_data_file = tempfile.NamedTemporaryFile()
-        runtime_data_file = tempfile.NamedTemporaryFile()
-
-        with tarfile.open(mode='r', name=filename) as tar_file:
+        with tarfile.open(mode='r', name=filename) as tf:
             # file with structures
-            reference_structure_file.write(tar_file.extractfile('atoms').read())
-
-            reference_structure_file.seek(0)
-            structure = ase_read(reference_structure_file.name, format='json')
+            with tempfile.NamedTemporaryFile() as fobj:
+                fobj.write(tf.extractfile('atoms').read())
+                fobj.flush()
+                structure = ase_read(fobj.name, format='json')
 
             # file with reference data
-            reference_data_file.write(tar_file.extractfile('reference_data').read())
-            reference_data_file.seek(0)
-            with open(reference_data_file.name, encoding='utf-8') as fd:
-                reference_data = json.load(fd)
+            with tempfile.NamedTemporaryFile() as fobj:
+                fobj.write(tf.extractfile('reference_data').read())
+                fobj.flush()
+                with open(fobj.name, encoding='utf-8') as fd:
+                    reference_data = json.load(fd)
 
             # init DataContainer
             dc = cls(structure=structure,
@@ -417,14 +414,15 @@ class BaseDataContainer:
                     dc._last_state[tag] = value
 
             # add runtime data from file
-            runtime_data_file.write(tar_file.extractfile('runtime_data').read())
-            runtime_data_file.seek(0)
-            if old_format:
-                runtime_data = pd.read_json(runtime_data_file)
-                data = runtime_data.sort_index(ascending=True)
-                dc._data_list = data.T.apply(lambda x: x.dropna().to_dict()).tolist()
-            else:
-                dc._data_list = np.load(runtime_data_file, allow_pickle=True)['arr_0'].tolist()
+            with tempfile.NamedTemporaryFile() as fobj:
+                fobj.write(tf.extractfile('runtime_data').read())
+                fobj.seek(0)
+                if old_format:
+                    runtime_data = pd.read_json(fobj)
+                    data = runtime_data.sort_index(ascending=True)
+                    dc._data_list = data.T.apply(lambda x: x.dropna().to_dict()).tolist()
+                else:
+                    dc._data_list = np.load(fobj, allow_pickle=True)['arr_0'].tolist()
 
         dc._observables = set([key for data in dc._data_list for key in data])
         dc._observables = dc._observables - {'mctrial'}

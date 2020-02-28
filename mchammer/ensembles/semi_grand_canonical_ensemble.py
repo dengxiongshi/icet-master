@@ -219,7 +219,8 @@ class SemiGrandCanonicalEnsemble(ThermodynamicBaseEnsemble):
         return data
 
 
-def get_chemical_potentials(chemical_potentials: Union[Dict[str, float], Dict[int, float]]):
+def get_chemical_potentials(chemical_potentials: Union[Dict[str, float], Dict[int, float]]) \
+        -> Dict[int, float]:
     """ Gets values of chemical potentials."""
     if not isinstance(chemical_potentials, dict):
         raise TypeError('chemical_potentials has the wrong type: {}'
