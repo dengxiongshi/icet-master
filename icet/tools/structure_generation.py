@@ -424,10 +424,6 @@ def generate_sqs_by_enumeration(cluster_space: ClusterSpace,
         if sl.symbol in target_concentrations:
             sl_conc = target_concentrations[sl.symbol]
         else:
-            if len(sl.chemical_symbols) > 1:  # Should be prevented by _validate_concentrations
-                raise ValueError('A sublattice ({}: {}) is missing in '
-                                 'target_concentrations'.format(sl.symbol,
-                                                                list(sl.chemical_symbol)))
             sl_conc = {sl.chemical_symbols[0]: 1.0}
         for species, value in sl_conc.items():
             c = value * mult_factor
@@ -574,7 +570,7 @@ def _validate_concentrations(concentrations: dict,
                 raise ValueError('Chemical symbols on a sublattice ({}: {}) are '
                                  'not the same as those in the specified '
                                  'concentrations {}'.format(sl.symbol, list(sl.chemical_symbols),
-                                                            sl.symbol, list(sl_conc.keys())))
+                                                            list(sl_conc.keys())))
 
     return concentrations
 
@@ -639,15 +635,10 @@ def _get_sqs_cluster_vector(cluster_space: ClusterSpace,
     symbol_to_integer_map = {}
     found_species = []  # type: List[str]
     for sublattice in all_sublattices:
-        syms = sublattice.chemical_symbols
-        if len(syms) < 2:
+        if len(sublattice.chemical_symbols) < 2:
             continue
-        atomic_numbers = [periodic_table.index(sym) for sym in syms]
+        atomic_numbers = [periodic_table.index(sym) for sym in sublattice.chemical_symbols]
         for i, species in enumerate(sorted(atomic_numbers)):
-            if species in found_species:
-                raise ValueError('Each chemical symbol can only occur on one '
-                                 'sublattice, {} occurred more than '
-                                 'once.'.format(periodic_table[species]))
             found_species.append(species)
             symbol_to_integer_map[periodic_table[species]] = i
 
