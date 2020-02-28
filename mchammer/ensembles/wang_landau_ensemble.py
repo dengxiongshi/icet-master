@@ -3,7 +3,7 @@
 import random
 
 from collections import OrderedDict
-from typing import BinaryIO, Dict, List, TextIO, Union
+from typing import BinaryIO, Dict, List, TextIO, Union, Any, Optional
 
 import numpy as np
 
@@ -201,7 +201,7 @@ class WangLandauEnsemble(BaseEnsemble):
 
         # set default values that are system dependent
         if flatness_check_interval is None:
-            flatness_check_interval = len(structure) * 1e3
+            flatness_check_interval = len(structure) * 1000
 
         # parameters pertaining to construction of entropy and histogram
         self._energy_spacing = energy_spacing
@@ -266,20 +266,20 @@ class WangLandauEnsemble(BaseEnsemble):
         # initialize Wang-Landau algorithm; in the case of a restart
         # these quantities are read from the data container file; the
         # if-conditions prevent these values from being overwritten
-        self._converged = None
+        self._converged = None  # type: Optional[bool]
         self._potential = self.calculator.calculate_total(
             occupations=self.configuration.occupations)
         if not hasattr(self, '_fill_factor'):
-            self._fill_factor = 1
+            self._fill_factor = 1.0
         if not hasattr(self, '_fill_factor_history'):
             if self._reached_energy_window:
                 self._fill_factor_history = {self.step: self._fill_factor}
             else:
                 self._fill_factor_history = {}
         if not hasattr(self, '_histogram'):
-            self._histogram = {}
+            self._histogram = {}  # type: Dict[int, int]
         if not hasattr(self, '_entropy'):
-            self._entropy = {}
+            self._entropy = {}  # type: Dict[int, float]
 
     @property
     def fill_factor(self) -> float:
@@ -559,7 +559,7 @@ class WangLandauEnsemble(BaseEnsemble):
         """Returns sublattice probabilities suitable for swaps. This method
         has been copied without modification from ThermodynamicBaseEnsemble.
         """
-        sublattice_probabilities = []
+        sublattice_probabilities = []  # type: List[Any]
         for i, sl in enumerate(self.sublattices):
             if self.configuration.is_swap_possible(i):
                 sublattice_probabilities.append(len(sl.indices))
@@ -576,7 +576,7 @@ class WangLandauEnsemble(BaseEnsemble):
         sizes of a sublattice. This method has been copied without
         modification from ThermodynamicBaseEnsemble.
         """
-        sublattice_probabilities = []
+        sublattice_probabilities = []  # type: List[Any]
         for _, sl in enumerate(self.sublattices):
             if len(sl.chemical_symbols) > 1:
                 sublattice_probabilities.append(len(sl.indices))

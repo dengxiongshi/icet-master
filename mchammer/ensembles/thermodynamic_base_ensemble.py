@@ -1,5 +1,5 @@
 from abc import abstractproperty
-from typing import Dict, List
+from typing import Dict, List, Type, Any
 
 import numpy as np
 
@@ -62,7 +62,7 @@ class ThermodynamicBaseEnsemble(BaseEnsemble):
                  random_seed: int = None,
                  dc_filename: str = None,
                  data_container: str = None,
-                 data_container_class: BaseDataContainer = None,
+                 data_container_class: Type[BaseDataContainer] = None,
                  data_container_write_period: float = 600,
                  ensemble_data_write_interval: int = None,
                  trajectory_write_interval: int = None) -> None:
@@ -208,7 +208,7 @@ class ThermodynamicBaseEnsemble(BaseEnsemble):
 
     def _get_swap_sublattice_probabilities(self) -> List[float]:
         """ Returns sublattice probabilities suitable for swaps."""
-        sublattice_probabilities = []
+        sublattice_probabilities = []  # type: List[Any]
         for i, sl in enumerate(self.sublattices):
             if self.configuration.is_swap_possible(i):
                 sublattice_probabilities.append(len(sl.indices))
@@ -224,7 +224,7 @@ class ThermodynamicBaseEnsemble(BaseEnsemble):
         """Returns the default sublattice probability which is based on
         the sizes of a sublattice.
         """
-        probability_distribution = []
+        probability_distribution = []  # type: List[Any]
         for i, sl in enumerate(self.sublattices):
             if len(sl.chemical_symbols) > 1:
                 probability_distribution.append(len(sl.indices))
@@ -235,7 +235,7 @@ class ThermodynamicBaseEnsemble(BaseEnsemble):
         probability_distribution = [p / norm for p in probability_distribution]
         return probability_distribution
 
-    def _get_vcsgc_free_energy_derivatives(self, phis: Dict[int, str], kappa: float,
+    def _get_vcsgc_free_energy_derivatives(self, phis: Dict[int, float], kappa: float,
                                            sublattice_index: int = None) -> Dict:
         """
         Returns a dict with the free energy derivatives.

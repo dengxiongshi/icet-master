@@ -3,10 +3,10 @@
 from ase import Atoms
 from ase.data import chemical_symbols
 from ase.units import kB
-from typing import Dict, List
+from typing import Dict, List, Any
 
 from .. import DataContainer
-from ..calculators.base_calculator import BaseCalculator
+from ..calculators import ClusterExpansionCalculator
 from .thermodynamic_base_ensemble import ThermodynamicBaseEnsemble
 from .semi_grand_canonical_ensemble import get_chemical_potentials
 from .canonical_annealing import available_cooling_functions
@@ -46,7 +46,8 @@ class SGCAnnealing(ThermodynamicBaseEnsemble):
         chemical potential for each species :math:`\\mu_i`; the key
         denotes the species, the value specifies the chemical potential in
         units that are consistent with the underlying cluster expansion
-    calculator : :class:`BaseCalculator <mchammer.calculators.ClusterExpansionCalculator>`
+    calculator : :class:`ClusterExpansionCalculator
+        <mchammer.calculators.ClusterExpansionCalculator>`
         calculator to be used for calculating the potential changes
         that enter the evaluation of the Metropolis criterion
     T_start : float
@@ -95,7 +96,7 @@ class SGCAnnealing(ThermodynamicBaseEnsemble):
 
     def __init__(self,
                  structure: Atoms,
-                 calculator: BaseCalculator,
+                 calculator: ClusterExpansionCalculator,
                  T_start: float,
                  T_stop: float,
                  n_steps: int,
@@ -111,7 +112,7 @@ class SGCAnnealing(ThermodynamicBaseEnsemble):
                  trajectory_write_interval: int = None,
                  sublattice_probabilities: List[float] = None) -> None:
 
-        self._ensemble_parameters = dict(n_steps=n_steps)
+        self._ensemble_parameters = dict(n_steps=n_steps)  # type: Dict[str, Any]
 
         self._chemical_potentials = get_chemical_potentials(chemical_potentials)
 
@@ -140,7 +141,7 @@ class SGCAnnealing(ThermodynamicBaseEnsemble):
         self._n_steps = n_steps
 
         self._ground_state_candidate = self.configuration.structure
-        self._ground_state_candidate_potential = self.calculator.calculate_total(
+        self._ground_state_candidate_potential = calculator.calculate_total(
             occupations=self.configuration.occupations)
 
         # setup cooling function

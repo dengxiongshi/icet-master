@@ -1,5 +1,5 @@
 from itertools import product
-from typing import Dict, List, Tuple, Generator
+from typing import Dict, List, Tuple, Generator, Union
 
 import numpy as np
 
@@ -329,7 +329,8 @@ def _get_symmetry_operations(structure: Atoms,
     return symmetries
 
 
-def enumerate_structures(structure: Atoms, sizes: List[int],
+def enumerate_structures(structure: Atoms,
+                         sizes: Union[List[int], range],
                          chemical_symbols: list,
                          concentration_restrictions: dict = None,
                          niggli_reduce: bool = None,
@@ -490,7 +491,8 @@ def enumerate_structures(structure: Atoms, sizes: List[int],
                                                  structure.pbc)
 
 
-def enumerate_supercells(structure: Atoms, sizes: List[int],
+def enumerate_supercells(structure: Atoms,
+                         sizes: Union[List[int], range],
                          niggli_reduce: bool = None,
                          symprec: float = 1e-5,
                          position_tolerance: float = None) -> Atoms:

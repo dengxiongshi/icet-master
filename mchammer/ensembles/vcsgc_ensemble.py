@@ -266,7 +266,7 @@ class VCSGCEnsemble(ThermodynamicBaseEnsemble):
         return data
 
 
-def get_phis(phis: Dict[Union[int, str], float]) -> Dict[int, float]:
+def get_phis(phis: Union[Dict[int, float], Dict[str, float]]) -> Dict[int, float]:
     """Get phis as used in the vcsgc ensemble.
 
     Parameters

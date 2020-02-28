@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Any
 
 import numpy as np
 from math import isclose
@@ -233,17 +233,16 @@ class HybridEnsemble(ThermodynamicBaseEnsemble):
         return self._ensemble_parameters['temperature']
 
     @property
-    def probabilities(self) -> float:
+    def probabilities(self) -> List[float]:
         """ Ensemble propabilities """
         return self._probabilities
 
     @property
-    def trial_steps_per_ensemble(self) -> Dict[str, float]:
+    def trial_steps_per_ensemble(self) -> Dict[str, int]:
         """ Number of Monte Carlo trial steps for each ensemble """
         return self._trial_steps_per_ensemble
 
-    def _process_ensemble_specs(
-            self, ensemble_specs: List[Dict]):
+    def _process_ensemble_specs(self, ensemble_specs: List[Dict]) -> None:
         """Process the list of ensembles and parameters
 
         Parameters
@@ -267,7 +266,7 @@ class HybridEnsemble(ThermodynamicBaseEnsemble):
 
         for ind, ensemble_spec in enumerate(ensemble_specs):
 
-            ensemble_arg = {}
+            ensemble_arg = {}  # type: Dict[str, Any]
             tag = "ensemble_{}".format(ind)
             ensemble_arg['tag'] = tag
 

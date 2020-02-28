@@ -323,7 +323,7 @@ class ClusterSpace(_ClusterSpace):
         return spglib.get_spacegroup(structure_as_tuple, symprec=self._config['symprec'])
 
     @property
-    def orbit_data(self) -> List[dict]:
+    def orbit_data(self) -> List[OrderedDict]:
         """
         list of orbits with information regarding
         order, radius, multiplicity etc

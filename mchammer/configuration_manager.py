@@ -1,5 +1,5 @@
 import random
-from numpy import array
+import numpy as np
 from typing import Dict, List, Tuple
 from ase import Atoms
 from icet.core.sublattices import Sublattices
@@ -50,7 +50,7 @@ class ConfigurationManager(object):
         return sites_by_species
 
     @property
-    def occupations(self) -> List[int]:
+    def occupations(self) -> np.ndarray:
         """ occupation vector of the configuration (copy) """
         return self._occupations.copy()
 
@@ -139,7 +139,7 @@ class ConfigurationManager(object):
         for Z in possible_swap_species:
             possible_swap_sites.extend(self._sites_by_species[sublattice_index][Z])
 
-        possible_swap_sites = array(possible_swap_sites)
+        possible_swap_sites = np.array(possible_swap_sites)
 
         try:
             site2 = random.choice(possible_swap_sites)

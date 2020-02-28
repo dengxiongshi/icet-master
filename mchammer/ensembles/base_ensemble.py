@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from collections import OrderedDict
 from math import gcd
 from time import time
-from typing import BinaryIO, Dict, List, TextIO, Union
+from typing import BinaryIO, Dict, List, TextIO, Union, Type, Any
 
 import numpy as np
 
@@ -67,14 +67,14 @@ class BaseEnsemble(ABC):
                  random_seed: int = None,
                  dc_filename: str = None,
                  data_container: str = None,
-                 data_container_class: BaseDataContainer = BaseDataContainer,
+                 data_container_class: Type[BaseDataContainer] = BaseDataContainer,
                  data_container_write_period: float = 600,
                  ensemble_data_write_interval: int = None,
                  trajectory_write_interval: int = None) -> None:
 
         # initialize basic variables
         self._accepted_trials = 0
-        self._observers = {}
+        self._observers = {}  # type: Dict[str, BaseObserver]
         self._step = 0
 
         # calculator and configuration
@@ -94,12 +94,14 @@ class BaseEnsemble(ABC):
 
         # random number generator
         if random_seed is None:
-            self._random_seed = random.randint(0, 1e16)
+            self._random_seed = random.randint(0, int(1e16))
         else:
             self._random_seed = random_seed
         random.seed(a=self._random_seed)
 
         # add ensemble parameters and metadata
+        if not self._ensemble_parameters:
+            self._ensemble_parameters = {}  # type: Dict[str, Any]
         self._ensemble_parameters['n_atoms'] = len(self.structure)
         metadata = OrderedDict(ensemble_name=self.__class__.__name__,
                                user_tag=user_tag, seed=self.random_seed)
@@ -312,7 +314,7 @@ class BaseEnsemble(ABC):
         """
         return self._observer_interval
 
-    def _find_observer_interval(self) -> int:
+    def _find_observer_interval(self) -> None:
         """
         Finds the greatest common denominator from the observation intervals.
         """
