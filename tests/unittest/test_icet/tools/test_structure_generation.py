@@ -588,8 +588,8 @@ class TestStructureGenerationInactiveSublatticeFCC(unittest.TestCase):
         target_conc = {'Pd': 1 / 3, 'Au': 2 / 3}
         target_cv = [1., 0., -0.16666667, 0., 0., 0.,
                      0., 0., 0., 0., 0., 0., 0.]
-        target_cv = [ 1, 1/3, -1/9, 1/9, 1/3, -1/9,
-                      -1/3, -1/9, 1/9, -1/9, 1/9, 1/3, -1/3]
+        target_cv = [1, 1/3, -1/9, 1/9, 1/3, -1/9,
+                     -1/3, -1/9, 1/9, -1/9, 1/9, 1/3, -1/3]
         structure = generate_sqs_by_enumeration(cluster_space=self.cs,
                                                 max_size=3,
                                                 target_concentrations=target_conc,
