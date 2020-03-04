@@ -661,13 +661,16 @@ class ClusterSpace(_ClusterSpace):
                           chemical_symbols=items['chemical_symbols'],
                           symprec=items['symprec'],
                           position_tolerance=items['position_tolerance'])
-        for key, value in items['pruning_history']:
-            print("key:", key, 'value', value)
-
-            if key == 'prune':
-                cs._prune_orbit_list(value)
-            elif key == 'merge':
-                cs.merge_orbits(value)
+        if len(items['pruning_history'])>0:
+            if isinstance(items['pruning_history'][0],tuple):
+                for key, value in items['pruning_history']:
+                    if key == 'prune':
+                        cs._prune_orbit_list(value)
+                    elif key == 'merge':
+                        cs.merge_orbits(value)
+            else:
+                for value in items['pruning_history']:
+                    cs._pruning_history(value)
 
         return cs
 
@@ -678,7 +681,7 @@ class ClusterSpace(_ClusterSpace):
                                chemical_symbols=self._input_chemical_symbols,
                                symprec=self.symprec,
                                position_tolerance=self.position_tolerance)
-
+        
         for key, value in self._pruning_history:
             if key == 'prune':
                 cs_copy._prune_orbit_list(value)
