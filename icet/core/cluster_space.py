@@ -440,7 +440,7 @@ class ClusterSpace(_ClusterSpace):
 
         return positions
 
-    def _prune_orbit_list(self, indices: List[int]) -> None:
+    def _prune_orbit_list(self, indices: List[int], keep_prune_history=True) -> None:
         """
         Prunes the internal orbit list
 
@@ -458,7 +458,9 @@ class ClusterSpace(_ClusterSpace):
 
         size_after = len(self._orbit_list)
         assert size_before - len(indices) == size_after
-        self._pruning_history.append(indices)
+        
+        if keep_prune_history:
+            self._pruning_history.append(('prune', indices))
 
     @property
     def primitive_structure(self) -> Atoms:
@@ -539,7 +541,7 @@ class ClusterSpace(_ClusterSpace):
         if abs(vol1 - vol2) > vol_tol:
             raise ValueError('Volume per atom of structure does not match the volume of '
                              'ClusterSpace.primitive_structure')
-
+        
         # check occupations
         sublattices = self.get_sublattices(structure)
         sublattices.assert_occupation_is_allowed(structure.get_chemical_symbols())
@@ -550,6 +552,8 @@ class ClusterSpace(_ClusterSpace):
 
 
     def merge_orbits(self, equivalent_orbits: Dict[int, List[int]]) -> None:
+
+        self._pruning_history.append(('merge', equivalent_orbits))
         orbit_to_delete = []
         for k1, orbit_indices in equivalent_orbits.items():
             for k2 in orbit_indices:
@@ -558,7 +562,7 @@ class ClusterSpace(_ClusterSpace):
 
         
         # update merge/prune history
-        self._prune_orbit_list(orbit_to_delete)
+        self._prune_orbit_list(orbit_to_delete, keep_prune_history=False)
 
 
     def is_supercell_self_interacting(self, structure: Atoms) -> bool:
@@ -660,8 +664,14 @@ class ClusterSpace(_ClusterSpace):
                           chemical_symbols=items['chemical_symbols'],
                           symprec=items['symprec'],
                           position_tolerance=items['position_tolerance'])
-        for indices in items['pruning_history']:
-            cs._prune_orbit_list(indices)
+        for key, value in items['pruning_history']:
+            print("key:", key, 'value', value)
+            
+            if key == 'prune':        
+                cs._prune_orbit_list(value)
+            elif key == 'merge':
+                cs.merge_orbits(value)
+            
         return cs
 
     def copy(self):
@@ -671,6 +681,10 @@ class ClusterSpace(_ClusterSpace):
                                chemical_symbols=self._input_chemical_symbols,
                                symprec=self.symprec,
                                position_tolerance=self.position_tolerance)
-        for indices in self._pruning_history:
-            cs_copy._prune_orbit_list(indices)
+        
+        for key, value in self._pruning_history:
+            if key == 'prune':        
+                cs_copy._prune_orbit_list(value)
+            elif key == 'merge':
+                cs_copy.merge_orbits(value)
         return cs_copy
