@@ -1,6 +1,13 @@
-import pandas as pd
+from typing import Optional, Union
+
 import numpy as np
+import pandas as pd
 import scipy
+
+
+# Type definition used to handle cases where an int is expected but failure is
+# denoted by a NaN value.
+IntNaN = Union[int, np.nan]
 
 
 def analyze_data(data: np.ndarray, max_lag: int = None) -> dict:
@@ -104,7 +111,7 @@ def get_error_estimate(data: np.ndarray, confidence: float = 0.95) -> float:
     return error_estimate
 
 
-def _estimate_correlation_length_from_acf(acf: np.ndarray) -> int:
+def _estimate_correlation_length_from_acf(acf: np.ndarray) -> IntNaN:
     """ Estimates correlation length from acf. """
     for i, a in enumerate(acf):
         if a < np.exp(-2):
@@ -112,7 +119,8 @@ def _estimate_correlation_length_from_acf(acf: np.ndarray) -> int:
     return np.nan
 
 
-def _estimate_error(data: np.ndarray, correlation_length: int,
+def _estimate_error(data: np.ndarray,
+                    correlation_length: IntNaN,
                     confidence: float) -> float:
     """ Estimates error using correlation length. """
     t_factor = scipy.stats.t.ppf((1 + confidence) / 2, len(data)-1)  # type: float
