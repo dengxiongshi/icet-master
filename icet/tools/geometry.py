@@ -130,7 +130,7 @@ def get_position_from_lattice_site(structure: Atoms, lattice_site: LatticeSite):
 
 
 def fractional_to_cartesian(structure: Atoms,
-                            frac_positions: List[Vector]) -> List[Vector]:
+                            frac_positions: List[Vector]) -> np.ndarray:
     """
     Turns fractional positions into cartesian positions.
 
@@ -168,7 +168,7 @@ def ase_atoms_to_spglib_cell(structure: Atoms) -> Tuple[np.ndarray, np.ndarray, 
 
 def get_occupied_primitive_structure(structure: Atoms,
                                      allowed_species: List[List[str]],
-                                     symprec: float) -> Tuple[Atoms, List[List[str]]]:
+                                     symprec: float) -> Tuple[Atoms, List[Tuple[str, ...]]]:
     """
     Returns an occupied primitive structure.
     Will put hydrogen on sublattice 1, Helium on sublattice 2 and
@@ -190,19 +190,19 @@ def get_occupied_primitive_structure(structure: Atoms,
     if len(structure) != len(allowed_species):
         raise ValueError(
             'structure and chemical symbols need to be the same size.')
-    symbols = sorted({tuple(sorted(s)) for s in allowed_species})
+    sorted_symbols = sorted({tuple(sorted(s)) for s in allowed_species})
 
     decorated_primitive = structure.copy()
     for i, sym in enumerate(allowed_species):
-        sublattice = symbols.index(tuple(sorted(sym))) + 1
+        sublattice = sorted_symbols.index(tuple(sorted(sym))) + 1
         decorated_primitive[i].symbol = chemical_symbols[sublattice]
 
     decorated_primitive = get_primitive_structure(decorated_primitive, symprec=symprec)
     decorated_primitive.wrap()
-    primitive_chemical_symbols = []
+    primitive_chemical_symbols: List[Tuple[str, ...]] = []
     for atom in decorated_primitive:
         sublattice = chemical_symbols.index(atom.symbol)
-        primitive_chemical_symbols.append(symbols[sublattice - 1])
+        primitive_chemical_symbols.append(sorted_symbols[sublattice - 1])
 
     for symbols in allowed_species:
         if tuple(sorted(symbols)) in primitive_chemical_symbols:
