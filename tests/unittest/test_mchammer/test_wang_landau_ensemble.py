@@ -7,9 +7,12 @@ from ase.build import bulk
 from pandas import DataFrame
 
 from icet import ClusterExpansion, ClusterSpace
+from icet.input_output.logging_tools import set_log_config
 from mchammer.calculators import ClusterExpansionCalculator
 from mchammer.ensembles import WangLandauEnsemble
 from mchammer.observers.base_observer import BaseObserver
+
+set_log_config(level=100)
 
 
 class ConcreteObserver(BaseObserver):
@@ -360,6 +363,7 @@ class TestEnsemble(unittest.TestCase):
     def test_restart_ensemble(self):
         """ Tests the restart functionality. """
         dc_filename = 'my-test.dc'
+        # ensemble for first run
         ens1 = WangLandauEnsemble(structure=self.structure,
                                   calculator=self.calculator,
                                   dc_filename=dc_filename,
@@ -367,15 +371,27 @@ class TestEnsemble(unittest.TestCase):
                                   ensemble_data_write_interval=2)
         ens1.run(10)
 
-        # restart from file
+        # ensemble for second run
         ens2 = WangLandauEnsemble(structure=self.structure,
                                   calculator=self.calculator,
                                   dc_filename=dc_filename,
-                                  energy_spacing=self.energy_spacing)
+                                  energy_spacing=self.energy_spacing,
+                                  ensemble_data_write_interval=2)
         self.assertEqual(len(ens1.data_container.data), len(ens2.data_container.data))
         self.assertTrue(np.allclose(list(ens1.data_container.data.potential),
-                                    list(ens1.data_container.data.potential)))
-        ens1.run(10)
+                                    list(ens2.data_container.data.potential)))
+
+        # ensure that the simulation is not run if converged
+        ens2._converged = True
+        ens2.run(10)
+        self.assertEqual(ens1.step, ens2.step)
+        self.assertEqual(len(ens1.data_container.data), len(ens2.data_container.data))
+
+        # ensure that the simulation is not run if converged
+        ens2._converged = False
+        ens2.run(10)
+        self.assertEqual(ens1.step + 10, ens2.step)
+        self.assertEqual(len(ens1.data_container.data) + 5, len(ens2.data_container.data))
 
         os.remove(dc_filename)
 
@@ -448,6 +464,52 @@ class TestEnsemble(unittest.TestCase):
                                  energy_limit_right=4)
         self.assertFalse(ens._inside_energy_window(-1))
         self.assertTrue(ens._inside_energy_window(1))
+
+    def test_reached_energy_window(self):
+        """ Tests the reached_energy_window property. """
+        # with no limit
+        ens = WangLandauEnsemble(structure=self.structure,
+                                 calculator=self.calculator,
+                                 energy_spacing=self.energy_spacing)
+        self.assertTrue(ens._reached_energy_window)
+        # with left limit < energy of structure (0)
+        ens = WangLandauEnsemble(structure=self.structure,
+                                 calculator=self.calculator,
+                                 energy_spacing=self.energy_spacing,
+                                 energy_limit_left=-1)
+        self.assertTrue(ens._reached_energy_window)
+        # with left limit > energy of structure (0)
+        ens = WangLandauEnsemble(structure=self.structure,
+                                 calculator=self.calculator,
+                                 energy_spacing=self.energy_spacing,
+                                 energy_limit_left=1)
+        self.assertFalse(ens._reached_energy_window)
+        # with right limit < energy of structure (0)
+        ens = WangLandauEnsemble(structure=self.structure,
+                                 calculator=self.calculator,
+                                 energy_spacing=self.energy_spacing,
+                                 energy_limit_right=-1)
+        self.assertFalse(ens._reached_energy_window)
+        # with right limit > energy of structure (0)
+        ens = WangLandauEnsemble(structure=self.structure,
+                                 calculator=self.calculator,
+                                 energy_spacing=self.energy_spacing,
+                                 energy_limit_right=1)
+        self.assertTrue(ens._reached_energy_window)
+        # with energy of structure (0) within left and right limits
+        ens = WangLandauEnsemble(structure=self.structure,
+                                 calculator=self.calculator,
+                                 energy_spacing=self.energy_spacing,
+                                 energy_limit_left=-1,
+                                 energy_limit_right=1)
+        self.assertTrue(ens._reached_energy_window)
+        # with energy of structure (0) outside left and right limits
+        ens = WangLandauEnsemble(structure=self.structure,
+                                 calculator=self.calculator,
+                                 energy_spacing=self.energy_spacing,
+                                 energy_limit_left=1,
+                                 energy_limit_right=2)
+        self.assertFalse(ens._reached_energy_window)
 
 
 if __name__ == '__main__':

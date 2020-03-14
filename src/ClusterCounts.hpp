@@ -28,7 +28,7 @@ public:
     ClusterCounts() {  }
     void count(const Structure &, const std::vector<std::vector<LatticeSite>> &, const Cluster &, bool);
     void countCluster(const Cluster &, const std::vector<int> &, bool);
-    void countOrbitList(const Structure &, const OrbitList &, bool orderIntact, bool permuteSites = false);
+    void countOrbitList(const Structure &, const OrbitList &, bool keepOrder, bool permuteSites = false);
 
     /**
     @details Returns a map representing the cluster counts. The key of the map

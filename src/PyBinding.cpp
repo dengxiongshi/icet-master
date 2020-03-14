@@ -1053,8 +1053,25 @@ PYBIND11_MODULE(_icet, m)
               ignored_indices : list(int)
                   list of indices that have already had their local energy calculated;
                   this is required to prevent double counting
-              )pbdoc",
+              )pbdoc",              
               py::arg("occupations"),
               py::arg("index"),
-              py::arg("ignored_indices"));
+              py::arg("ignored_indices"))
+        .def("get_full_cluster_vector",
+             [](ClusterExpansionCalculator &calc,
+                const std::vector<int> &occupations)
+             {
+                auto cv = calc.getClusterVector(occupations);
+                return py::array(cv.size(), cv.data());
+              },
+              R"pbdoc(
+              Returns full cluster vector used in total property calculations.
+
+              Parameters
+              ----------
+              occupations : list(int)
+                  the occupation vector for the supercell              
+              )pbdoc",              
+              py::arg("occupations"))
+              ;
 }

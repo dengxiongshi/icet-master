@@ -34,6 +34,9 @@ public:
     /// Returns the local cluster vector.
     std::vector<double> getLocalClusterVector(const std::vector<int>&, const int, const std::vector<size_t>);
 
+    /// Returns the full cluster vector.
+    std::vector<double> getClusterVector(const std::vector<int> &occupations);
+
 private:
 
     /// Maps offsets to local orbit lists.
@@ -53,4 +56,13 @@ private:
 
     /// Maps supercell index to its corresponding primitive cell offset.
     std::map<int, Vector3d> _indexToOffset;
+
+    /// Placeholder for translated orbitlist
+    OrbitList _translatedOrbitList;
+
+    /// Placeholder for cluster coutns
+    ClusterCounts _clusterCounts;
+
+    /// The full orbit list used when calculating full cluster vector
+    OrbitList _fullOrbitList;
 };

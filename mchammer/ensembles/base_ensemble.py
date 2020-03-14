@@ -157,7 +157,7 @@ class BaseEnsemble(ABC):
     @property
     def structure(self) -> Atoms:
         """ current configuration (copy) """
-        return self.configuration.structure.copy()
+        return self.configuration.structure
 
     @property
     def data_container(self) -> BaseDataContainer:
@@ -176,7 +176,7 @@ class BaseEnsemble(ABC):
 
     @property
     def step(self) -> int:
-        """ current configuration (copy) """
+        """ current trial step counter """
         return self._step
 
     def run(self, number_of_trial_steps: int):

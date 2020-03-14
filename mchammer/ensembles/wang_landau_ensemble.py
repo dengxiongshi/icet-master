@@ -3,7 +3,7 @@
 import random
 
 from collections import OrderedDict
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -13,6 +13,9 @@ from pandas import DataFrame
 from .. import WangLandauDataContainer
 from ..calculators.base_calculator import BaseCalculator
 from .thermodynamic_base_ensemble import BaseEnsemble
+from icet.input_output.logging_tools import logger
+
+logger = logger.getChild('wang_landau_ensemble')
 
 
 class WangLandauEnsemble(BaseEnsemble):
@@ -31,7 +34,6 @@ class WangLandauEnsemble(BaseEnsemble):
      #. Initialize counters for the microcanonical entropy
         :math:`S(E)` and the histogram :math:`H(E)` to zero.
      #. Set the fill factor :math:`f=1`.
-
 
     It then proceeds as follows.
 
@@ -224,7 +226,6 @@ class WangLandauEnsemble(BaseEnsemble):
                              ' smaller than right boundary ({}, {})'
                              .format(energy_limit_left, self._bin_left,
                                      energy_limit_right, self._bin_right))
-        self._reached_energy_window = self._bin_left is None and self._bin_right is None
 
         # ensemble parameters
         self._ensemble_parameters = {}
@@ -249,6 +250,9 @@ class WangLandauEnsemble(BaseEnsemble):
             count = structure.get_chemical_symbols().count(symbol)
             self._ensemble_parameters[key] = count
 
+        # set the convergence, which may be updated in case of a restart
+        self._converged = None  # type: Optional[bool]
+
         # the constructor of the parent classes must be called *after*
         # the ensemble_parameters dict has been populated
         super().__init__(
@@ -272,9 +276,10 @@ class WangLandauEnsemble(BaseEnsemble):
         # initialize Wang-Landau algorithm; in the case of a restart
         # these quantities are read from the data container file; the
         # if-conditions prevent these values from being overwritten
-        self._converged = None  # type: Optional[bool]
         self._potential = self.calculator.calculate_total(
             occupations=self.configuration.occupations)
+        self._reached_energy_window = self._inside_energy_window(
+            self._get_bin_index(self._potential))
         if not hasattr(self, '_fill_factor'):
             self._fill_factor = 1.0
         if not hasattr(self, '_fill_factor_history'):
@@ -338,6 +343,28 @@ class WangLandauEnsemble(BaseEnsemble):
     def flatness_check_interval(self, new_value: int) -> None:
         self._flatness_check_interval = new_value
 
+    def run(self, number_of_trial_steps: int):
+        """
+        Samples the ensemble for the given number of trial steps.
+
+        Parameters
+        ----------
+        number_of_trial_steps
+            number of MC trial steps to run in total
+        reset_step
+            if True the MC trial step counter and the data container will
+            be reset to zero and empty, respectively.
+
+        Raises
+        ------
+        TypeError
+            if `number_of_trial_steps` is not an int
+        """
+        if self.converged:
+            logger.warning('Convergence has already been reached.')
+        else:
+            super().run(number_of_trial_steps)
+
     def get_entropy(self) -> DataFrame:
         """ entropy accumulated during Wang-Landau simulation """
         df = DataFrame(data={'energy': self._energy_spacing * np.array(list(self._entropy.keys())),
@@ -372,6 +399,7 @@ class WangLandauEnsemble(BaseEnsemble):
         self._fill_factor_history = self.data_container._last_state['fill_factor_history']
         self._histogram = self.data_container._last_state['histogram']
         self._entropy = self.data_container._last_state['entropy']
+        self._converged = (self._fill_factor <= self._fill_factor_limit)
 
     def write_data_container(self, outfile: Union[str, bytes]):
         """Updates last state of the Wang-Landau simulation and
@@ -589,3 +617,72 @@ class WangLandauEnsemble(BaseEnsemble):
         norm = sum(sublattice_probabilities)
         sublattice_probabilities = [p / norm for p in sublattice_probabilities]
         return sublattice_probabilities
+
+
+def get_bins_for_parallel_simulations(n_bins: int,
+                                      energy_spacing: float,
+                                      minimum_energy: float,
+                                      maximum_energy: float,
+                                      overlap: int = 4,
+                                      bin_size_exponent: float = 1.0) -> List[Tuple[float, float]]:
+    """Generates a list of energy bins (lower and upper bound) suitable for
+    parallel Wang-Landau simulations. For the latter, the energy range is
+    split up into a several bins (``n_bins``). Each bin is then sampled in a
+    separate Wang-Landau simulation. Once the density of states in the
+    individual bins has been converged the total density of states can be
+    constructed by patching the segments back together. To this end, one
+    requires some over overlap between the segments (``overlap``).
+
+    The function returns a list of tuples. Each tuple provides the lower
+    (``energy_limit_left``) and upper (``energy_limit_right``) bound of one
+    bin, which are then to be used to set ``energy_limit_left`` and
+    ``energy_limit_right`` when initializing a :class:`WangLandauEnsemble`
+    instance.
+
+    N.B.: The left-most/right-most bin has no lower/upper bound (set to
+    ``None``).
+
+    Parameters
+    ----------
+    n_bins
+        number of bins
+    energy_spacing
+        defines the bin size of the energy grid used by the Wang-Landau
+        simulation, see :class:`WangLandauEnsemble` for details
+    minimum_energy
+        an estimate for the lowest energy to be encountered in this system
+    maximum_energy
+        an estimate for the highest energy to be encountered in this system
+    overlap
+        amount of overlap between bins in units of ``energy_spacing``
+    bin_size_exponent
+        *Expert option*: This parameter allows one to generate a non-uniform
+        distribution of bin sizes. If ``bin_size_exponent`` is smaller than
+        one bins at the lower and upper end of the energy range (specified via
+        ``minimum_energy`` and ``maximum_energy``) will be shrunk relative to
+        the bins in the middle of the energy range. In principle this can be
+        used one to achieve a more even distribution of computational load
+        between the individual Wang-Landau simulations.
+    """
+
+    limits = np.linspace(-1, 1, n_bins + 1)
+    limits = np.sign(limits) * np.abs(limits) ** bin_size_exponent
+    limits *= 0.5 * (maximum_energy - minimum_energy)
+    limits += 0.5 * (maximum_energy + minimum_energy)
+    limits[0], limits[-1] = None, None
+
+    bounds = []
+    for k, (energy_limit_left, energy_limit_right) in enumerate(zip(limits[:-1], limits[1:])):
+        if energy_limit_left is not None and energy_limit_right is not None and \
+              (energy_limit_right - energy_limit_left) / energy_spacing < 2 * overlap:
+            raise ValueError('Energy window too small. min/max: {}/{}'
+                             .format(energy_limit_right, energy_limit_left) +
+                             ' Try decreasing n_bins ({}) and/or overlap ({}).'
+                             .format(n_bins, overlap))
+        if energy_limit_left is not None:
+            energy_limit_left -= overlap * energy_spacing
+        if energy_limit_right is not None:
+            energy_limit_right += overlap * energy_spacing
+        bounds.append((energy_limit_left, energy_limit_right))
+
+    return bounds

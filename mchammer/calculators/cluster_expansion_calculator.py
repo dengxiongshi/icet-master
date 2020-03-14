@@ -86,9 +86,9 @@ class ClusterExpansionCalculator(BaseCalculator):
         occupations
             the entire occupation vector (i.e. list of atomic species)
         """
-        self.structure.set_atomic_numbers(occupations)
-        return self.cluster_expansion.predict(self.structure) * \
-            self._property_scaling
+
+        cv = self.cpp_calc.get_full_cluster_vector(occupations)
+        return np.dot(cv, self.cluster_expansion.parameters) * self._property_scaling
 
     def calculate_local_contribution(self, *, local_indices: List[int],
                                      occupations: List[int]) -> float:

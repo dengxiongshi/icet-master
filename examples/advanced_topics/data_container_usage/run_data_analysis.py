@@ -1,10 +1,10 @@
 import numpy as np
-from mchammer import read_data_container
+from mchammer import DataContainer
 from mchammer.data_analysis import get_autocorrelation_function
 import matplotlib.pyplot as plt
 
 
-dc = read_data_container('dc_size6_nPd691_T400.dc')
+dc = DataContainer.read('dc_size6_nPd691_T400.dc')
 
 # getting data
 steps, E_mix = dc.get('mctrial', 'potential')

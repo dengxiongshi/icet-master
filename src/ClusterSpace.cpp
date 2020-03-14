@@ -55,14 +55,14 @@ over orbits (symmetry equivalent clusters) of increasing order and size.
 @param structure input configuration
 @param fractionalPositionTolerance tolerance applied when comparing positions in fractional coordinates
 
-@todo review the necessity for having the orderIntact argument to e.g., countOrbitList.
+@todo review the necessity for having the keepOrder argument to e.g., countOrbitList.
 **/
 std::vector<double> ClusterSpace::getClusterVector(const Structure &structure,
                                                    const double fractionalPositionTolerance) const
 {
 
     // Do not sort clusters.
-    bool orderIntact = true;
+    bool keepOrder = true;
 
     // Count the clusters in the orbit with the same order as the prototype cluster
     bool permuteSites = true;
@@ -75,7 +75,7 @@ std::vector<double> ClusterSpace::getClusterVector(const Structure &structure,
     for (size_t i = 0; i < uniqueOffsets; i++)
     {
         const auto localOrbitList = localOrbitListGenerator.getLocalOrbitList(i);
-        clusterCounts.countOrbitList(structure, localOrbitList, orderIntact, permuteSites);
+        clusterCounts.countOrbitList(structure, localOrbitList, keepOrder, permuteSites);
     }
 
     // Check that the number of unique offsets equals the number of unit cells in the supercell.
