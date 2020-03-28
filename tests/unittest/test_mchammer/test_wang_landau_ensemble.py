@@ -164,6 +164,51 @@ class TestEnsemble(unittest.TestCase):
                                  random_seed=42)
         ens.run(10)
 
+        # use unreachable energy window to test window approach aspects
+        # - prepare initial configuration with energy -32 (ground state)
+        structure = self.prim.repeat((2, 2, 1))
+        structure[0].symbol = 'Ag'
+        structure[3].symbol = 'Ag'
+        structure = structure.repeat((2, 2, 1))
+        ens = WangLandauEnsemble(structure, self.calculator, energy_spacing=1,
+                                 energy_limit_right=-60,
+                                 energy_limit_left=-70,
+                                 ensemble_data_write_interval=1,
+                                 random_seed=42)
+        ens.run(10)  # Run to get something in the data container
+
+        # Stepping away from window should not be allowed
+        self.assertFalse(ens._acceptance_condition(10))
+
+        # Approaching the window should always be allowed
+        self.assertTrue(ens._acceptance_condition(-10))
+
+        # Do the same thing from below
+        ens._potential = -100
+        self.assertTrue(ens._acceptance_condition(10))
+        self.assertFalse(ens._acceptance_condition(-10))
+
+        # Take a step that would be accepted due to entropy but accepted
+        # because it takes us closer to window
+        self.assertEqual(ens._potential, -90)
+        ens._histogram[-80] = 1e9
+        ens._entropy[-80] = 1e9
+        self.assertTrue(ens._acceptance_condition(10))
+
+        # Take a step that would be accepted due to entropy but rejected
+        # because it takes us closer to window
+        self.assertEqual(ens._potential, -80)
+        ens._histogram[-80] = 1
+        ens._entropy[-80] = 1
+        ens._histogram[-90] = 100
+        ens._entropy[-90] = 100
+        self.assertFalse(ens._acceptance_condition(-10))
+
+        # Finally step inside the window
+        ens._potential = -59
+        self.assertTrue(ens._acceptance_condition(-5))
+        self.assertTrue(ens._reached_energy_window)
+
         # Todo: come up with more sensitive tests
 
     def test_get_entropy(self):

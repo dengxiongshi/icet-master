@@ -557,11 +557,14 @@ PYBIND11_MODULE(_icet, m)
                 before comparison (i.e., ABC != ACB)
              permute_sites : bool
                 if true the sites will be permuted according to the permutations associated with the orbit
+            max_orbit : bool
+                include only orbits with indices smaller than this (by default all orbits are included)
              )pbdoc",
              py::arg("structure"),
              py::arg("orbit_list"),
              py::arg("order_intact"),
-             py::arg("permute_sites"))
+             py::arg("permute_sites"),
+             py::arg("max_orbit") = -1)
         .def("__len__", &ClusterCounts::size)
         .def("reset", &ClusterCounts::reset)
         .def("get_cluster_counts", [](const ClusterCounts &clusterCounts) {

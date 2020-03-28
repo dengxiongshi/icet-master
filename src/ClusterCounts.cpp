@@ -42,10 +42,14 @@ void ClusterCounts::countCluster(const Cluster &cluster, const std::vector<int> 
  @param orbitList orbit list
  @param keepOrder if true do not reorder clusters before comparison (i.e., ABC != ACB)
  @param permuteSites if true the sites will be permuted according to the correspondin permutations in the orbit
+ @param maxOrbit include only orbits with indices smaller than this (by default all orbits are included)
 */
-void ClusterCounts::countOrbitList(const Structure &structure, const OrbitList &orbitList, bool keepOrder, bool permuteSites)
+void ClusterCounts::countOrbitList(const Structure &structure, const OrbitList &orbitList, bool keepOrder, bool permuteSites, int maxOrbit)
 {
-    for (size_t i = 0; i < orbitList.size(); i++)
+    if (maxOrbit == -1) {
+        maxOrbit = orbitList.size();
+    }
+    for (size_t i = 0; i < maxOrbit; i++)
     {
         Cluster representativeCluster = orbitList._orbits[i].getRepresentativeCluster();
         representativeCluster.setTag(i);
