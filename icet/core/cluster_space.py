@@ -122,7 +122,7 @@ class ClusterSpace(_ClusterSpace):
         self._input_chemical_symbols = copy.deepcopy(chemical_symbols)
         chemical_symbols = self._get_chemical_symbols()
 
-        self._pruning_history : List[int] = []
+        self._pruning_history = []
 
         # set up primitive
         occupied_primitive, primitive_chemical_symbols = get_occupied_primitive_structure(
@@ -158,11 +158,11 @@ class ClusterSpace(_ClusterSpace):
                                position_tolerance=self.position_tolerance,
                                fractional_position_tolerance=self.fractional_position_tolerance)
 
-    def _get_chemical_symbols(self) -> List[List[str]]:
+    def _get_chemical_symbols(self):
         """ Returns chemical symbols using input structure and
         chemical symbols. Carries out multiple sanity checks. """
 
-        # set up chemical symbols as List[List[str]]
+        # setup chemical symbols as List[List[str]]
         if all(isinstance(i, str) for i in self._input_chemical_symbols):
             chemical_symbols = [
                 self._input_chemical_symbols] * len(self._input_structure)
