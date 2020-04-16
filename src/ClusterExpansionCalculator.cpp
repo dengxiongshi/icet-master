@@ -88,14 +88,15 @@ ClusterExpansionCalculator::ClusterExpansionCalculator(const ClusterSpace &clust
     for (auto orbit : orbitVector)
     {
         orbitIndex++;
+        orbit.setEquivalentSitesPermutations(permutations[orbitIndex]);
         _fullPrimitiveOrbitList.addOrbit(orbit);
     }
 
     // Calculate the permutation for each orbit in this orbit list.
     // This is normally done in the constructor but since we made one manually
     // we have to do this ourself.
-    _fullPrimitiveOrbitList.addPermutationInformationToOrbits(_clusterSpace.getOrbitList().getFirstColumnOfMatrixOfEquivalentSites(),
-                                                              _clusterSpace.getOrbitList().getMatrixOfEquivalentSites());
+    // _fullPrimitiveOrbitList.addPermutationInformationToOrbits(_clusterSpace.getOrbitList().getFirstColumnOfMatrixOfEquivalentSites(),
+    //                                                           _clusterSpace.getOrbitList().getMatrixOfEquivalentSites());
 
     _primToSupercellMap.clear();
     _indexToOffset.clear();
