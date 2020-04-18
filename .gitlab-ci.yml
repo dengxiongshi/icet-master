@@ -101,6 +101,7 @@ pages:
   script:
     # prepare homepage
     - mkdir -p public/dev
+    - mv doc/google*.html public/
     # code coverage report (actually for the master master (=development version)
     # but that is the sensible one to show anyways)
     - mv htmlcov/ public/
