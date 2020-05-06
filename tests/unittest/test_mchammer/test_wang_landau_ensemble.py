@@ -4,7 +4,6 @@ import unittest
 import numpy as np
 from ase import Atoms
 from ase.build import bulk
-from pandas import DataFrame
 
 from icet import ClusterExpansion, ClusterSpace
 from icet.input_output.logging_tools import set_log_config
@@ -211,34 +210,6 @@ class TestEnsemble(unittest.TestCase):
 
         # Todo: come up with more sensitive tests
 
-    def test_get_entropy(self):
-        """Tests retrieval of entropy."""
-        ret = self.ensemble.get_entropy()
-        self.assertIsInstance(ret, DataFrame)
-        self.assertIn('energy', ret)
-        self.assertIn('entropy', ret)
-        self.assertTrue(len(ret) == 0)
-        self.ensemble.run(4)
-        ret = self.ensemble.get_entropy()
-        self.assertIsInstance(ret, DataFrame)
-        self.assertIn('energy', ret)
-        self.assertIn('entropy', ret)
-        self.assertTrue(len(ret) > 0)
-
-    def test_get_histogram(self):
-        """Tests retrieval of histogram."""
-        ret = self.ensemble.get_histogram()
-        self.assertIsInstance(ret, DataFrame)
-        self.assertIn('energy', ret)
-        self.assertIn('histogram', ret)
-        self.assertTrue(len(ret) == 0)
-        self.ensemble.run(4)
-        ret = self.ensemble.get_histogram()
-        self.assertIsInstance(ret, DataFrame)
-        self.assertIn('energy', ret)
-        self.assertIn('histogram', ret)
-        self.assertTrue(len(ret) > 0)
-
     def test_property_fill_factor(self):
         """Tests behavior of flatness_limit."""
         self.assertAlmostEqual(1, self.ensemble.fill_factor)
@@ -320,6 +291,22 @@ class TestEnsemble(unittest.TestCase):
         self.assertEqual(self.ensemble._trajectory_write_interval,
                          self.trajectory_write_interval)
 
+    def test_entropy_history(self):
+        """ Tests if the entropy history is updated """
+        self.assertTrue(len(self.ensemble._entropy_history)
+                        == len(self.ensemble._fill_factor_history) - 1)
+        self.ensemble.flatness_check_interval = 2
+        self.ensemble.run(4)
+        self.assertTrue(len(self.ensemble._entropy_history)
+                        == len(self.ensemble._fill_factor_history) - 1)
+        self.ensemble.flatness_limit = 0
+        self.ensemble.run(4)
+        self.assertTrue(len(self.ensemble._entropy_history)
+                        == len(self.ensemble._fill_factor_history) - 1)
+        for target_mctrial, ret_mctrial in zip(list(self.ensemble._fill_factor_history.keys())[1:],
+                                               self.ensemble._entropy_history.keys()):
+            self.assertEqual(target_mctrial, ret_mctrial)
+
     def test_mc_with_one_filled_sublattice(self):
         """ Tests if WL simulation works with two sublattices
         where one sublattice is filled/empty. """
@@ -383,8 +370,6 @@ class TestEnsemble(unittest.TestCase):
         chemical_symbols = [['W', 'Ti'], ['C', 'N']]
         cs = ClusterSpace(prim, cutoffs=[0], chemical_symbols=chemical_symbols)
         ce = ClusterExpansion(cs, [1] * len(cs))
-
-        # structure
         structure = prim.repeat(2)
         structure[0].symbol = 'Ti'
         structure[1].symbol = 'N'

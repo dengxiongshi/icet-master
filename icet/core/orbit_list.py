@@ -81,7 +81,6 @@ class OrbitList(_OrbitList):
                             matrix_of_equivalent_sites=pm_lattice_sites,
                             neighbor_lists=neighbor_lists,
                             position_tolerance=position_tolerance)
-        self.check_equivalent_clusters(position_tolerance=position_tolerance)
         logger.info('Finished construction of orbit list.')
 
     @property

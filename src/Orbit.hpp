@@ -13,12 +13,11 @@
 using namespace Eigen;
 
 /**
-Class Orbit
+This class handles an orbit.
 
-contains equivalent vector<LatticeSites>
-contains a sorted Cluster for representation
-
-Can be compared to other orbits
+An orbit is a set of clusters that are equivalent under the symmetry operations
+of the underlying lattice. Each cluster is represented by a set of lattice
+sites. An orbit is characterized by a representative cluster.
 
 */
 
@@ -28,14 +27,14 @@ public:
     /// Constructor.
     Orbit(const Cluster &cluster) : _representativeCluster(cluster) {}
 
-    /// Adds a group of sites that are equivalent to this orbit.
-    void addEquivalentSites(const std::vector<LatticeSite> &, bool = false);
+    /// Adds one cluster to the orbit.
+    void addEquivalentCluster(const std::vector<LatticeSite> &, bool = false);
 
-    /// Adds several groups of sites that are equivalent to this orbit.
-    void addEquivalentSites(const std::vector<std::vector<LatticeSite>> &, bool = false);
+    /// Adds several several clusters to the orbit.
+    void addEquivalentClusters(const std::vector<std::vector<LatticeSite>> &, bool = false);
 
-    /// Returns the number of equivalent sites in this orbit.
-    size_t size() const { return _equivalentSites.size(); }
+    /// Returns the number of equivalent clusters in this orbit.
+    size_t size() const { return _equivalentClusters.size(); }
 
     /// Returns the radius of the representative cluster in this orbit.
     double radius() const { return _representativeCluster.radius(); }
@@ -43,64 +42,58 @@ public:
     /// Returns the sorted, representative cluster for this orbit.
     Cluster getRepresentativeCluster() const { return _representativeCluster; }
 
-    /// Returns the equivalent sites.
-    std::vector<LatticeSite> getSitesByIndex(unsigned int) const;
+    /// Returns the sites that define the representative cluster of this orbit.
+    std::vector<LatticeSite> getSitesOfRepresentativeCluster() const { return _equivalentClusters[0]; }
 
-    /// Returns the permuted equivalent sites.
-    std::vector<LatticeSite> getPermutedSitesByIndex(unsigned int) const;
+    /// Returns the equivalent cluster.
+    std::vector<LatticeSite> getClusterByIndex(unsigned int) const;
 
-    /// Returns all equivalent sites.
-    std::vector<std::vector<LatticeSite>> getEquivalentSites() const { return _equivalentSites; }
+    /// Returns the permuted equivalent cluster.
+    std::vector<LatticeSite> getPermutedClusterByIndex(unsigned int) const;
 
-    /// Returns all permuted equivalent sites.
-    std::vector<std::vector<LatticeSite>> getPermutedEquivalentSites() const;
+    /// Returns all equivalent clusters.
+    std::vector<std::vector<LatticeSite>> getEquivalentClusters() const { return _equivalentClusters; }
 
-    /// Sets the equivalent sites.
-    void setEquivalentSites(const std::vector<std::vector<LatticeSite>> &equivalentSites) { _equivalentSites = equivalentSites; }
+    /// Returns all permuted equivalent clusters.
+    std::vector<std::vector<LatticeSite>> getPermutedEquivalentClusters() const;
 
-    /// Sorts sites.
-    void sort() { std::sort(_equivalentSites.begin(), _equivalentSites.end()); }
+    /// Sets the equivalent clusters.
+    void setEquivalentClusters(const std::vector<std::vector<LatticeSite>> &equivalentClusters) { _equivalentClusters = equivalentClusters; }
+
+    /// Sorts equivalent clusters.
+    void sort() { std::sort(_equivalentClusters.begin(), _equivalentClusters.end()); }
 
     /// Returns the number of bodies of the cluster that represent this orbit.
     unsigned int getClusterSize() const { return _representativeCluster.order(); }
 
-    /// Returns the equivalent sites permutations.
-    std::vector<std::vector<int>> getPermutationsOfEquivalentSites() const { return _equivalentSitesPermutations; }
+    /// Returns permutations of equivalent clusters.
+    std::vector<std::vector<int>> getPermutationsOfEquivalentClusters() const { return _equivalentClusterPermutations; }
 
-    /// Assigns the equivalent sites permutations.
-    void setEquivalentSitesPermutations(std::vector<std::vector<int>> &permutations) { _equivalentSitesPermutations = permutations; }
+    /// Assigns the permutations of the equivalent clusters.
+    void setPermutationsOfEquivalentClusters(std::vector<std::vector<int>> &permutations) { _equivalentClusterPermutations = permutations; }
 
-    /// Assigns the allowed sites permutations.
-    void setAllowedSitesPermutations(std::set<std::vector<int>> &permutations) { _allowedSitesPermutations = permutations; }
+    /// Assigns the allowed permutations.
+    void setAllowedClusterPermutations(std::set<std::vector<int>> &permutations) { _allowedClusterPermutations = permutations; }
 
-    /// Gets the allowed sites permutations.
-    std::set<std::vector<int>> getAllowedSitesPermutations() const { return _allowedSitesPermutations; }
-
-    /// Returns the representative sites of this orbit (if any equivalentSites permutations exists it is to these sites they refer to).
-    std::vector<LatticeSite> getRepresentativeSites() const { return _equivalentSites[0]; }
-
-    /**
-    Returns the number of exactly equal sites in equivalent sites vector
-    This is used among other things to debug orbits when duplicates are not expected
-    */
-    int getNumberOfDuplicates(int verbosity = 0) const;
+    /// Gets the allowed permutations of clusters.
+    std::set<std::vector<int>> getAllowedClusterPermutations() const { return _allowedClusterPermutations; }
 
     /// Returns the relevant multicomponent vectors of this orbit given the number of allowed components.
     std::vector<std::vector<int>> getMultiComponentVectors(const std::vector<int> &Mi_local) const;
 
     std::vector<std::vector<int>> getAllPossibleMultiComponentVectorPermutations(const std::vector<int> &Mi_local) const;
 
-    /// Returns true if the input sites exists in _equivalentSites, order does not matter if sorted=false.
+    /// Returns true if the input sites exists in _equivalentClusters, order does not matter if sorted=false.
     bool contains(const std::vector<LatticeSite>, bool) const;
 
-    /// Removes all elements i in equivalent sites if any sites in _equivalentSites[i] have the input index.
-    void removeSitesWithIndex(const size_t, bool);
+    /// Removes all clusters from the list of equivalent clusters that contain the site with the given index.
+    void removeClustersWithSiteIndex(const size_t, bool);
 
-    /// Removes all elements i in equivalent sites if no sites in _equivalentSites[i] have the input index.
-    void removeSitesNotWithIndex(const size_t index, bool);
+    /// Removes all clusters from the list of equivalent clusters that do not contain the site with the given index.
+    void removeClustersWithoutIndex(const size_t index, bool);
 
-    /// Remove a specific set of sites with corresponding equivalent site permutation.
-    void removeSites(std::vector<LatticeSite>);
+    /// Remove a specific cluster (defined by a list of lattice sites) from the list of equivalent clusters.
+    void removeCluster(std::vector<LatticeSite>);
 
     /// Comparison operator for automatic sorting in containers.
     friend bool operator==(const Orbit &orbit1, const Orbit &orbit2)
@@ -121,7 +114,7 @@ public:
     friend Orbit operator+(const Orbit &orbit, const Eigen::Vector3d &offset)
     {
         Orbit orbitOffset = orbit;
-        for (auto &latticeSites : orbitOffset._equivalentSites)
+        for (auto &latticeSites : orbitOffset._equivalentClusters)
         {
             for (auto &latticeSite : latticeSites)
             {
@@ -135,52 +128,52 @@ public:
     Orbit &operator+=(const Orbit &orbit_rhs)
     {
         // This orbit does not have any eq. sites permutations: check that orbit_rhs also doesn't have them
-        if (_equivalentSitesPermutations.size() == 0)
+        if (_equivalentClusterPermutations.size() == 0)
         {
-            if (orbit_rhs.getPermutationsOfEquivalentSites().size() != 0)
+            if (orbit_rhs.getPermutationsOfEquivalentClusters().size() != 0)
             {
                 throw std::runtime_error("One orbit has equivalent site permutations and one does not (Orbit &operator+=)");
             }
         }
         else // This orbit has some eq. sites permutations: check that orbit_rhs also has them
         {
-            if (orbit_rhs.getPermutationsOfEquivalentSites().size() == 0)
+            if (orbit_rhs.getPermutationsOfEquivalentClusters().size() == 0)
             {
                 throw std::runtime_error("One orbit has equivalent site permutations and one does not (Orbit &operator+=)");
             }
         }
 
         // Get representative sites
-        auto rep_sites_rhs = orbit_rhs.getRepresentativeSites();
-        auto rep_sites_this = getRepresentativeSites();
+        auto rep_sites_rhs = orbit_rhs.getSitesOfRepresentativeCluster();
+        auto rep_sites_this = getSitesOfRepresentativeCluster();
 
         if (rep_sites_this.size() != rep_sites_rhs.size())
         {
             throw std::runtime_error("Orbit order is not equal (Orbit &operator+=)");
         }
 
-        const auto rhsEquivalentSites = orbit_rhs.getEquivalentSites();
-        const auto rhsEquivalentSitesPermutations = orbit_rhs.getPermutationsOfEquivalentSites();
+        const auto rhsEquivalentClusters = orbit_rhs.getEquivalentClusters();
+        const auto rhsEquivalentClusterPermutations = orbit_rhs.getPermutationsOfEquivalentClusters();
 
         // Insert rhs eq sites and corresponding permutations
-        _equivalentSites.insert(_equivalentSites.end(), rhsEquivalentSites.begin(), rhsEquivalentSites.end());
-        _equivalentSitesPermutations.insert(_equivalentSitesPermutations.end(), rhsEquivalentSitesPermutations.begin(), rhsEquivalentSitesPermutations.end());
+        _equivalentClusters.insert(_equivalentClusters.end(), rhsEquivalentClusters.begin(), rhsEquivalentClusters.end());
+        _equivalentClusterPermutations.insert(_equivalentClusterPermutations.end(), rhsEquivalentClusterPermutations.begin(), rhsEquivalentClusterPermutations.end());
         return *this;
     }
 
 public:
     /// Container of equivalent sites for this orbit
-    std::vector<std::vector<LatticeSite>> _equivalentSites;
+    std::vector<std::vector<LatticeSite>> _equivalentClusters;
 
     /// Representative sorted cluster for this orbit
     Cluster _representativeCluster;
 
 private:
     /// Contains the permutations of the equivalent sites which takes it to the order of the reference cluster
-    std::vector<std::vector<int>> _equivalentSitesPermutations;
+    std::vector<std::vector<int>> _equivalentClusterPermutations;
 
     /// Contains the allowed sites permutations. i.e. if 0,2,1 is in this set then 0,1,0 is the same MC vector as 0,0,1
-    std::set<std::vector<int>> _allowedSitesPermutations;
+    std::set<std::vector<int>> _allowedClusterPermutations;
 };
 
 

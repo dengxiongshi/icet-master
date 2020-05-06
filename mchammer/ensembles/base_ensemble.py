@@ -282,10 +282,10 @@ class BaseEnsemble(ABC):
             assert isinstance(observer.interval, int), 'interval is not an int'
             if step % observer.interval == 0:
                 if observer.return_type is dict:
-                    for key, value in observer.get_observable(self.calculator.structure).items():
-                        row_dict[key] = value
+                    for key, val in observer.get_observable(self.configuration.structure).items():
+                        row_dict[key] = val
                 else:
-                    row_dict[observer.tag] = observer.get_observable(self.calculator.structure)
+                    row_dict[observer.tag] = observer.get_observable(self.configuration.structure)
 
         if len(row_dict) > 0:
             self._data_container.append(mctrial=step, record=row_dict)

@@ -1,9 +1,7 @@
 import spglib as spg
 from ase.neighborlist import NeighborList as ASENeighborList
 from ase.db import connect
-from icet.core.structure import Structure
-from _icet import NeighborList
-
+from icet.core.neighbor_list import get_neighbor_lists
 """
 This script compares the neighbor list computed for structures in a database using
 both icet.NeighborList and ase.neighborlist modules.
@@ -22,9 +20,8 @@ for row in db.select('natoms>1'):
     ase_indices, ase_offsets = ase_nl.get_neighbors(1)
 
     # icet neighbor_list
-    nl = NeighborList(neighbor_cutoff)
-    nl.build(Structure.from_atoms(structure_row), position_tolerance=1e-5)
-    neighbors = nl.get_neighbors(1)
+    neighbor_list = get_neighbor_lists(structure_row, [neighbor_cutoff])[0]
+    neighbors = neighbor_list[1]
     indices = []
     offsets = []
     for ngb in neighbors:
@@ -62,7 +59,7 @@ for row in db.select('natoms>1'):
     dataset = spg.get_symmetry_dataset(structure_row, symprec=1e-5,
                                        angle_tolerance=-1.0, hall_number=0)
     for index, equiv_index in enumerate(dataset['equivalent_atoms']):
-        neighbors = nl.get_neighbors(index)
+        neighbors = neighbor_list[index]
         if equiv_index in count_neighbors:
             msg = ['Testing number of neighbors']
             msg += ['failed for {}'.format(row.tag)]

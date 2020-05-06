@@ -249,7 +249,7 @@ class GroundStateFinder:
         cluster_to_orbit_map = []
         for orb_index in range(len(full_orbit_list)):
 
-            equivalent_clusters = full_orbit_list.get_orbit(orb_index).get_equivalent_sites()
+            equivalent_clusters = full_orbit_list.get_orbit(orb_index).equivalent_clusters
 
             # Determine the sites and the orbit associated with each cluster
             for cluster in equivalent_clusters:

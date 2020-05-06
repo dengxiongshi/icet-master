@@ -157,26 +157,24 @@ And then run the WL simulation for a number of :term:`MCS`:
 Analyzing a WL simulation
 -------------------------
 
-The data container file contains all the information that is needed for
-extracting thermodynamic data from a :term:`WL` simulation. In addition to the
-regular fields found in most data containers such as ``mctrial``,
-``potential``, or ``acceptance_ratio``, a :term:`WL` data container contains
-the fields ``fill_factor``, which is the current value of :math:`f`,
-``histogram``, and ``entropy``. These data are not written at every step as
-they consume quite a lot of space. Rather they are only added to the data
-container when the fill factor :math:`f` is updated or the maximum number of
-MC trial steps has been reached.
+The data container file contains all the information that is needed for extracting thermodynamic data from a :term:`WL` simulation.
+In addition to the regular fields found in most data containers (e.g., ``mctrial``, ``potential``, or ``acceptance_ratio``), a :term:`WL` data container contains the fields ``fill_factor``, which is the current value of :math:`f`, ``histogram``, and ``entropy``.
+These data are not written at every step as they consume quite a lot of space.
+Rather they are only added to the data container when the fill factor :math:`f` is updated or the maximum number of MC trial steps has been reached.
+While the ``entropy`` data and ``fill_factor`` values are recorded during the entire simulation, the ``histogram`` data is only stored for the last state.
 
-:program:`icet` provides support functions to make the analysis of these data
-particularly simple. One can for example extract the (relative) entropy as
-well as the :term:`DOS`.
+:program:`icet` provides support functions to make the simplify analysis of these data.
+One can for example extract the (relative) entropy as well as the :term:`DOS`.
+In particular, it is possible to check the convergence of the properties of interest by specifying a `fill_factor_limit` to the analysis function, in this case `get_density_of_states_wl`.
+By doing so, the results obained corresponds to data collected up to the point when the ``fill_factor`` reached below the specified limit.
 
 .. literalinclude:: ../../../../examples/advanced_topics/wang_landau/2_analyze_simulation.py
-   :start-after: # Get density and entropy
-   :end-before: # Plot density
+   :start-after: # Extract and plot the DOS
+   :end-before: # Plot DOS
 
-For the present, very small system, the number of energy bins is small and
-the :term:`DOS` is relatively rough.
+For the present, very small system, the number of energy bins is small and the :term:`DOS` is relatively rough.
+
+.. _wl-density-figure:
 
 .. figure:: _static/wang_landau_density.svg
    :width: 70%
@@ -199,7 +197,7 @@ averages of other observables can be extracted using
 <mchammer.data_containers.get_average_observables_wl>`:
 
 .. literalinclude:: ../../../../examples/advanced_topics/wang_landau/2_analyze_simulation.py
-   :start-after: # Compute thermodynamic
+   :start-after: # Compute thermodynamic averages
    :end-before: # Plot heat capacity
 
 The heat capacity obtained using the :term:`WL` approach matches those from a
@@ -207,28 +205,26 @@ series of MC simulations in the canonical ensemble (not described here). The
 availability of the full :term:`DOS` enables one, however, to extract the heat
 capacity as a practically continuous function of temperature.
 
+.. _wl-heat-capacity-sro-figure:
+
 .. figure:: _static/wang_landau_heat_capacity_sro.svg
    :width: 70%
 
    Heat capacity (top) and short-range order parameter (bottom) from Wang-Landau
    simulation of a :math:`4\times4` two-dimensional Ising model.
 
-Using the same approach one can also extract thermodynamic averages of other
-observables. This is illustrated here by the first-nearest neighbor
-short-range order parameter. Notably the standard deviation of the latter
-correlates with the heat capacity, corresponding to the increase (and for an
-infinite system, divergence) of the correlation length at the transition
-temperature.
+Using the same approach one can also extract thermodynamic averages of other observables.
+This is illustrated here by the first-nearest neighbor short-range order parameter.
+Notably the standard deviation of the latter correlates with the heat capacity, corresponding to the increase (and for an infinite system, divergence) of the correlation length at the transition temperature.
+Since both the :ref:`density of states <wl-density-figure>`, the :ref:`heat capacity, and the short-ranged order <wl-heat-capacity-sro-figure>` show small variations with respect to the fill factor limit, the calculations can be considered already rather well converged.
+If this had not been the case, one could have continued the simulations by rerunning the script, after having reduced the value on the ``fill_factor_limit``.
 
 
 Representative configurations
 -----------------------------
 
-In addition to common thermodynamic observables one can also be interested in
-the evolution of the structure itself as a function of temperature. To this
-end, :program:`icet` provides the :func:`get_average_cluster_vectors_wl
-<mchammer.data_containers.get_average_cluster_vectors_wl>` function, which
-allows one to obtain the average cluster vectors at different temperatures:
+In addition to common thermodynamic observables one can also be interested in the evolution of the structure itself as a function of temperature.
+To this end, :program:`icet` provides the :func:`get_average_cluster_vectors_wl <mchammer.data_containers.get_average_cluster_vectors_wl>` function, which allows one to obtain the average cluster vectors at different temperatures:
 
 .. literalinclude:: ../../../../examples/advanced_topics/wang_landau/3_extract_structures.py
    :start-after: # Get average cluster vectors

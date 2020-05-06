@@ -8,7 +8,6 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 
 from ase import Atoms
-from pandas import DataFrame
 
 from .. import WangLandauDataContainer
 from ..calculators.base_calculator import BaseCalculator
@@ -150,6 +149,7 @@ class WangLandauEnsemble(BaseEnsemble):
         >>> from ase import Atoms
         >>> from icet import ClusterExpansion, ClusterSpace
         >>> from mchammer.calculators import ClusterExpansionCalculator
+        >>> from mchammer.ensembles import WangLandauEnsemble
 
         >>> # prepare cluster expansion
         >>> prim = Atoms('Au', positions=[[0, 0, 0]], cell=[1, 1, 10], pbc=True)
@@ -241,6 +241,7 @@ class WangLandauEnsemble(BaseEnsemble):
         #  * fill_factor_limit
         #  * flatness_check_interval
         #  * flatness_limit
+        #  * entropy_write_frequency
 
         # add species count to ensemble parameters
         symbols = set([symbol for sub in calculator.sublattices
@@ -287,6 +288,8 @@ class WangLandauEnsemble(BaseEnsemble):
                 self._fill_factor_history = {self.step: self._fill_factor}
             else:
                 self._fill_factor_history = {}
+        if not hasattr(self, '_entropy_history'):
+            self._entropy_history = {}
         if not hasattr(self, '_histogram'):
             self._histogram = {}  # type: Dict[int, int]
         if not hasattr(self, '_entropy'):
@@ -366,23 +369,6 @@ class WangLandauEnsemble(BaseEnsemble):
         else:
             super().run(number_of_trial_steps)
 
-    def get_entropy(self) -> DataFrame:
-        """ entropy accumulated during Wang-Landau simulation """
-        df = DataFrame(data={'energy': self._energy_spacing * np.array(list(self._entropy.keys())),
-                             'entropy': np.array(list(self._entropy.values()))},
-                       index=list(self._entropy.keys()))
-        df['entropy'] -= np.min(df['entropy'])
-        return df
-
-    def get_histogram(self) -> DataFrame:
-        """ histogram accumulated since last update of fill factor """
-        df = DataFrame(data={'energy': self._energy_spacing *
-                             np.array(list(self._histogram.keys())),
-                             'histogram': np.array(list(self._histogram.values()))},
-                       index=list(self._histogram.keys()))
-        df['histogram'] -= np.min(df['histogram'])
-        return df
-
     def _terminate_sampling(self) -> bool:
         """Returns True if the Wang-Landau algorithm has converged. This is
         used in the run method implemented of BaseEnsemble to
@@ -398,6 +384,7 @@ class WangLandauEnsemble(BaseEnsemble):
         super()._restart_ensemble()
         self._fill_factor = self.data_container._last_state['fill_factor']
         self._fill_factor_history = self.data_container._last_state['fill_factor_history']
+        self._entropy_history = self.data_container._last_state['entropy_history']
         self._histogram = self.data_container._last_state['histogram']
         self._entropy = self.data_container._last_state['entropy']
         self._converged = (self._fill_factor <= self._fill_factor_limit)
@@ -418,6 +405,7 @@ class WangLandauEnsemble(BaseEnsemble):
             random_state=random.getstate(),
             fill_factor=self._fill_factor,
             fill_factor_history=self._fill_factor_history,
+            entropy_history=self._entropy_history,
             histogram=OrderedDict(sorted(self._histogram.items())),
             entropy=OrderedDict(sorted(self._entropy.items())))
         self.data_container.write(outfile)
@@ -513,9 +501,13 @@ class WangLandauEnsemble(BaseEnsemble):
                 # check whether the Wang-Landau algorithm has converged
                 self._converged = (self._fill_factor <= self._fill_factor_limit)
                 if not self._converged:
-                    # update fill factor and reset histogram
+                    # update fill factor
                     self._fill_factor /= 2
                     self._fill_factor_history[self.step] = self._fill_factor
+                    # update entropy history
+                    self._entropy_history[self.step] = OrderedDict(
+                        sorted(self._entropy.items()))
+                    # reset histogram
                     self._histogram = dict.fromkeys(self._histogram, 0)
 
     def _get_bin_index(self, energy: float) -> int:

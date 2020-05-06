@@ -65,7 +65,7 @@ def find_orbit_and_equivalent_site_with_indices(orbit_list, site_indices):
         if len(site_indices) != orbit.order:
             continue
 
-        for sites in orbit.get_equivalent_sites():
+        for sites in orbit.equivalent_clusters:
 
             # Check if the list of site indices matches those for the equivalent site
             if all(sites[j].index == site_indices[j] for j in range(len(site_indices))):

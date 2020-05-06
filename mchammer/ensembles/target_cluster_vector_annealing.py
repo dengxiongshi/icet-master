@@ -72,7 +72,7 @@ class TargetClusterVectorAnnealing:
         self._current_score = self._sub_ensembles[0].calculator.calculate_total(
             self._sub_ensembles[0].configuration.occupations)
         self._best_score = self._current_score
-        self._best_structure = structure[0]
+        self._best_structure = structure[0].copy()
         self._temperature = T_start
         self._T_start = T_start
         self._T_stop = T_stop

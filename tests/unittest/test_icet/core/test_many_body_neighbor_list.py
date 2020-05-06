@@ -70,7 +70,7 @@ class TestManyBodyNeighborList(unittest.TestCase):
         by  neighbor_list for a specific lattice site.
         """
         index = 0
-        nl_neighbors = self.neighbor_lists[0].get_neighbors(0)
+        nl_neighbors = self.neighbor_lists[0][0]
         target = tuple(([LatticeSite(index, [0., 0., 0.])], nl_neighbors))
         pairs = self.mbnl.build(self.neighbor_lists, index, True)[1]
         self.assertEqual(pairs, target)

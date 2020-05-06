@@ -2,6 +2,7 @@ import os
 import random
 import unittest
 from collections import OrderedDict
+import warnings
 
 import numpy as np
 from ase import Atoms
@@ -32,7 +33,9 @@ class TestDataContainer(unittest.TestCase):
         super(TestDataContainer, self).__init__(*args, **kwargs)
         # further settings
         self.prim = Atoms('Au', positions=[[0, 0, 0]], cell=[1, 1, 10], pbc=True)
-        self.fill_factor_history = OrderedDict((k, 1 / 2 ** k) for k in range(10))
+        self.fill_factor_history = OrderedDict((10 * k, 1 / 2 ** k) for k in range(7))
+        self.entropy_history = {10 * j: OrderedDict((k, 1 / (1 + k**2 * (j + 1))) for k in
+                                                    range(-20, 21)) for j in range(7)}
         self.entropy = OrderedDict((k, 1 / (1 + k**2)) for k in range(-20, 21))
         self.histogram = OrderedDict((k, int(k / 2 + 3)) for k in range(-20, 21))
 
@@ -73,6 +76,8 @@ class TestDataContainer(unittest.TestCase):
             random_state=random.getstate(),
             fill_factor=fill_factor,
             fill_factor_history=self.fill_factor_history,
+            entropy_history={mctrial: split_dict(entropy, energy_limit_left, energy_limit_right)
+                             for mctrial, entropy in self.entropy_history.items()},
             histogram=split_dict(self.histogram, energy_limit_left, energy_limit_right),
             entropy=split_dict(self.entropy, energy_limit_left, energy_limit_right))
         data_rows = OrderedDict([
@@ -91,6 +96,57 @@ class TestDataContainer(unittest.TestCase):
             (60, {'potential': -1.3,
                   'obs': 4,
                   'occupations': [79 if k < 0.5*n_atoms else 47 for k in range(n_atoms)]})])
+
+        for mctrial in data_rows:
+            dc.append(mctrial, data_rows[mctrial])
+
+        return dc
+
+    def prepare_dc_fill_factor_limit_ref(self, energy_limit_left=None, energy_limit_right=None,
+                                         energy_spacing=1, n_rep=3, trial_move='swap',
+                                         fill_factor=1e-6):
+        """This method prepares a single data container that can be used for
+        checking the entropy history."""
+        def split_dict(data, left_limit, right_limit):
+            return OrderedDict((k, v) for k, v in data.items()
+                               if (left_limit is None or k > left_limit) and
+                               (right_limit is None or k < right_limit))
+
+        # prepare initial configuration
+        structure = self.prim.repeat(n_rep)
+        structure[0].symbol = 'Ag'
+        structure[1].symbol = 'Ag'
+        structure = structure.repeat(n_rep)
+        n_atoms = len(structure)
+
+        # compiling data container
+        dc = WangLandauDataContainer(
+            structure=structure,
+            ensemble_parameters={'n_atoms': len(structure),
+                                 'energy_spacing': energy_spacing,
+                                 'energy_limit_left': energy_limit_left,
+                                 'energy_limit_right': energy_limit_right,
+                                 'trial_move': trial_move})
+        dc._update_last_state(
+            last_step=206,
+            occupations=[9] * len(structure),
+            accepted_trials=10,
+            random_state=random.getstate(),
+            fill_factor=fill_factor,
+            fill_factor_history=self.fill_factor_history,
+            entropy_history={mctrial: split_dict(entropy, energy_limit_left, energy_limit_right)
+                             for mctrial, entropy in self.entropy_history.items()},
+            histogram=split_dict(self.histogram, energy_limit_left, energy_limit_right),
+            entropy=split_dict(self.entropy_history[30], energy_limit_left, energy_limit_right))
+        data_rows = OrderedDict([
+            (0, {'potential': -1.32,
+                 'obs': 1,
+                 'occupations': [79 if k < 0.8*n_atoms else 47 for k in range(n_atoms)]}),
+            (10, {'potential': -1.35}),
+            (20, {'potential': -1.33,
+                  'obs': 2,
+                  'occupations': [79 if k < 0.1*n_atoms else 47 for k in range(n_atoms)]}),
+            (30, {'potential': -1.07})])
         for mctrial in data_rows:
             dc.append(mctrial, data_rows[mctrial])
 
@@ -135,12 +191,59 @@ class TestDataContainer(unittest.TestCase):
             dc.fill_factor_history = 1000
         self.assertTrue("can't set attribute" in str(context.exception))
 
+    def test_get(self):
+        """ Tests the get function. """
+
+        dc = self.prepareDataContainer()
+
+        # dummy trajectory
+        traj = []
+        for occupations in DataFrame.from_records(
+                dc._data_list, index='mctrial').occupations.dropna():
+            atoms = dc.structure.copy()
+            atoms.numbers = occupations
+            traj.append(atoms)
+
+        # assert numpy array is returned
+        mctrial, potential = dc.get('mctrial', 'potential')
+        self.assertIsInstance(mctrial, np.ndarray)
+        self.assertIsInstance(potential, np.ndarray)
+
+        # with a given fill factor limit
+        fill_factor_limit = (self.fill_factor_history[20] + self.fill_factor_history[30]) / 2
+        mctrial, obs = dc.get('mctrial', 'obs', fill_factor_limit=fill_factor_limit)
+        self.assertEqual(mctrial.tolist(), [0, 20])
+        self.assertEqual(obs.tolist(), [1, 2])
+
+        # get trajectory
+        traj_ret = dc.get('trajectory')
+        self.assertEqual(traj, traj_ret)
+
+        # get trajectory with a given fill factor limit
+        fill_factor_limit = (self.fill_factor_history[20] + self.fill_factor_history[30]) / 2
+        traj_ret = dc.get('trajectory', fill_factor_limit=fill_factor_limit)
+        for i in range(2):
+            self.assertEqual(traj[i], traj_ret[i])
+
+        # get trajectory with a given fill factor limit and property
+        fill_factor_limit = (self.fill_factor_history[40] + self.fill_factor_history[50]) / 2
+        traj_ret, obs1 = dc.get('trajectory', 'obs', fill_factor_limit=fill_factor_limit)
+        for i in range(3):
+            self.assertEqual(traj[i], traj_ret[i])
+        self.assertEqual(obs1.tolist(), [1, 2, 3])
+
     def test_get_entropy(self):
         """Tests get_entropy method."""
+        # test data container without entropy
         dc = self.prepareDataContainer()
         del dc._last_state['entropy']
-        self.assertIsNone(dc.get_entropy())
+        with self.assertWarns(Warning) as context:
+            entropy = dc.get_entropy()
+        self.assertIn('There is no entropy information in the data container',
+                      str(context.warning))
+        self.assertIsNone(entropy)
 
+        # test without fill factor limit
         dc = self.prepareDataContainer()
         ret = dc.get_entropy()
         self.assertIsInstance(ret, DataFrame)
@@ -155,6 +258,47 @@ class TestDataContainer(unittest.TestCase):
         target_entropy -= np.min(target_entropy)
         target_entropy = target_entropy.tolist()
         self.assertAlmostEqual(ret_entropy, target_entropy)
+
+        # test with fill factor limit
+        fill_factor_limit = (self.fill_factor_history[20] + self.fill_factor_history[30]) / 2
+        dc = self.prepareDataContainer()
+        ret = dc.get_entropy(fill_factor_limit)
+        self.assertIsInstance(ret, DataFrame)
+        ret = ret.sort_index()
+
+        ret_energy = ret.energy.tolist()
+        target_energy = list(self.entropy_history[30].keys())
+        self.assertEqual(ret_energy, target_energy)
+
+        ret_entropy = ret.entropy.tolist()
+        target_entropy = np.array(list(self.entropy_history[30].values()))
+        target_entropy -= np.min(target_entropy)
+        target_entropy = target_entropy.tolist()
+        self.assertAlmostEqual(ret_entropy, target_entropy)
+
+        # test data container with fill factor limit but empty entropy history
+        dc = self.prepareDataContainer()
+        dc._last_state['entropy_history'] = {}
+        with self.assertWarns(Warning) as context:
+            ret = dc.get_entropy(fill_factor_limit)
+        self.assertIn('The entropy history is empty', str(context.warning))
+        self.assertIsNone(ret)
+
+        # test data container with fill factor limit but no entropy history
+        dc = self.prepareDataContainer()
+        del dc._last_state['entropy_history']
+        with self.assertWarns(Warning) as context:
+            ret = dc.get_entropy(fill_factor_limit)
+        self.assertIn('The entropy history is empty', str(context.warning))
+        self.assertIsNone(ret)
+
+        # test data container with fill factor above limit
+        dc = self.prepareDataContainer()
+        dc._last_state['fill_factor'] = fill_factor_limit * 2
+        with self.assertWarns(Warning) as context:
+            ret = dc.get_entropy(fill_factor_limit)
+        self.assertIn('is higher than the limit', str(context.warning))
+        self.assertIsNone(ret)
 
     def test_get_histogram(self):
         """Tests get_histogram method."""
@@ -208,13 +352,28 @@ class TestDataContainer(unittest.TestCase):
             ret = get_density_of_states_wl('abc')
         self.assertTrue('must be a data container with entropy data' in str(context.exception))
 
+        # test warning for data container(s) without entropy
+        dc = self.prepareDataContainer()
+        del dc._last_state['entropy']
+        with self.assertRaises(ValueError) as context:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                ret = get_density_of_states_wl(dc)
+        self.assertTrue('Entropy information could not be retrieved' in str(context.exception))
+        dcs = {'a': self.prepareDataContainer(), 'b': dc}
+        with self.assertRaises(ValueError) as context:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                ret = get_density_of_states_wl(dcs)
+        self.assertTrue('Entropy information could not be retrieved' in str(context.exception))
+
         # test warning concerning underconverged data with single container
         dc = self.prepareDataContainer(fill_factor=0.1)
         with self.assertWarns(Warning) as context:
             get_density_of_states_wl(dc)
         self.assertIn('underconverged Wang-Landau', str(context.warning))
 
-        # test single container
+        # test single container without fill factor limit
         dc = self.prepareDataContainer()
         ret = get_density_of_states_wl(dc)
         self.assertTrue(len(ret), 2)
@@ -265,7 +424,7 @@ class TestDataContainer(unittest.TestCase):
             ret = get_density_of_states_wl(dcs)
         self.assertTrue('No overlap in the energy range' in str(context.exception))
 
-        # test overlapping data containers
+        # test overlapping data containers without fill factor limit
         dcs = {}
         for k, (lim1, lim2) in enumerate(zip([None, -12, -2, 8], [-8, 2, 12, None])):
             dcs[k] = self.prepareDataContainer(energy_limit_left=lim1, energy_limit_right=lim2)
@@ -279,6 +438,43 @@ class TestDataContainer(unittest.TestCase):
 
         ret_entropy = ret_single.entropy.tolist()
         target_entropy = np.array(list(self.entropy.values()))
+        target_entropy -= np.min(target_entropy)
+        target_entropy = target_entropy.tolist()
+        self.assertAlmostEqual(ret_entropy, target_entropy)
+
+        self.assertEqual(len(ret_binned), len(ret_single))
+
+        # test single container with fill factor limit
+        dc = self.prepareDataContainer()
+        fill_factor_limit = (self.fill_factor_history[20] + self.fill_factor_history[30]) / 2
+        ret = get_density_of_states_wl(dc, fill_factor_limit)
+        self.assertTrue(len(ret), 2)
+        self.assertIsInstance(ret[0], DataFrame)
+        self.assertIsNone(ret[1])
+        ret_single = ret[0]
+        for key in ['energy', 'entropy', 'density']:
+            self.assertIn(key, ret_single.columns)
+        ret_entropy = ret_single.entropy.tolist()
+        target_entropy = np.array(list(self.entropy_history[30].values()))
+        target_entropy -= np.min(target_entropy)
+        target_entropy = target_entropy.tolist()
+        self.assertAlmostEqual(ret_entropy, target_entropy)
+
+        # test overlapping data containers with fill factor limit
+        fill_factor_limit = (self.fill_factor_history[20] + self.fill_factor_history[30]) / 2
+        dcs = {}
+        for k, (lim1, lim2) in enumerate(zip([None, -12, -2, 8], [-8, 2, 12, None])):
+            dcs[k] = self.prepareDataContainer(energy_limit_left=lim1, energy_limit_right=lim2)
+        ret = get_density_of_states_wl(dcs, fill_factor_limit)
+        self.assertTrue(len(ret), 2)
+        self.assertIsInstance(ret[0], DataFrame)
+        self.assertIsInstance(ret[1], dict)
+        ret_binned = ret[0]
+        for key in ['energy', 'entropy', 'density']:
+            self.assertIn(key, ret_single.columns)
+
+        ret_entropy = ret_single.entropy.tolist()
+        target_entropy = np.array(list(self.entropy_history[30].values()))
         target_entropy -= np.min(target_entropy)
         target_entropy = target_entropy.tolist()
         self.assertAlmostEqual(ret_entropy, target_entropy)
@@ -343,6 +539,51 @@ class TestDataContainer(unittest.TestCase):
             diff = (np.array(ret[col].tolist()) - target[col]) / target[col]
             self.assertTrue(np.all(np.abs(diff) < 1e-8))
 
+    def test_get_average_observables_wl_fill_factor_limit(self):
+        """Tests get_average_observables_wl function with fill factor limit."""
+
+        fill_factor_limit = (self.fill_factor_history[20] + self.fill_factor_history[30]) / 2
+
+        # generate target data
+        temperatures = [500, 1000, 1500, 3000, 5000]
+        dc = self.prepare_dc_fill_factor_limit_ref()
+        target = get_average_observables_wl(dc, temperatures, observables=['obs'])
+
+        # test single container without observables
+        dc = self.prepareDataContainer()
+        ret = get_average_observables_wl(dc, temperatures, fill_factor_limit=fill_factor_limit)
+        np.set_printoptions(precision=12)
+        self.assertIsInstance(ret, DataFrame)
+        for key in ['temperature', 'potential_mean', 'potential_std']:
+            self.assertIn(key, ret.columns)
+        for col in ret.columns:
+            diff = (np.array(ret[col].tolist()) - target[col]) / target[col]
+            self.assertTrue(np.all(np.abs(diff) < 1e-6))
+
+        # test single container with observable
+        dc = self.prepareDataContainer()
+        ret = get_average_observables_wl(dc, temperatures, observables=['obs'],
+                                         fill_factor_limit=fill_factor_limit)
+        np.set_printoptions(precision=12)
+        self.assertIsInstance(ret, DataFrame)
+        for key in ['temperature', 'potential_mean', 'potential_std', 'obs_mean', 'obs_std']:
+            self.assertIn(key, ret.columns)
+        for col in ret.columns:
+            diff = (np.array(ret[col].tolist()) - target[col]) / target[col]
+            self.assertTrue(np.all(np.abs(diff) < 1e-6))
+
+        # run with multiple containers
+        dcs = {1: self.prepareDataContainer(energy_limit_left=None, energy_limit_right=4),
+               2: self.prepareDataContainer(energy_limit_left=-4, energy_limit_right=None)}
+        ret = get_average_observables_wl(dcs, temperatures, observables=['obs'],
+                                         fill_factor_limit=fill_factor_limit)
+        self.assertIsInstance(ret, DataFrame)
+        for key in ['temperature', 'potential_mean', 'potential_std', 'obs_mean', 'obs_std']:
+            self.assertIn(key, ret.columns)
+        for col in ret.columns:
+            diff = (np.array(ret[col].tolist()) - target[col]) / target[col]
+            self.assertTrue(np.all(np.abs(diff) < 1e-8))
+
     def test_get_average_cluster_vectors_wl(self):
         """Tests get_average_observables_wl function."""
 
@@ -375,6 +616,36 @@ class TestDataContainer(unittest.TestCase):
         dcs = {1: self.prepareDataContainer(energy_limit_left=None, energy_limit_right=4),
                2: self.prepareDataContainer(energy_limit_left=-4, energy_limit_right=None)}
         ret = get_average_cluster_vectors_wl(dcs, cluster_space, temperatures)
+        self.assertIsInstance(ret, DataFrame)
+        for key in target:
+            for row_ret, row_target in zip(ret[key].tolist(), target[key]):
+                self.assertTrue(np.all(np.abs(np.array(row_ret) - row_target) < 1e-8))
+
+    def test_get_average_cluster_vectors_wl_fill_factor_limit(self):
+        """Tests get_average_observables_wl function with fill factor limit."""
+
+        fill_factor_limit = (self.fill_factor_history[20] + self.fill_factor_history[30]) / 2
+
+        # generate target data
+        cluster_space = ClusterSpace(self.prim, cutoffs=[1.1, 1.1], chemical_symbols=['Ag', 'Au'])
+        temperatures = np.linspace(500, 1900, 4)
+        dc = self.prepare_dc_fill_factor_limit_ref()
+        target = get_average_cluster_vectors_wl(dc, cluster_space, temperatures)
+
+        # test single container without observables
+        dc = self.prepareDataContainer()
+        ret = get_average_cluster_vectors_wl(dc, cluster_space, temperatures,
+                                             fill_factor_limit=fill_factor_limit)
+        self.assertIsInstance(ret, DataFrame)
+        for key in target:
+            for row_ret, row_target in zip(ret[key].tolist(), target[key]):
+                self.assertTrue(np.all(np.abs(np.array(row_ret) - row_target) < 1e-8))
+
+        # test with multiple containers
+        dcs = {1: self.prepareDataContainer(energy_limit_left=None, energy_limit_right=4),
+               2: self.prepareDataContainer(energy_limit_left=-4, energy_limit_right=None)}
+        ret = get_average_cluster_vectors_wl(dcs, cluster_space, temperatures,
+                                             fill_factor_limit=fill_factor_limit)
         self.assertIsInstance(ret, DataFrame)
         for key in target:
             for row_ret, row_target in zip(ret[key].tolist(), target[key]):

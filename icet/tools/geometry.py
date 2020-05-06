@@ -4,7 +4,6 @@ from typing import List, Sequence, Tuple, TypeVar
 from ase import Atoms
 from ase.data import chemical_symbols
 from icet.core.lattice_site import LatticeSite
-from icet.core.neighbor_list import NeighborList
 from icet.core.structure import Structure
 
 Vector = List[float]
@@ -81,7 +80,7 @@ def get_primitive_structure(structure: Atoms,
 
 
 def get_fractional_positions_from_neighbor_list(
-        structure: Structure, neighbor_list: NeighborList) -> List[Vector]:
+        structure: Structure, neighbor_list: List) -> List[Vector]:
     """
     Returns the fractional positions of the lattice sites in structure from
     a neighbor list.
@@ -101,7 +100,7 @@ def get_fractional_positions_from_neighbor_list(
         lattice_site.index = i
         position = structure.get_position(lattice_site)
         neighbor_positions.append(position)
-        for neighbor in neighbor_list.get_neighbors(i):
+        for neighbor in neighbor_list[i]:
             position = structure.get_position(neighbor)
             neighbor_positions.append(position)
 

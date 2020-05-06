@@ -11,7 +11,7 @@ import spglib
 from ase import Atoms
 from _icet import MatrixOfEquivalentPositions
 from icet.core.lattice_site import LatticeSite
-from icet.core.neighbor_list import NeighborList
+from icet.core.neighbor_list import get_neighbor_lists
 from icet.core.structure import Structure
 from icet.input_output.logging_tools import logger
 from icet.tools.geometry import (ase_atoms_to_spglib_cell,
@@ -26,7 +26,7 @@ def matrix_of_equivalent_positions_from_structure(structure: Atoms,
                                                   position_tolerance: float,
                                                   symprec: float,
                                                   find_primitive: bool = True) \
-        -> Tuple[np.ndarray, Structure, NeighborList]:
+        -> Tuple[np.ndarray, Structure, List]:
     """Sets up a list of permutation maps from an Atoms object.
 
     Parameters
@@ -65,8 +65,10 @@ def matrix_of_equivalent_positions_from_structure(structure: Atoms,
 
     # create neighbor_lists from the different cutoffs
     prim_icet_structure = Structure.from_atoms(structure_prim)
-    neighbor_list = NeighborList(cutoff)
-    neighbor_list.build(structure=prim_icet_structure, position_tolerance=position_tolerance)
+
+    neighbor_list = get_neighbor_lists(prim_icet_structure,
+                                       [cutoff],
+                                       position_tolerance=position_tolerance)[0]
 
     # get fractional positions for neighbor_list
     frac_positions = get_fractional_positions_from_neighbor_list(

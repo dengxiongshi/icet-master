@@ -154,7 +154,7 @@ class TestOrbitList(unittest.TestCase):
 
         for k, orbit in enumerate(self.orbit_list.orbits):
             with self.subTest(orbit=orbit):
-                self.assertEqual(str(orbit.get_representative_cluster()),
+                self.assertEqual(str(orbit.representative_cluster),
                                  str(repr_clusters[k]))
 
     def test_remove_all_orbits(self):
@@ -250,10 +250,7 @@ class TestOrbitList(unittest.TestCase):
                  LatticeSite(0, [1., 0., 0.])]
 
         pm = self.orbit_list.matrix_of_equivalent_positions
-        column1 = [row[0] for row in pm]
-
-        columns = \
-            self.orbit_list._get_all_columns_from_sites(sites, column1, pm)
+        columns = self.orbit_list._get_all_columns_from_sites(sites)
         for i in range(len(pm[0])):
             perm_sites = [pm[0][i], pm[-1][i]]
             translated_sites = \
@@ -283,16 +280,13 @@ class TestOrbitList(unittest.TestCase):
             symprec=self.symprec, position_tolerance=self.position_tolerance,
             fractional_position_tolerance=self.fractional_position_tolerance)
 
-        pm = orbit_list.matrix_of_equivalent_positions
-        column1 = [row[0] for row in pm]
-
         for orbit in orbit_list.orbits:
             # Set up all possible permutations
             allowed_perm = []
             all_perm = \
                 [list(perm) for perm in permutations(range(orbit.order))]
             # Get representative site of orbit
-            repr_sites = orbit.get_representative_sites()
+            repr_sites = orbit.sites_of_representative_cluster
             translated_sites = \
                 orbit_list._get_sites_translated_to_unitcell(repr_sites, False)
             for sites in translated_sites:
@@ -302,8 +296,7 @@ class TestOrbitList(unittest.TestCase):
                     # Get from all columns those sites at the rows
                     # where permuted sites is found in column1.
                     columns = \
-                        orbit_list._get_all_columns_from_sites(perm_sites,
-                                                               column1, pm)
+                        orbit_list._get_all_columns_from_sites(perm_sites)
                     # Any translated sites will be found in columns since
                     # permutation is not allowed
                     if perm not in orbit.allowed_permutations:
@@ -327,25 +320,18 @@ class TestOrbitList(unittest.TestCase):
             symprec=self.symprec, position_tolerance=self.position_tolerance,
             fractional_position_tolerance=self.fractional_position_tolerance)
 
-        pm = orbit_list.matrix_of_equivalent_positions
-        column1 = [row[0] for row in pm]
-
         for orbit in orbit_list.orbits:
             match_repr_site = False
             # Take representative sites and translate them into unitcell
-            repr_sites = orbit.get_representative_sites()
+            repr_sites = orbit.sites_of_representative_cluster
             # Take equivalent sites and its permutations_to_representative
-            for eq_sites, perm in zip(orbit.equivalent_sites,
+            for eq_sites, perm in zip(orbit.equivalent_clusters,
                                       orbit.permutations_to_representative):
-                trans_eq_sites = \
-                    orbit_list._get_sites_translated_to_unitcell(eq_sites,
-                                                                 False)
+                trans_eq_sites = orbit_list._get_sites_translated_to_unitcell(eq_sites, False)
                 # Permute equivalent sites and get all columns from those sites
                 for sites in trans_eq_sites:
                     perm_sites = get_permutation(sites, perm)
-                    columns = \
-                        orbit_list._get_all_columns_from_sites(perm_sites,
-                                                               column1, pm)
+                    columns = orbit_list._get_all_columns_from_sites(perm_sites)
                     # Check representative sites can be found in columns
                     if repr_sites in columns:
                         match_repr_site = True

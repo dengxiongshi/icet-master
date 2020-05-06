@@ -77,8 +77,9 @@ def generate_target_structure_from_supercells(cluster_space: ClusterSpace,
     valid_supercells = []
     warning_issued = False
     for supercell in supercells:
+        supercell_copy = supercell.copy()
         try:
-            occupy_structure_randomly(supercell, cluster_space,
+            occupy_structure_randomly(supercell_copy, cluster_space,
                                       target_concentrations)
         except ValueError:
             if not warning_issued:
@@ -86,8 +87,8 @@ def generate_target_structure_from_supercells(cluster_space: ClusterSpace,
                                'target concentrations.')
                 warning_issued = True
             continue
-        valid_supercells.append(supercell)
-        calculators.append(TargetVectorCalculator(supercell, cluster_space,
+        valid_supercells.append(supercell_copy)
+        calculators.append(TargetVectorCalculator(supercell_copy, cluster_space,
                                                   target_cluster_vector,
                                                   optimality_weight=optimality_weight,
                                                   optimality_tol=tol))

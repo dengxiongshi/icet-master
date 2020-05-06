@@ -24,7 +24,7 @@ def _is_sites_in_orbit(orbit: Orbit, sites: List[LatticeSite]) -> bool:
     if len(sites) != orbit.order:
         return False
 
-    equivalent_sites = orbit.get_equivalent_sites()
+    equivalent_sites = orbit.equivalent_clusters
 
     # Check if the set of lattice sites is found among the equivalent sites
     if set(sites) in [set(es) for es in equivalent_sites]:
@@ -82,11 +82,11 @@ def get_transformation_matrix(structure: Atoms,
     transformation[0, 0] = 1.0
     for i, orb_index in enumerate(orbit_indices, 1):
         orbit = full_orbit_list.get_orbit(orb_index)
-        rep_sites = orbit.get_representative_sites()
+        repr_sites = orbit.sites_of_representative_cluster
         # add contributions to the lower order orbits to which the
         # subclusters belong
         for sub_order in range(orbit.order + 1):
-            n_terms_target = len(list(combinations(rep_sites, sub_order)))
+            n_terms_target = len(list(combinations(repr_sites, sub_order)))
             n_terms_actual = 0
             if sub_order == 0:
                 transformation[0, i] += 1.0
@@ -95,7 +95,7 @@ def get_transformation_matrix(structure: Atoms,
                 transformation[i, i] += (-2.0) ** (sub_order)
                 n_terms_actual += 1
             else:
-                comb_sub_sites = combinations(rep_sites, sub_order)
+                comb_sub_sites = combinations(repr_sites, sub_order)
                 for sub_sites in comb_sub_sites:
                     for j, sub_index in enumerate(orbit_indices, 1):
                         sub_orbit = full_orbit_list.get_orbit(sub_index)

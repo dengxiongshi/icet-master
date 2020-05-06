@@ -85,7 +85,7 @@ def time_orbit_sites_permutations(orbit, iterations=5000):
 
     t = time.process_time()
     for i in range(iterations):
-        orbit.permuted_sites
+        orbit.permuted_equivalent_clusters
 
     total_time = time.process_time() - t
     return total_time / iterations

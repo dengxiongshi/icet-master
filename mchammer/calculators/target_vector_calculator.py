@@ -58,7 +58,7 @@ class TargetVectorCalculator(BaseCalculator):
                  optimality_weight: float = 1.0,
                  optimality_tol: float = 1e-5,
                  name: str = 'Target vector calculator') -> None:
-        super().__init__(structure=structure, name=name)
+        super().__init__(name=name)
 
         if len(target_vector) != len(cluster_space):
             raise ValueError('Cluster space and target vector '
@@ -84,6 +84,8 @@ class TargetVectorCalculator(BaseCalculator):
             self.orbit_data = None
 
         self._cluster_space = cluster_space
+        self._structure = structure
+        self._sublattices = self._cluster_space.get_sublattices(structure)
 
     def calculate_total(self, occupations: List[int]) -> float:
         """
@@ -95,8 +97,8 @@ class TargetVectorCalculator(BaseCalculator):
         occupations
             the entire occupation vector (i.e. list of atomic species)
         """
-        self.structure.set_atomic_numbers(occupations)
-        cv = self.cluster_space.get_cluster_vector(self.structure)
+        self._structure.set_atomic_numbers(occupations)
+        cv = self.cluster_space.get_cluster_vector(self._structure)
         return compare_cluster_vectors(cv, self.target_vector,
                                        self.orbit_data,
                                        weights=self.weights,
@@ -113,8 +115,7 @@ class TargetVectorCalculator(BaseCalculator):
     @property
     def sublattices(self) -> Sublattices:
         """Sublattices of the calculators structure."""
-        sl = self.cluster_space.get_sublattices(self.structure)
-        return sl
+        return self._sublattices
 
 
 def compare_cluster_vectors(cv_1: np.ndarray, cv_2: np.ndarray,

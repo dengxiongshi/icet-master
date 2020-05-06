@@ -55,15 +55,15 @@ void ClusterCounts::countOrbitList(const Structure &structure, const OrbitList &
         representativeCluster.setTag(i);
         if (permuteSites && keepOrder && representativeCluster.order() != 1)
         {
-            count(structure, orbitList.getOrbit(i).getPermutedEquivalentSites(), representativeCluster, keepOrder);
+            count(structure, orbitList.getOrbit(i).getPermutedEquivalentClusters(), representativeCluster, keepOrder);
         }
         else if (!permuteSites && keepOrder && representativeCluster.order() != 1)
         {
-            count(structure, orbitList._orbits[i]._equivalentSites, representativeCluster, keepOrder);
+            count(structure, orbitList._orbits[i]._equivalentClusters, representativeCluster, keepOrder);
         }
         else
         {
-            count(structure, orbitList._orbits[i]._equivalentSites, representativeCluster, keepOrder);
+            count(structure, orbitList._orbits[i]._equivalentClusters, representativeCluster, keepOrder);
         }
     }
 }

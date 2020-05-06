@@ -344,21 +344,21 @@ class ClusterSpace(_ClusterSpace):
             orbit_index = multi_component_vectors_by_orbit[0]
             mc_vector = multi_component_vectors_by_orbit[1]
             orbit = self.get_orbit(orbit_index)
-            rep_sites = orbit.get_representative_sites()
+            repr_sites = orbit.sites_of_representative_cluster
             orbit_sublattices = '-'.join(
                 [sublattices[sublattices.get_sublattice_index(ls.index)].symbol
-                 for ls in rep_sites])
+                 for ls in repr_sites])
             local_Mi = self.get_number_of_allowed_species_by_site(
-                self._get_primitive_structure(), orbit.representative_sites)
+                self._get_primitive_structure(), orbit.sites_of_representative_cluster)
             mc_vectors = orbit.get_mc_vectors(local_Mi)
             mc_permutations = self.get_multi_component_vector_permutations(
                 mc_vectors, orbit_index)
             mc_index = mc_vectors.index(mc_vector)
             mc_permutations_multiplicity = len(mc_permutations[mc_index])
-            cluster = self.get_orbit(orbit_index).get_representative_cluster()
+            cluster = self.get_orbit(orbit_index).representative_cluster
 
             multiplicity = len(self.get_orbit(
-                orbit_index).get_equivalent_sites())
+                orbit_index).equivalent_clusters)
             record = OrderedDict([('index', index),
                                   ('order', cluster.order),
                                   ('radius', cluster.radius),
@@ -430,7 +430,7 @@ class ClusterSpace(_ClusterSpace):
         if not (orbit_index in range(len(self._orbit_list))):
             raise ValueError('The input orbit index is not in the list of possible values.')
 
-        lattice_sites = self._orbit_list.get_orbit(orbit_index).representative_sites
+        lattice_sites = self._orbit_list.get_orbit(orbit_index).sites_of_representative_cluster
         positions = []
 
         for site in lattice_sites:
@@ -499,7 +499,7 @@ class ClusterSpace(_ClusterSpace):
         orbit = self.orbit_list.orbits[orbit_index]
 
         indices = [
-            lattice_site.index for lattice_site in orbit.representative_sites]
+            lattice_site.index for lattice_site in orbit.sites_of_representative_cluster]
 
         allowed_species = [self.chemical_symbols[index] for index in indices]
 
@@ -569,7 +569,7 @@ class ClusterSpace(_ClusterSpace):
             fractional_position_tolerance=self.fractional_position_tolerance)
         orbit_indices = set()
         for orbit in ol.orbits:
-            for sites in orbit.get_equivalent_sites():
+            for sites in orbit.equivalent_clusters:
                 indices = tuple(sorted([site.index for site in sites]))
                 if indices in orbit_indices:
                     return True
