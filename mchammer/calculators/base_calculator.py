@@ -19,7 +19,7 @@ class BaseCalculator(ABC):
         pass
 
     @abstractmethod
-    def calculate_local_contribution(self):
+    def calculate_change(self):
         pass
 
     @property

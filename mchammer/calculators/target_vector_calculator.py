@@ -105,12 +105,8 @@ class TargetVectorCalculator(BaseCalculator):
                                        optimality_weight=self.optimality_weight,
                                        tol=self.optimality_tol)
 
-    def calculate_local_contribution(self, local_indices, occupations: List[int]) -> float:
-        """
-        Not yet implemented, forwards calculation to
-        calculate_total.
-        """
-        return self.calculate_total(occupations)
+    def calculate_change(self):
+        raise NotImplementedError
 
     @property
     def sublattices(self) -> Sublattices:

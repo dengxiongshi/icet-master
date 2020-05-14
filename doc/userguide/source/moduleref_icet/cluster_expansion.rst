@@ -9,3 +9,4 @@ Cluster expansions
    :members:
    :undoc-members:
    :inherited-members:
+   :noindex:

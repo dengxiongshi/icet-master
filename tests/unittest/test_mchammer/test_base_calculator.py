@@ -10,8 +10,8 @@ class ConcreteCalculator(BaseCalculator):
     def calculate_total(self):
         super().calculate_total()
 
-    def calculate_local_contribution(self):
-        super().calculate_local_contribution()
+    def calculate_change(self):
+        super().calculate_change()
 
 
 class TestBaseCalculator(unittest.TestCase):
@@ -32,9 +32,9 @@ class TestBaseCalculator(unittest.TestCase):
         """Tests calculate total."""
         self.calculator.calculate_total()
 
-    def test_calculate_local_contribution(self):
+    def test_calculate_change(self):
         """Tests calculate local contribution."""
-        self.calculator.calculate_local_contribution()
+        self.calculator.calculate_change()
 
 
 if __name__ == '__main__':

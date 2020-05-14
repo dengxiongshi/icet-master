@@ -35,15 +35,15 @@ allows one to express :math:`Q` in the form [Wal09]_
    J_\alpha
    \left<\Gamma_{\alpha'}(\boldsymbol{\sigma})\right>_{\alpha}.
 
-Here, the sum extends over all symmetry equivalent clusters  (:term:`orbit`)
-:math:`\alpha`, :math:`m_{\alpha}` denotes the  multiplicity [#]_ whereas the
-coefficients :math:`J_{\alpha}` are the  so-called effective cluster
-interactions (ECIs). The last term in the  above expression represents the
-average over cluster functions  :math:`\Gamma_{\alpha}(\boldsymbol{\sigma})`
-belonging to symmetry  equivalent clusters (:term:`orbits`). The cluster
-functions  themselves are obtained as a product over point functions
-:math:`\Theta`. In :program:`icet`, the point functions from [Wal09]_ are
-used:
+Here, the sum extends over all symmetry equivalent clusters
+(:term:`orbit`) :math:`\alpha`, :math:`m_{\alpha}` denotes the
+multiplicity, whereas the coefficients :math:`J_{\alpha}` are the
+so-called effective cluster interactions (:term:`ECIs`). The last term
+in the above expression represents the average over cluster functions
+:math:`\Gamma_{\alpha}(\boldsymbol{\sigma})` belonging to symmetry
+equivalent clusters. The cluster functions themselves are obtained as
+a product over point functions :math:`\Theta`. In :program:`icet`, the
+point functions from [Wal09]_ are used:
 
 .. math::
     
@@ -59,10 +59,6 @@ numbers. For further details, please consult [Wal09]_ or [AngMunRah19]_.
 
 In :program:`icet`, the formalism is handled internally by the
 :class:`ClusterSpace <icet.ClusterSpace>` class.
-
-.. [#] Note that some authors include :math:`m_{\alpha}` in the
-       symmetrized product over cluster functions
-       :math:`\left<\Gamma_{\alpha'}(\boldsymbol{\sigma})\right>_{\alpha}`.
 
 
 .. index::
@@ -80,8 +76,11 @@ where :math:`\boldsymbol{Q}` is the vector of target properties, the
 vector :math:`\boldsymbol{J}` represents the ECIs, and
 :math:`\mathbf{\bar{\Pi}}` is a matrix that is obtained by stacking
 the vectors that represent each structure (also referred to in this
-documentation as cluster vectors) of the training set. This problem
-can be approached by choosing the number of structures
+documentation as cluster vectors) of the training set. Here, the
+multiplicities :math:`m_{\alpha}` have been included in 
+:math:`\mathbf{\bar{\Pi}}`.
+
+This problem can be approached by choosing the number of structures
 :math:`n_{\boldsymbol{Q}}` (and thus the dimensionality of
 :math:`\boldsymbol{Q}`), to be (much) larger than the number of ECIs
 :math:`n_{\boldsymbol{J}}` (and thus the dimensionality of

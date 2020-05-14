@@ -47,7 +47,7 @@ test_benchmarks_examples:
   dependencies:
     - build_linux
   script:
-    - for f in benchmark/*.py; do python3 "$f"; done
+    - for f in benchmark/*.py; do python3 -u "$f"; done
     - pwd=`pwd`
     - |
       for dir in `find examples -name '*.py' | xargs gdirname | sort -uk1` ; do

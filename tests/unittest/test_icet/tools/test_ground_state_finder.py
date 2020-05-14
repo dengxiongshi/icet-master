@@ -36,7 +36,7 @@ from ase.db import connect as db_connect
 from icet import ClusterExpansion, ClusterSpace
 from icet.core.local_orbit_list_generator import LocalOrbitListGenerator
 from icet.core.structure import Structure
-from icet.tools.variable_transformation import (transform_ECIs, get_transformation_matrix)
+from icet.tools.variable_transformation import (transform_parameters, get_transformation_matrix)
 try:
     import icet.tools.ground_state_finder
 except ImportError as ex:
@@ -527,11 +527,11 @@ class TestGroundStateFinderInactiveSublatticeSameSpecies(unittest.TestCase):
         self.assertEqual(target, gsf._nclusters_per_orbit)
 
 
-class TestGroundStateFinderZeroECI(unittest.TestCase):
-    """Container for test of the class functionality for a system with a zero ECI."""
+class TestGroundStateFinderZeroParameter(unittest.TestCase):
+    """Container for test of the class functionality for a system with a zero parameter."""
 
     def __init__(self, *args, **kwargs):
-        super(TestGroundStateFinderZeroECI, self).__init__(*args, **kwargs)
+        super(TestGroundStateFinderZeroParameter, self).__init__(*args, **kwargs)
         self.chemical_symbols = ['Ag', 'Au']
         self.cutoffs = [4.3]
         self.structure_prim = bulk(self.chemical_symbols[1], a=4.0)
@@ -541,13 +541,13 @@ class TestGroundStateFinderZeroECI(unittest.TestCase):
                                        Structure.from_atoms(self.structure_prim),
                                        self.cs.fractional_position_tolerance)
         full_orbit_list = lolg.generate_full_orbit_list()
-        binary_ecis_zero = transform_ECIs(self.structure_prim, full_orbit_list,
-                                          nonzero_ce.parameters)
-        binary_ecis_zero[1] = 0
+        binary_parameters_zero = transform_parameters(self.structure_prim, full_orbit_list,
+                                                      nonzero_ce.parameters)
+        binary_parameters_zero[1] = 0
         A = get_transformation_matrix(self.structure_prim, full_orbit_list)
         Ainv = np.linalg.inv(A)
-        zero_ecis = np.dot(Ainv, binary_ecis_zero)
-        self.ce = ClusterExpansion(self.cs, zero_ecis)
+        zero_parameters = np.dot(Ainv, binary_parameters_zero)
+        self.ce = ClusterExpansion(self.cs, zero_parameters)
         self.all_possible_structures = []
         self.supercell = self.structure_prim.repeat(2)
         for i in range(len(self.supercell)):
@@ -601,8 +601,8 @@ class TestGroundStateFinderTriplets(unittest.TestCase):
         structure_prim.wrap()
         self.structure_prim = structure_prim
         self.cs = ClusterSpace(self.structure_prim, self.cutoffs, self.chemical_symbols)
-        ecis = [0.0] * 4 + [0.1] * 6 + [-0.02] * 11
-        self.ce = ClusterExpansion(self.cs, ecis)
+        parameters = [0.0] * 4 + [0.1] * 6 + [-0.02] * 11
+        self.ce = ClusterExpansion(self.cs, parameters)
         self.all_possible_structures = []
         self.supercell = self.structure_prim.repeat((2, 2, 1))
         for i in range(len(self.supercell)):
@@ -672,8 +672,8 @@ class TestGroundStateFinderTwoActiveSublattices(unittest.TestCase):
         self.structure_prim = structure_prim
         self.cs = ClusterSpace(self.structure_prim, self.cutoffs,
                                self.chemical_symbols)
-        ecis = [0.1, -0.45, 0.333, 2, -1.42, 0.98]
-        self.ce = ClusterExpansion(self.cs, ecis)
+        parameters = [0.1, -0.45, 0.333, 2, -1.42, 0.98]
+        self.ce = ClusterExpansion(self.cs, parameters)
         self.all_possible_structures = []
         self.supercell = self.structure_prim.repeat(2)
         self.sl1_indices = [s for s, sym in enumerate(self.supercell.get_chemical_symbols()) if

@@ -111,11 +111,11 @@ def get_transformation_matrix(structure: Atoms,
     return transformation
 
 
-def transform_ECIs(structure: Atoms,
-                   full_orbit_list: OrbitList,
-                   ecis: np.ndarray) -> np.ndarray:
+def transform_parameters(structure: Atoms,
+                         full_orbit_list: OrbitList,
+                         parameters: np.ndarray) -> np.ndarray:
     """
-    Transforms the list of ECIs, obtained using cluster functions in the
+    Transforms the list of parameters, obtained using cluster functions in the
     form of of spin variables, (:math:`\\sigma_i\\in\\{-1,1\\}`), to their
     equivalents for the case of binary variables,
     (:math:`x_i\\in\\{0,1\\}`).
@@ -126,8 +126,8 @@ def transform_ECIs(structure: Atoms,
         atomic configuration
     full_orbit_list
         full orbit list
-    ecis
-        spin variable ECIs
+    parameters
+        parameter vector (spin variables)
     """
     A = get_transformation_matrix(structure, full_orbit_list)
-    return np.dot(A, ecis)
+    return np.dot(A, parameters)

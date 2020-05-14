@@ -176,18 +176,18 @@ class TestEnsemble(unittest.TestCase):
                                  random_seed=42)
         ens.run(10)  # Run to get something in the data container
 
-        # Stepping away from window should not be allowed
-        self.assertFalse(ens._acceptance_condition(10))
-
         # Approaching the window should always be allowed
         self.assertTrue(ens._acceptance_condition(-10))
+
+        # Stepping far away from window should not be allowed
+        self.assertFalse(ens._acceptance_condition(10000.0))
 
         # Do the same thing from below
         ens._potential = -100
         self.assertTrue(ens._acceptance_condition(10))
-        self.assertFalse(ens._acceptance_condition(-10))
+        self.assertFalse(ens._acceptance_condition(-10000.0))
 
-        # Take a step that would be accepted due to entropy but accepted
+        # Take a step that would be rejected due to entropy but accepted
         # because it takes us closer to window
         self.assertEqual(ens._potential, -90)
         ens._histogram[-80] = 1e9
@@ -195,13 +195,24 @@ class TestEnsemble(unittest.TestCase):
         self.assertTrue(ens._acceptance_condition(10))
 
         # Take a step that would be accepted due to entropy but rejected
-        # because it takes us closer to window
+        # because it takes us away to window
         self.assertEqual(ens._potential, -80)
-        ens._histogram[-80] = 1
-        ens._entropy[-80] = 1
-        ens._histogram[-90] = 100
-        ens._entropy[-90] = 100
-        self.assertFalse(ens._acceptance_condition(-10))
+        ens._histogram[-80] = 100
+        ens._entropy[-80] = 100
+        ens._histogram[-10000] = 1
+        ens._entropy[-10000] = 1
+        self.assertFalse(ens._acceptance_condition(-9920))
+
+        # Stepping away should not be allowed if the penalty is high
+        ens._potential = -80
+        ens._histogram[-81] = 1
+        ens._entropy[-81] = 1
+        ens._window_search_penalty = 100
+        self.assertFalse(ens._acceptance_condition(-1))
+
+        # Stepping away should be allowed if the penalty is low
+        ens._window_search_penalty = 0.0001
+        self.assertTrue(ens._acceptance_condition(-1))
 
         # Finally step inside the window
         ens._potential = -59

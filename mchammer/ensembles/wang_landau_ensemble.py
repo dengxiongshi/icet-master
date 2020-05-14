@@ -110,6 +110,18 @@ class WangLandauEnsemble(BaseEnsemble):
         The histogram :math:`H(E)` is deemed sufficiently flat if
         :math:`H(E) > \\chi \\left<H(E)\\right>\\,\\forall
         E`. ``flatness_limit`` sets the parameter :math:`\\chi`.
+    window_search_penalty : float
+        If `energy_limit_left` and/or `energy_limit_right` have been
+        provided, a modified acceptance probability,
+        :math:`P=\\min\\{1,\\,\\exp[C_\\mathrm{WSP}(d_\\mathrm{new}-
+        d_\\mathrm{cur})]\\}`, will be used until a configuration is
+        found within the interval of interest. This parameter,
+        specifically, corresponds to :math:`C_\\mathrm{WSP}`, which
+        controls how strongly moves that lead to an increase in the
+        distance, i.e. difference in energy divided by the energy
+        spacing, to the energy window (:math:`d_\\mathrm{new}>
+        d_\\mathrm{cur}`) should be penalized. A higher value leads
+        to a lower acceptance probability for such moves.
     user_tag : str
         human-readable tag for ensemble [default: None]
     dc_filename : str
@@ -129,7 +141,7 @@ class WangLandauEnsemble(BaseEnsemble):
         period in units of seconds at which the data container is
         written to file; writing periodically to file provides both
         a way to examine the progress of the simulation and to back up
-        the data
+        the data [default: 600 s]
     trajectory_write_interval : int
         interval at which the current occupation vector of the atomic
         configuration is written to the data container.
@@ -181,6 +193,7 @@ class WangLandauEnsemble(BaseEnsemble):
                  fill_factor_limit: float = 1e-6,
                  flatness_check_interval: int = None,
                  flatness_limit: float = 0.8,
+                 window_search_penalty: float = 2.0,
                  user_tag: str = None,
                  dc_filename: str = None,
                  data_container: str = None,
@@ -212,14 +225,9 @@ class WangLandauEnsemble(BaseEnsemble):
         self._flatness_limit = flatness_limit
 
         # energy window
-        if energy_limit_left is None or np.isnan(energy_limit_left):
-            self._bin_left = None
-        else:
-            self._bin_left = self._get_bin_index(energy_limit_left)
-        if energy_limit_right is None or np.isnan(energy_limit_right):
-            self._bin_right = None
-        else:
-            self._bin_right = self._get_bin_index(energy_limit_right)
+        self._window_search_penalty = window_search_penalty
+        self._bin_left = self._get_bin_index(energy_limit_left)
+        self._bin_right = self._get_bin_index(energy_limit_right)
         if self._bin_left is not None and \
                 self._bin_right is not None and self._bin_left >= self._bin_right:
             raise ValueError('Invalid energy window: left boundary ({}, {}) must be'
@@ -242,6 +250,7 @@ class WangLandauEnsemble(BaseEnsemble):
         #  * flatness_check_interval
         #  * flatness_limit
         #  * entropy_write_frequency
+        #  * window_search_penalty
 
         # add species count to ensemble parameters
         symbols = set([symbol for sub in calculator.sublattices
@@ -453,23 +462,30 @@ class WangLandauEnsemble(BaseEnsemble):
             else:
                 # then reconsider accept/reject based on whether we
                 # approached the window or not
-                if (self._bin_left is not None and
-                   bin_cur < self._bin_left and bin_new < bin_old) or \
-                   (self._bin_right is not None and
-                   bin_cur > self._bin_right and bin_new > bin_old):
-                    # should be rejected
-                    if accept:
-                        # reset potential
-                        self._potential -= potential_diff
-                    bin_cur = bin_old
-                    accept = False
-                else:
+                dist_new = np.inf
+                dist_old = np.inf
+                if self._bin_left is not None:
+                    dist_new = min(dist_new, abs(bin_new - self._bin_left))
+                    dist_old = min(dist_old, abs(bin_old - self._bin_left))
+                if self._bin_right is not None:
+                    dist_new = min(dist_new, abs(bin_new - self._bin_right))
+                    dist_old = min(dist_old, abs(bin_old - self._bin_right))
+                assert dist_new < np.inf and dist_old < np.inf
+                exp_dist = np.exp((dist_old - dist_new) * self._window_search_penalty)
+                if exp_dist >= 1 or exp_dist >= self._next_random_number():
                     # should be accepted
                     if not accept:
                         # reset potential
                         self._potential += potential_diff
                     bin_cur = bin_new
                     accept = True
+                else:
+                    # should be rejected
+                    if accept:
+                        # reset potential
+                        self._potential -= potential_diff
+                    bin_cur = bin_old
+                    accept = False
 
         # update histograms and entropy counters
         self._update_entropy(bin_cur)

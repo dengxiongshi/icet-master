@@ -39,14 +39,14 @@ Optimization and machine learning
         algorithm provided by `scikit-learn
         <https://scikit-learn.org/stable/modules/linear_model.html#automatic-relevance-determination-ard>`_
 
-   Compressive sensing
+   compressive sensing
         `Compressive sensing (CS)
         <https://en.wikipedia.org/wiki/Compressed_sensing>`_, also known as
         compressive sampling, is an efficient method for constructing sparse
         solutions for linear systems.
 
    CV
-   Cross validation
+   cross validation
         `Cross validation (CV)
         <https://en.wikipedia.org/wiki/Cross-validation_(statistics)>`_
         is commonly employed to evaluated the transferability and accuracy of
@@ -58,7 +58,7 @@ Optimization and machine learning
         performing variable selection and regularization in problems in
         statistics and machine learning.
 
-   Kernel ridge regression
+   kernel ridge regression
         `Kernel ridge regression (KRR) <http://scikit-
         learn.org/stable/modules/kernel_ridge.html>`_ combines `ridge
         regression <https://en.wikipedia.org/wiki/Tikhonov_regularization>`_
@@ -71,7 +71,7 @@ Optimization and machine learning
         <https://en.wikipedia.org/wiki/Feature_selection>`_ process in model
         construction.
 
-   Regularization
+   regularization
         `Regularization
         <https://en.wikipedia.org/wiki/Regularization_(mathematics)>`_,
         is commonly used in machine learning to combat overfitting and
@@ -82,27 +82,26 @@ Crystal symmetry and clusters
 =============================
 .. glossary::
 
-   Crystal symmetry operation
+   crystal symmetry operation
         A crystal symmetry operation for a specific lattice means that the
         lattice is invariant under this operation. An operation comprises
         translational and rotational components.
 
-   Cluster
+   cluster
         A cluster is defined as a set of points on a lattice.
 
-   Cluster size
+   cluster size
         The size of a cluster (commonly refered to as the cluster radius) is
         defined as the average distance to the geometrical center of the cluster.
 
-   Cluster space
+   cluster space
         The set of clusters into which a structure can be decomposed.
 
-   Cutoff
+   cutoff
         Cutoffs define the longest allowed distance between two atoms in a
         cluster for each order.
 
-   Orbit
-   Orbits
+   orbit
         An orbit is defined as a set of symmetry equivalent clusters.
 
 
@@ -111,7 +110,7 @@ Cluster expansions
 ==================
 .. glossary::
 
-   Cluster expansion
+   cluster expansion
    CE
    CEs
    	     :ref:`Cluster expansions <cluster_expansions>` (CEs) provide a

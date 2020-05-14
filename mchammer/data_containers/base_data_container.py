@@ -234,7 +234,7 @@ class BaseDataContainer:
         local_tags = ['occupations' if tag == 'trajectory' else tag for tag in tags]
 
         for tag in local_tags:
-            if tag in 'mctrial':
+            if isinstance(tag, str) and tag in 'mctrial':
                 continue
             if tag not in self.observables:
                 raise ValueError('No observable named {} in data container'.format(tag))

@@ -92,36 +92,51 @@ class ClusterExpansionCalculator(BaseCalculator):
         cv = self.cpp_calc.get_full_cluster_vector(occupations)
         return np.dot(cv, self.cluster_expansion.parameters) * self._property_scaling
 
-    def calculate_local_contribution(self, *, local_indices: List[int],
-                                     occupations: List[int]) -> float:
+    def calculate_change(self, *, sites: List[int],
+                         current_occupations: List[int],
+                         new_site_occupations: List[int]) -> float:
         """
         Calculates and returns the sum of the contributions to the property
         due to the sites specified in `local_indices`
 
         Parameters
         ----------
-        local_indices
-            sites over which to sum up the local contribution
-        occupations
-            entire occupation vector
+        sites
+            index of sites at which occupations will be changed
+        current_occupations
+            entire occupation vector (atomic numbers) before change
+        new_site_occupations
+            atomic numbers after change at the sites defined by `sites`
         """
+        occupations = np.array(current_occupations)
+        new_site_occupations = np.array(new_site_occupations)
+
         if not self.use_local_energy_calculator:
-            return self.calculate_total(occupations=occupations)
+            e_before = self.calculate_total(occupations=occupations)
+            occupations[sites] = np.array(new_site_occupations)
+            e_after = self.calculate_total(occupations=occupations)
+            return e_after - e_before
 
         local_contribution = 0
-        exclude_indices = []  # type: List[int]
+        try:
+            exclude_indices = []  # type: List[int]
+            for index in sites:
+                local_contribution -= self._calculate_local_contribution(
+                    occupations=occupations, index=index,
+                    exclude_indices=exclude_indices)
+                exclude_indices.append(index)
 
-        for index in local_indices:
-            try:
+            occupations[sites] = np.array(new_site_occupations)
+            exclude_indices = []  # type: List[int]
+            for index in sites:
                 local_contribution += self._calculate_local_contribution(
                     occupations=occupations, index=index,
                     exclude_indices=exclude_indices)
-            except Exception as e:
-                msg = 'Caught exception {}. Try setting parameter '.format(e)
-                msg += 'use_local_energy_calculator to False in init'
-                raise RuntimeError(msg)
-
-            exclude_indices.append(index)
+                exclude_indices.append(index)
+        except Exception as e:
+            msg = 'Caught exception {}. Try setting parameter '.format(e)
+            msg += 'use_local_energy_calculator to False in init'
+            raise RuntimeError(msg)
 
         return local_contribution * self._property_scaling
 

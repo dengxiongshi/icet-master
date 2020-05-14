@@ -406,20 +406,9 @@ class BaseEnsemble(ABC):
         species
             new occupations (species) by atomic number
         """
-        current_species = self.configuration.occupations[sites]
-        current_property = self.calculator.calculate_local_contribution(
-            local_indices=sites,
-            occupations=self.configuration.occupations)
-
-        self.update_occupations(sites=sites, species=species)
-        new_property = self.calculator.calculate_local_contribution(
-            local_indices=sites,
-            occupations=self.configuration.occupations)
-        property_change = new_property - current_property
-
-        # Restore initial configuration
-        self.update_occupations(sites, current_species)
-        return property_change
+        return self.calculator.calculate_change(sites=sites,
+                                                current_occupations=self.configuration.occupations,
+                                                new_site_occupations=species)
 
     def _get_ensemble_data(self) -> dict:
         """ Returns the current calculator property. """

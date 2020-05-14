@@ -39,6 +39,5 @@ RUN \
     cloud_sptheme \
     sphinx \
     sphinx-rtd-theme \
-    sphinx_autodoc_typehints \
     sphinx_sitemap \
     sphinxcontrib-bibtex

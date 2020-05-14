@@ -215,6 +215,14 @@ This procedure is repeated 10 times (``number_of_splits``) [#]_.
   optimization algorithms are analyzed and compared in the advanced tutorial
   section.
 
+.. note::
+
+   The optimized parameters returned by the optimizer are actually
+   *not* the :term:`ECIs` but the :term:`ECIs` times the multiplicity
+   of the respective orbit. The distinction is handled internally but
+   it is something to be aware of when inspecting the parameters
+   directly.
+
 .. [#] You will likely see a few "Convergence errors" when executing this command.
        For the present purpose these can be ignored. They arise since the internal
        scikit-learn optimization loops have exceeded the number of iterations
@@ -229,16 +237,20 @@ it is finished, the results can be displayed by providing the
 the :func:`print` function, which gives the output shown below::
 
   ============== CrossValidationEstimator ==============
-  alpha_optimal                  : 4.524343e-05
+  alpha_optimal                  : 0.001944862
   fit_method                     : lasso
-  number_of_nonzero_parameters   : 54
-  number_of_parameters           : 173
-  number_of_splits               : 10
-  number_of_target_values        : 137
-  rmse_train                     : 0.00121032
-  rmse_train_final               : 0.001247321
-  rmse_validation                : 0.002371993
+  n_nonzero_parameters           : 40
+  n_parameters                   : 55
+  n_splits                       : 10
+  n_target_values                : 625
+  parameters_norm                : 0.06954891
+  rmse_train                     : 0.002077373
+  rmse_train_final               : 0.002085274
+  rmse_validation                : 0.002267498
+  seed                           : 42
+  shuffle                        : True
   standardize                    : True
+  target_values_std              : 0.01486413
   validation_method              : k-fold
   ======================================================
 
@@ -275,39 +287,49 @@ Information regarding the parameters and associated cluster space
 can be displayed by using the :func:`print` function with the
 :class:`ClusterExpansion <icet.ClusterExpansion>` object as input argument::
 
-  =================================== Cluster Expansion ====================================
-   chemical species: Pd Ag
-   cutoffs: 8.5000 8.5000 7.5000
-   total number of orbits: 173
-   number of orbits by order: 0= 1  1= 1  2= 8  3= 50  4= 113
-  ------------------------------------------------------------------------------------------
-  index | order |  radius  | multiplicity | orbit_index | multi_component_vector |    ECI
-  ------------------------------------------------------------------------------------------
-     0  |   0   |   0.0000 |        1     |      -1     |           .            |   -0.0438
-     1  |   1   |   0.0000 |        1     |       0     |          [0]           |   -0.0348
-     2  |   2   |   1.4460 |        6     |       1     |         [0, 0]         |     0.024
-     3  |   2   |   2.0450 |        3     |       2     |         [0, 0]         |     0.014
-     4  |   2   |   2.5046 |       12     |       3     |         [0, 0]         |    0.0174
-     5  |   2   |   2.8921 |        6     |       4     |         [0, 0]         |         0
-     6  |   2   |   3.2334 |       12     |       5     |         [0, 0]         |         0
-     7  |   2   |   3.5420 |        4     |       6     |         [0, 0]         |   0.00258
-     8  |   2   |   3.8258 |       24     |       7     |         [0, 0]         |  -0.00214
-     9  |   2   |   4.0900 |        3     |       8     |         [0, 0]         |        -0
+  ================================================ Cluster Expansion =================================================
+   space group                            : Fm-3m (225)
+   chemical species                       : ['Ag', 'Pd'] (sublattice A)
+   cutoffs                                : 13.5000 6.0000 5.5000
+   total number of parameters             : 55
+   number of parameters by order          : 0= 1  1= 1  2= 25  3= 12  4= 16
+   fractional_position_tolerance          : 2e-06
+   position_tolerance                     : 1e-05
+   symprec                                : 1e-05
+   total number of nonzero parameters     : 40
+   number of nonzero parameters by order  : 0= 1  1= 1  2= 19  3= 10  4= 9 
+  --------------------------------------------------------------------------------------------------------------------
+  index | order |  radius  | multiplicity | orbit_index | multi_component_vector | sublattices | parameter |    ECI   
+  --------------------------------------------------------------------------------------------------------------------
+     0  |   0   |   0.0000 |        1     |      -1     |           .            |      .      |    -0.045 |    -0.045
+     1  |   1   |   0.0000 |        1     |       0     |          [0]           |      A      |   -0.0353 |   -0.0353
+     2  |   2   |   1.4460 |        6     |       1     |         [0, 0]         |     A-A     |    0.0285 |   0.00475
+     3  |   2   |   2.0450 |        3     |       2     |         [0, 0]         |     A-A     |    0.0134 |   0.00447
+     4  |   2   |   2.5046 |       12     |       3     |         [0, 0]         |     A-A     |    0.0172 |   0.00144
+     5  |   2   |   2.8921 |        6     |       4     |         [0, 0]         |     A-A     |        -0 |        -0
+     6  |   2   |   3.2334 |       12     |       5     |         [0, 0]         |     A-A     |        -0 |        -0
+     7  |   2   |   3.5420 |        4     |       6     |         [0, 0]         |     A-A     |    0.0029 |  0.000724
+     8  |   2   |   3.8258 |       24     |       7     |         [0, 0]         |     A-A     |  -0.00178 | -7.41e-05
+     9  |   2   |   4.0900 |        3     |       8     |         [0, 0]         |     A-A     | -0.000288 |  -9.6e-05
    ...
-   163  |   4   |   3.4222 |       48     |     162     |      [0, 0, 0, 0]      | -8.84e-05
-   164  |   4   |   3.4327 |       48     |     163     |      [0, 0, 0, 0]      |        -0
-   165  |   4   |   3.4642 |       24     |     164     |      [0, 0, 0, 0]      |  0.000643
-   166  |   4   |   3.5420 |        2     |     165     |      [0, 0, 0, 0]      |        -0
-   167  |   4   |   3.5420 |        6     |     166     |      [0, 0, 0, 0]      |  -0.00109
-   168  |   4   |   3.5886 |       48     |     167     |      [0, 0, 0, 0]      |  -0.00143
-   169  |   4   |   3.6056 |       24     |     168     |      [0, 0, 0, 0]      |         0
-   170  |   4   |   3.6056 |       48     |     169     |      [0, 0, 0, 0]      | -0.000859
-   171  |   4   |   3.6577 |       24     |     170     |      [0, 0, 0, 0]      | -0.000354
-   172  |   4   |   3.8258 |       12     |     171     |      [0, 0, 0, 0]      |         0
-  ==========================================================================================
+    45  |   4   |   2.1691 |        8     |      44     |      [0, 0, 0, 0]      |   A-A-A-A   |         0 |         0
+    46  |   4   |   2.2295 |       24     |      45     |      [0, 0, 0, 0]      |   A-A-A-A   |        -0 |        -0
+    47  |   4   |   2.3434 |       48     |      46     |      [0, 0, 0, 0]      |   A-A-A-A   |        -0 |        -0
+    48  |   4   |   2.4193 |        8     |      47     |      [0, 0, 0, 0]      |   A-A-A-A   |   0.00101 |  0.000127
+    49  |   4   |   2.4222 |       24     |      48     |      [0, 0, 0, 0]      |   A-A-A-A   |         0 |         0
+    50  |   4   |   2.5046 |        6     |      49     |      [0, 0, 0, 0]      |   A-A-A-A   | -0.000682 | -0.000114
+    51  |   4   |   2.5657 |       48     |      50     |      [0, 0, 0, 0]      |   A-A-A-A   |        -0 |        -0
+    52  |   4   |   2.7676 |       48     |      51     |      [0, 0, 0, 0]      |   A-A-A-A   |  -0.00395 | -8.23e-05
+    53  |   4   |   2.7940 |       12     |      52     |      [0, 0, 0, 0]      |   A-A-A-A   |  0.000196 |  1.63e-05
+    54  |   4   |   2.8921 |        6     |      53     |      [0, 0, 0, 0]      |   A-A-A-A   | -0.000411 | -6.85e-05
+  ====================================================================================================================
 
-Finally, the CE is written to file in order to be reused in the following steps of the
-tutorial.
+Note that in the table above the parameters obtained from the
+optimizer and the :term:`ECIs` are shown separately, with the
+multiplication factor being the multiplicity of the respective orbit.
+
+Finally, the CE is written to file in order to be reused in the
+following steps of the tutorial.
 
 
 Source code

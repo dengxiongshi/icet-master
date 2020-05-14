@@ -6,9 +6,20 @@
     <meta property="og:title" content="icet" />
     <meta property="og:description" content="A Pythonic approach to cluster expansions." />
     <meta property="og:image" content="https://icet.materialsmodeling.org/_static/logo.png" />
-{% endblock %}
 
-{% set css_files = css_files + ["_static/custom.css"] %}
+    {% set css_files = css_files + ["_static/custom.css"] %}
+
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-163003818-4"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-163003818-4');
+    </script>
+
+{% endblock %}
 
 {% block footer %}
  <script type="text/javascript">
@@ -20,5 +31,24 @@
             $(this).parent().children(".header").toggleClass("open");
         })
     });
+</script>
+
+<script>
+    (function() {
+      if (!localStorage.getItem('cookieconsent')) {
+        var banner = document.createElement("div");
+        banner.innerHTML ='\
+        <div class="cookieconsent" style="position:fixed;padding:18px;left:0;bottom:0;background-color:#121212;color:#FFF;text-align:center;width:100%;z-index:99999;">\
+          This website uses cookies to gather general statistics about its usage. \
+          <a href="#" style="font-size: 90%; border-radius: 5px; background-color: #CCCCCC; padding: 2px 7px; margin-left: 1em; color:black;">Hide</a>\
+        </div>';
+        document.body.appendChild(banner);
+        document.querySelector('.cookieconsent a').onclick = function(e) {
+          e.preventDefault();
+          document.querySelector('.cookieconsent').style.display = 'none';
+          localStorage.setItem('cookieconsent', true);
+        };
+      }
+    })();
 </script>
 {% endblock %}

@@ -127,7 +127,8 @@ static std::map<std::string, int> strInt =
      {"uo", 118}};
 
 static std::map<int, std::string> intStr =
-    {{1, "H"},
+    {{0, "X"},
+     {1, "H"},
      {2, "He"},
      {3, "Li"},
      {4, "Be"},

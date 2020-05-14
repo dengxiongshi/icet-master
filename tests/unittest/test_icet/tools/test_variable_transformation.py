@@ -128,8 +128,8 @@ class TestVariableTransformationTriplets(unittest.TestCase):
         structure_prim.wrap()
         self.structure_prim = structure_prim
         self.cs = ClusterSpace(self.structure_prim, self.cutoffs, self.chemical_symbols)
-        ecis = [0.0] * 4 + [0.1] * 6 + [-0.02] * 11
-        self.ce = ClusterExpansion(self.cs, ecis)
+        parameters = [0.0] * 4 + [0.1] * 6 + [-0.02] * 11
+        self.ce = ClusterExpansion(self.cs, parameters)
         self.all_possible_structures = []
         self.supercell = self.structure_prim.repeat((2, 2, 1))
         for i in range(len(self.supercell)):

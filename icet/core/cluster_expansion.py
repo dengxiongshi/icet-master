@@ -16,34 +16,38 @@ from ase import Atoms
 
 
 class ClusterExpansion:
-    """Cluster expansions are obtained by combining a cluster space with
-    a set of effective cluster interactions (ECIs). Instances of this
-    class allow one to predict the property of interest for a given
-    structure.
+    """Cluster expansions are obtained by combining a cluster space with a set
+    of parameters, where the latter is commonly obtained by optimization.
+    Instances of this class allow one to predict the property of interest for
+    a given structure.
+
+    **Note:** Each element of the parameter vector corresponds to an
+    effective cluster interaction (ECI) multiplied by the multiplicity of the
+    underlying orbit.
 
     Attributes
     ----------
     cluster_space : icet.ClusterSpace
         cluster space that was used for constructing the cluster expansion
     parameters : np.ndarray
-        effective cluster interactions (ECIs)
+        parameter vector
 
     Example
     -------
     The following snippet illustrates the initialization and usage of
-    a ClusterExpansion object. Here, the ECIs are taken to be a list
+    a ClusterExpansion object. Here, the parameters are taken to be a list
     of ones. Usually, they would be obtained by training with
     respect to a set of reference data::
 
        >>> from ase.build import bulk
        >>> from icet import ClusterSpace, ClusterExpansion
 
-       >>> # create cluster expansion with fake ECIs
+       >>> # create cluster expansion with fake parameters
        >>> prim = bulk('Au')
        >>> cs = ClusterSpace(prim, cutoffs=[7.0, 5.0],
        ...                   chemical_symbols=[['Au', 'Pd']])
-       >>> ecis = len(cs) * [1.0]
-       >>> ce = ClusterExpansion(cs, ecis)
+       >>> parameters = len(cs) * [1.0]
+       >>> ce = ClusterExpansion(cs, parameters)
 
        >>> # make prediction for supercell
        >>> sc = prim.repeat(3)
@@ -62,7 +66,7 @@ class ClusterExpansion:
         cluster_space
             cluster space to be used for constructing the cluster expansion
         parameters
-            effective cluster interactions (ECIs)
+            parameter vector
         metadata : dict
             metadata dictionary, user-defined metadata to be stored together
             with cluster expansion. Will be pickled when CE is written to file.
@@ -110,12 +114,14 @@ class ClusterExpansion:
         """ Gets copy of cluster space on which cluster expansion is based """
         return self._cluster_space.copy()
 
-    @property
-    def parameters_as_dataframe(self) -> pd.DataFrame:
-        """ dataframe containing orbit data and ECIs """
+    def to_dataframe(self) -> pd.DataFrame:
+        """Returns representation of the cluster expansion in the form of a
+        DataFrame containing orbit information and effective cluster interactions
+        (ECIs)."""
         rows = self._cluster_space.orbit_data
-        for row, eci in zip(rows, self.parameters):
-            row['eci'] = eci
+        for row, param in zip(rows, self.parameters):
+            row['parameter'] = param
+            row['eci'] = param / row['multiplicity']
         return pd.DataFrame(rows)
 
     @property
@@ -125,7 +131,9 @@ class ClusterExpansion:
 
     @property
     def parameters(self) -> List[float]:
-        """ effective cluster interactions (ECIs) """
+        """ parameter vector; each element of the parameter vector corresponds
+        to an effective cluster interaction (ECI) multiplied by the
+        multiplicity of the respective orbit """
         return self._parameters
 
     @property
@@ -153,15 +161,15 @@ class ClusterExpansion:
 
     @property
     def primitive_structure(self) -> Atoms:
-        """ Primitive structure on which cluster expansion is based """
+        """ primitive structure on which cluster expansion is based """
         return self._cluster_space.primitive_structure.copy()
 
-    def plot_parameters(self, fname, orders=None):
+    def plot_ecis(self, orders=None):
         """ Plot ECIs for given orders, default plots for all orders """
 
         if orders is None:
             orders = self.orders
-        df = self.parameters_as_dataframe
+        df = self.to_dataframe()
 
         # plotting
         import matplotlib.pyplot as plt
@@ -174,7 +182,7 @@ class ClusterExpansion:
         ax.legend(loc='best')
         ax.set_xlabel('Radius')
         ax.set_ylabel('ECI')
-        fig.savefig(fname)
+        plt.show()
 
     def __len__(self) -> int:
         return len(self._parameters)
@@ -185,15 +193,15 @@ class ClusterExpansion:
         cluster_space_repr = self._cluster_space._get_string_representation(
             print_threshold, print_minimum).split('\n')
         # rescale width
-        eci_col_width = max(len('{:9.3g}'.format(max(self._parameters, key=abs))), len('ECI'))
-        width = len(cluster_space_repr[0]) + len(' | ') + eci_col_width
+        par_col_width = max(len('{:9.3g}'.format(max(self._parameters, key=abs))), len('ECI'))
+        width = len(cluster_space_repr[0]) + 2 * (len(' | ') + par_col_width)
 
         s = []  # type: List
         s += ['{s:=^{n}}'.format(s=' Cluster Expansion ', n=width)]
         s += [t for t in cluster_space_repr if re.search(':', t)]
 
-        # additional information about number of nonzero the ECIs
-        df = self.parameters_as_dataframe
+        # additional information about number of nonzero parameters
+        df = self.to_dataframe()
         orders = self.orders
         nzp_by_order = [np.count_nonzero(df[df.order == order].eci) for order in orders]
         assert sum(nzp_by_order) == np.count_nonzero(self.parameters)
@@ -206,7 +214,8 @@ class ClusterExpansion:
         # table header
         s += [''.center(width, '-')]
         t = [t for t in cluster_space_repr if 'index' in t]
-        t += ['{s:^{n}}'.format(s='ECI', n=eci_col_width)]
+        t += ['{s:^{n}}'.format(s='parameter', n=par_col_width)]
+        t += ['{s:^{n}}'.format(s='ECI', n=par_col_width)]
         s += [' | '.join(t)]
         s += [''.center(width, '-')]
 
@@ -221,8 +230,10 @@ class ClusterExpansion:
                 s += [' ...']
             pattern = r'^{:4}'.format(index)
             t = [t for t in cluster_space_repr if re.match(pattern, t)]
-            eci_value = '{:9.3g}'.format(self._parameters[index])
-            t += ['{s:^{n}}'.format(s=eci_value, n=eci_col_width)]
+            parameter = self._parameters[index]
+            t += ['{s:^{n}}'.format(s=f'{parameter:9.3g}', n=par_col_width)]
+            eci = parameter / self._cluster_space.orbit_data[index]['multiplicity']
+            t += ['{s:^{n}}'.format(s=f'{eci:9.3g}', n=par_col_width)]
             s += [' | '.join(t)]
             index += 1
         s += [''.center(width, '=')]
@@ -251,30 +262,30 @@ class ClusterExpansion:
         print(self._get_string_representation(print_threshold=print_threshold,
                                               print_minimum=print_minimum))
 
-    def prune(self, indices: List[int] = None, tol: float = 0):
+    def prune(self, indices: List[int] = None, tol: float = 0) -> None:
         """
-        Removes orbits from the cluster expansion (CE), for which the effective
-        cluster interactions (ECIs; parameters) are zero or close to zero.
-        This commonly reduces the computational cost for evaluating the CE and
-        is therefore recommended prior to using it in production. If the method
+        Removes orbits from the cluster expansion (CE), for which the absolute
+        values of the corresponding parameters are zero or close to zero. This
+        commonly reduces the computational cost for evaluating the CE and is
+        therefore recommended prior to using it in production. If the method
         is called without arguments orbits will be pruned, for which the ECIs
-        are strictly zero. Less restrictive pruning can be achived by setting
+        are strictly zero. Less restrictive pruning can be achieved by setting
         the `tol` keyword.
 
         Parameters
         ----------
         indices
-            indices to parameters to remove in the cluster expansion.
+            indices of parameters to remove from the cluster expansion.
         tol
-            orbits for which the absolute ECIs is/are within this
-            value will be pruned
+            all orbits will be pruned for which the absolute parameter value(s)
+            is/are within this tolerance
         """
 
         # find orbit indices to be removed
         if indices is None:
             indices = [i for i, param in enumerate(
                 self.parameters) if np.abs(param) <= tol and i > 0]
-        df = self.parameters_as_dataframe
+        df = self.to_dataframe()
         indices = list(set(indices))
 
         if 0 in indices:
@@ -296,7 +307,7 @@ class ClusterExpansion:
             np.arange(len(self._parameters)), safe_to_remove_params)]
         assert len(self._parameters) == len(self._cluster_space)
 
-    def write(self, filename: str):
+    def write(self, filename: str) -> None:
         """
         Writes ClusterExpansion object to file.
 

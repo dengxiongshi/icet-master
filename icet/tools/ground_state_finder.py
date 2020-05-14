@@ -7,7 +7,7 @@ from ase.data import chemical_symbols as periodic_table
 from .. import ClusterExpansion
 from ..core.local_orbit_list_generator import LocalOrbitListGenerator
 from ..core.structure import Structure
-from .variable_transformation import transform_ECIs
+from .variable_transformation import transform_parameters
 from ..input_output.logging_tools import logger
 from pkg_resources import VersionConflict
 
@@ -80,7 +80,7 @@ class GroundStateFinder:
 
         >>> # prepare cluster expansion
         >>> # the setup emulates a second nearest-neighbor (NN) Ising model
-        >>> # (zerolet and singlet ECIs are zero; only first and second neighbor
+        >>> # (zerolet and singlet parameters are zero; only first and second neighbor
         >>> # pairs are included)
         >>> prim = bulk('Au')
         >>> chemical_symbols = ['Ag', 'Au']
@@ -135,11 +135,11 @@ class GroundStateFinder:
             fractional_position_tolerance=self._fractional_position_tolerance)
         self._full_orbit_list = lolg.generate_full_orbit_list()
 
-        # Transform the ECIs
-        binary_ecis = transform_ECIs(primitive_structure,
-                                     self._full_orbit_list,
-                                     self._cluster_expansion.parameters)
-        self._transformed_parameters = binary_ecis
+        # Transform the parameters
+        binary_parameters = transform_parameters(primitive_structure,
+                                                 self._full_orbit_list,
+                                                 self._cluster_expansion.parameters)
+        self._transformed_parameters = binary_parameters
 
         # Build model
         if solver_name is None:
@@ -193,16 +193,16 @@ class GroundStateFinder:
         constraint_count = 0
         for i, cluster in enumerate(self._cluster_to_sites_map):
             orbit = self._cluster_to_orbit_map[i]
-            ECI = self._transformed_parameters[orbit + 1]
-            assert ECI != 0
+            parameter = self._transformed_parameters[orbit + 1]
+            assert parameter != 0
 
-            if len(cluster) < 2 or ECI < 0:  # no "downwards" pressure
+            if len(cluster) < 2 or parameter < 0:  # no "downwards" pressure
                 for atom in cluster:
                     model.add_constr(ys[i] <= xs[atom],
                                      'Decoration -> cluster {}'.format(constraint_count))
                     constraint_count += 1
 
-            if len(cluster) < 2 or ECI > 0:  # no "upwards" pressure
+            if len(cluster) < 2 or parameter > 0:  # no "upwards" pressure
                 model.add_constr(ys[i] >= 1 - len(cluster) +
                                  mip.xsum(xs[atom]
                                           for atom in cluster),
@@ -254,9 +254,9 @@ class GroundStateFinder:
             # Determine the sites and the orbit associated with each cluster
             for cluster in equivalent_clusters:
 
-                # Do not include clusters for which the ECI is 0
-                ECI = self._transformed_parameters[orb_index + 1]
-                if ECI == 0:
+                # Do not include clusters for which the parameter is 0
+                parameter = self._transformed_parameters[orb_index + 1]
+                if parameter == 0:
                     continue
 
                 # Add the the list of sites and the orbit to the respective cluster maps

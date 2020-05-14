@@ -14,7 +14,7 @@ class Constraints:
     Example
     -------
     The following example demonstrates fitting of a cluster expansion under the
-    constraint that ECI 2 and ECI 4 should be equal::
+    constraint that parameter 2 and parameter 4 should be equal::
 
         >>> from icet.tools import Constraints
         >>> from icet.fitting import Optimizer
