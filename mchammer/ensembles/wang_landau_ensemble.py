@@ -526,7 +526,7 @@ class WangLandauEnsemble(BaseEnsemble):
                     # reset histogram
                     self._histogram = dict.fromkeys(self._histogram, 0)
 
-    def _get_bin_index(self, energy: float) -> int:
+    def _get_bin_index(self, energy: float) -> Optional[int]:
         """ Returns bin index for histogram and entropy dictionaries. """
         return int(np.around(energy / self._energy_spacing))
 
