@@ -528,6 +528,8 @@ class WangLandauEnsemble(BaseEnsemble):
 
     def _get_bin_index(self, energy: float) -> Optional[int]:
         """ Returns bin index for histogram and entropy dictionaries. """
+        if energy is None or np.isnan(energy):
+            return None
         return int(np.around(energy / self._energy_spacing))
 
     def _allow_move(self, bin_cur: Optional[int], bin_new: int) -> bool:
@@ -704,7 +706,7 @@ def get_bins_for_parallel_simulations(n_bins: int,
     bounds = []
     for k, (energy_limit_left, energy_limit_right) in enumerate(zip(limits[:-1], limits[1:])):
         if energy_limit_left is not None and energy_limit_right is not None and \
-              (energy_limit_right - energy_limit_left) / energy_spacing < 2 * overlap:
+                (energy_limit_right - energy_limit_left) / energy_spacing < 2 * overlap:
             raise ValueError('Energy window too small. min/max: {}/{}'
                              .format(energy_limit_right, energy_limit_left) +
                              ' Try decreasing n_bins ({}) and/or overlap ({}).'
