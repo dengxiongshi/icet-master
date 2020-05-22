@@ -1,6 +1,7 @@
 """Definition of the Wang-Landau algorithm class."""
 
 import random
+import warnings
 
 from collections import OrderedDict
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -12,9 +13,6 @@ from ase import Atoms
 from .. import WangLandauDataContainer
 from ..calculators.base_calculator import BaseCalculator
 from .thermodynamic_base_ensemble import BaseEnsemble
-from icet.input_output.logging_tools import logger
-
-logger = logger.getChild('wang_landau_ensemble')
 
 
 class WangLandauEnsemble(BaseEnsemble):
@@ -374,7 +372,8 @@ class WangLandauEnsemble(BaseEnsemble):
             if `number_of_trial_steps` is not an int
         """
         if self.converged:
-            logger.warning('Convergence has already been reached.')
+            warnings.simplefilter('always', RuntimeWarning)
+            warnings.warn('Convergence has already been reached.', RuntimeWarning)
         else:
             super().run(number_of_trial_steps)
 

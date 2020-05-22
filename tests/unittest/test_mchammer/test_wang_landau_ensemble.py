@@ -424,11 +424,13 @@ class TestEnsemble(unittest.TestCase):
 
         # ensure that the simulation is not run if converged
         ens2._converged = True
-        ens2.run(10)
+        with self.assertWarns(RuntimeWarning) as context:
+            ens2.run(10)
+        self.assertIn('Convergence has already been reached', str(context.warning))
         self.assertEqual(ens1.step, ens2.step)
         self.assertEqual(len(ens1.data_container.data), len(ens2.data_container.data))
 
-        # ensure that the simulation is not run if converged
+        # ensure that the simulation runs if not converged
         ens2._converged = False
         ens2.run(10)
         self.assertEqual(ens1.step + 10, ens2.step)
