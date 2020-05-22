@@ -6,12 +6,9 @@ from ase import Atoms
 from ase.build import bulk
 
 from icet import ClusterExpansion, ClusterSpace
-from icet.input_output.logging_tools import set_log_config
 from mchammer.calculators import ClusterExpansionCalculator
 from mchammer.ensembles import WangLandauEnsemble
 from mchammer.observers.base_observer import BaseObserver
-
-set_log_config(level=100)
 
 
 class ConcreteObserver(BaseObserver):
