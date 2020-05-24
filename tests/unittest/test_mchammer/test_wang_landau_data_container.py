@@ -16,6 +16,23 @@ from mchammer.data_containers.wang_landau_data_container import (WangLandauDataC
 from mchammer.observers.base_observer import BaseObserver
 
 
+def _assertAlmostEqualList(self, retval, target, places=6):
+    """
+    Helper function that conducts an element-wise comparison of two lists.
+    """
+    self.assertIsInstance(retval, type(target))
+    self.assertEqual(len(retval), len(target))
+    for k, (r, t) in enumerate(zip(retval, target)):
+        s = ['element: {}'.format(k)]
+        s += ['retval: {} ({})'.format(r, type(r))]
+        s += ['target: {} ({})'.format(t, type(t))]
+        info = '   '.join(s)
+        self.assertAlmostEqual(r, t, places=places, msg=info)
+
+
+unittest.TestCase.assertAlmostEqualList = _assertAlmostEqualList
+
+
 class ConcreteObserver(BaseObserver):
     """Child class of BaseObserver created for testing."""
     def __init__(self, interval, tag='ConcreteObserver'):
@@ -257,7 +274,7 @@ class TestDataContainer(unittest.TestCase):
         target_entropy = np.array(list(self.entropy.values()))
         target_entropy -= np.min(target_entropy)
         target_entropy = target_entropy.tolist()
-        self.assertAlmostEqual(ret_entropy, target_entropy)
+        self.assertAlmostEqualList(ret_entropy, target_entropy)
 
         # test with fill factor limit
         fill_factor_limit = (self.fill_factor_history[20] + self.fill_factor_history[30]) / 2
@@ -274,7 +291,7 @@ class TestDataContainer(unittest.TestCase):
         target_entropy = np.array(list(self.entropy_history[30].values()))
         target_entropy -= np.min(target_entropy)
         target_entropy = target_entropy.tolist()
-        self.assertAlmostEqual(ret_entropy, target_entropy)
+        self.assertAlmostEqualList(ret_entropy, target_entropy)
 
         # test data container with fill factor limit but empty entropy history
         dc = self.prepareDataContainer()
@@ -335,13 +352,13 @@ class TestDataContainer(unittest.TestCase):
                     (isinstance(val, list) and isinstance(val[0], float)):
                 self.assertAlmostEqual(val, dc2._last_state[key])
             elif isinstance(val, dict) and isinstance(list(val.values())[0], float):
-                self.assertAlmostEqual(list(val.values()), list(dc2._last_state[key].values()))
+                self.assertAlmostEqualList(list(val.values()), list(dc2._last_state[key].values()))
         self.assertEqual(len(dc1.data), len(dc2.data))
         for col in dc1.data.columns:
             self.assertIn(col, dc2.data.columns)
             data1 = dc1.data[col].dropna().tolist()
             data2 = dc2.data[col].dropna().tolist()
-            self.assertAlmostEqual(data1, data2)
+            self.assertAlmostEqualList(data1, data2)
         os.remove(file_name)
 
     def test_get_density_of_states_wl(self):
@@ -386,7 +403,7 @@ class TestDataContainer(unittest.TestCase):
         target_entropy = np.array(list(self.entropy.values()))
         target_entropy -= np.min(target_entropy)
         target_entropy = target_entropy.tolist()
-        self.assertAlmostEqual(ret_entropy, target_entropy)
+        self.assertAlmostEqualList(ret_entropy, target_entropy)
 
         # test warning concerning underconverged data with multiple containers
         dcs = {1: self.prepareDataContainer(energy_limit_left=None, energy_limit_right=4),
@@ -440,7 +457,7 @@ class TestDataContainer(unittest.TestCase):
         target_entropy = np.array(list(self.entropy.values()))
         target_entropy -= np.min(target_entropy)
         target_entropy = target_entropy.tolist()
-        self.assertAlmostEqual(ret_entropy, target_entropy)
+        self.assertAlmostEqualList(ret_entropy, target_entropy)
 
         self.assertEqual(len(ret_binned), len(ret_single))
 
@@ -454,11 +471,12 @@ class TestDataContainer(unittest.TestCase):
         ret_single = ret[0]
         for key in ['energy', 'entropy', 'density']:
             self.assertIn(key, ret_single.columns)
+
         ret_entropy = ret_single.entropy.tolist()
         target_entropy = np.array(list(self.entropy_history[30].values()))
         target_entropy -= np.min(target_entropy)
         target_entropy = target_entropy.tolist()
-        self.assertAlmostEqual(ret_entropy, target_entropy)
+        self.assertAlmostEqualList(ret_entropy, target_entropy)
 
         # test overlapping data containers with fill factor limit
         fill_factor_limit = (self.fill_factor_history[20] + self.fill_factor_history[30]) / 2
@@ -471,15 +489,37 @@ class TestDataContainer(unittest.TestCase):
         self.assertIsInstance(ret[1], dict)
         ret_binned = ret[0]
         for key in ['energy', 'entropy', 'density']:
-            self.assertIn(key, ret_single.columns)
+            self.assertIn(key, ret_binned.columns)
 
-        ret_entropy = ret_single.entropy.tolist()
+        ret_entropy = ret_binned.entropy.tolist()
         target_entropy = np.array(list(self.entropy_history[30].values()))
         target_entropy -= np.min(target_entropy)
         target_entropy = target_entropy.tolist()
-        self.assertAlmostEqual(ret_entropy, target_entropy)
+        self.assertAlmostEqualList(ret_entropy, target_entropy)
 
         self.assertEqual(len(ret_binned), len(ret_single))
+
+        # test data containers with uneven overlap, 1 subset of 2
+        dcs = {1: self.prepareDataContainer(energy_limit_left=-12, energy_limit_right=-5),
+               2: self.prepareDataContainer(energy_limit_left=-15, energy_limit_right=0)}
+        with self.assertWarns(Warning) as context:
+            ret = get_density_of_states_wl(dcs, fill_factor_limit)
+        self.assertIn('Window 1 is a subset of 2',
+                      str(context.warning))
+        self.assertTrue(len(ret), 2)
+        self.assertIsInstance(ret[0], DataFrame)
+        self.assertIsInstance(ret[1], dict)
+        ret_binned = ret[0]
+        self.assertFalse(all(ret_binned.entropy.isna()))
+        for key in ['energy', 'entropy', 'density']:
+            self.assertIn(key, ret_binned.columns)
+
+        ret_entropy = ret_binned.entropy.tolist()
+        target_entropy = np.array([e for k, e in self.entropy_history[30].items()
+                                   if k > -15 and k < 0])
+        target_entropy -= np.min(target_entropy)
+        target_entropy = target_entropy.tolist()
+        self.assertAlmostEqualList(ret_entropy, target_entropy)
 
     def test_get_average_observables_wl(self):
         """Tests get_average_observables_wl function."""

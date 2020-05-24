@@ -403,6 +403,8 @@ def get_density_of_states_wl(dcs: Union[WangLandauDataContainer,
         for tag1, tag2 in zip(tags[:-1], tags[1:]):
             df1 = entropies[tag1]
             df2 = entropies[tag2]
+            if all(df2.energy.isin(df1.energy)):
+                warn('Window {} is a subset of {}'.format(tag2, tag1))
             left_lim = np.min(df2.energy)
             right_lim = np.max(df1.energy)
             if left_lim >= right_lim:
@@ -412,8 +414,8 @@ def get_density_of_states_wl(dcs: Union[WangLandauDataContainer,
                                  .format(tag1, tag2))
             df1_ = df1[(df1.energy >= left_lim) & (df1.energy <= right_lim)]
             df2_ = df2[(df2.energy >= left_lim) & (df2.energy <= right_lim)]
-            offset = np.average(df2_.entropy - df1_.entropy)
-            errors['{}-{}'.format(tag1, tag2)] = np.std(df2_.entropy - df1_.entropy)
+            offset = (df2_.entropy - df1_.entropy).mean()
+            errors['{}-{}'.format(tag1, tag2)] = (df2_.entropy - df1_.entropy).std()
             entropies[tag2].entropy = entropies[tag2].entropy - offset
 
         # compile entropy over the entire energy range
