@@ -13,12 +13,10 @@ from _icet import MatrixOfEquivalentPositions
 from icet.core.lattice_site import LatticeSite
 from icet.core.neighbor_list import get_neighbor_lists
 from icet.core.structure import Structure
-from icet.input_output.logging_tools import logger
 from icet.tools.geometry import (ase_atoms_to_spglib_cell,
                                  get_fractional_positions_from_neighbor_list,
                                  get_primitive_structure)
-
-logger = logger.getChild('matrix_of_equivalent_positions')
+import warnings
 
 
 def matrix_of_equivalent_positions_from_structure(structure: Atoms,
@@ -52,7 +50,7 @@ def matrix_of_equivalent_positions_from_structure(structure: Atoms,
     structure_prim = structure
     if find_primitive:
         structure_prim = get_primitive_structure(structure, symprec=symprec)
-    logger.debug('Size of primitive structure: {}'.format(len(structure_prim)))
+    print('Size of primitive structure: {}'.format(len(structure_prim)))
 
     # get symmetry information
     structure_as_tuple = ase_atoms_to_spglib_cell(structure_prim)
@@ -74,7 +72,7 @@ def matrix_of_equivalent_positions_from_structure(structure: Atoms,
     frac_positions = get_fractional_positions_from_neighbor_list(
         prim_icet_structure, neighbor_list)
 
-    logger.debug('Number of fractional positions: {}'.format(len(frac_positions)))
+    print('Number of fractional positions: {}'.format(len(frac_positions)))
     if frac_positions is not None:
         matrix_of_equivalent_positions.build(frac_positions)
 
@@ -125,16 +123,16 @@ def _get_lattice_site_matrix_of_equivalent_positions(
         if lattice_sites is not None:
             pm_lattice_sites.append(lattice_sites)
         else:
-            logger.warning('Unable to transform any element in a column of the'
-                           ' fractional permutation matrix to lattice site')
+            warnings.warn('Unable to transform any element in a column of the'
+                          ' fractional permutation matrix to lattice site')
     if prune:
-        logger.debug('Size of columns of the permutation matrix before'
-                     ' pruning {}'.format(len(pm_lattice_sites)))
+        print('Size of columns of the permutation matrix before'
+              ' pruning {}'.format(len(pm_lattice_sites)))
 
         pm_lattice_sites = _prune_matrix_of_equivalent_positions(pm_lattice_sites)
 
-        logger.debug('Size of columns of the permutation matrix after'
-                     ' pruning {}'.format(len(pm_lattice_sites)))
+        print('Size of columns of the permutation matrix after'
+              ' pruning {}'.format(len(pm_lattice_sites)))
 
     return pm_lattice_sites
 
@@ -155,8 +153,8 @@ def _prune_matrix_of_equivalent_positions(matrix_of_equivalent_positions: List[L
                 continue
             if matrix_of_equivalent_positions[i][0] == matrix_of_equivalent_positions[j][0]:
                 matrix_of_equivalent_positions.pop(j)
-                logger.debug('Removing duplicate in permutation matrix'
-                             'i: {} j: {}'.format(i, j))
+                print('Removing duplicate in permutation matrix'
+                      'i: {} j: {}'.format(i, j))
     return matrix_of_equivalent_positions
 
 

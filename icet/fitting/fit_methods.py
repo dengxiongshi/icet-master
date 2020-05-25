@@ -28,11 +28,8 @@ from sklearn.model_selection import ShuffleSplit
 from sklearn.feature_selection import RFE, RFECV
 from sklearn.preprocessing import StandardScaler
 from typing import Any, Dict, List, Union
-from ..input_output.logging_tools import logger
 from .split_bregman import fit_split_bregman
-
-
-logger = logger.getChild('fit_methods')
+import warnings
 
 
 def fit(X: np.ndarray,
@@ -74,7 +71,7 @@ def fit(X: np.ndarray,
     if check_condition and X.shape[0] >= X.shape[1]:
         cond = np.linalg.cond(X)
         if cond > 1e10:
-            logger.warning('Condition number is large, {}'.format(cond))
+            warnings.warn('Condition number is large, {}'.format(cond))
 
     if standardize:
 

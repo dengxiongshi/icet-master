@@ -8,9 +8,9 @@ from mchammer.calculators import (TargetVectorCalculator,
 from icet.tools import (enumerate_structures,
                         enumerate_supercells)
 from icet import ClusterSpace
-from icet.input_output.logging_tools import logger
 from ase import Atoms
 from ase.data import chemical_symbols as periodic_table
+import warnings
 
 
 def generate_target_structure_from_supercells(cluster_space: ClusterSpace,
@@ -83,8 +83,8 @@ def generate_target_structure_from_supercells(cluster_space: ClusterSpace,
                                       target_concentrations)
         except ValueError:
             if not warning_issued:
-                logger.warning('At least one supercell was not commensurate with the specified '
-                               'target concentrations.')
+                warnings.warn('At least one supercell was not commensurate with the specified '
+                              'target concentrations.')
                 warning_issued = True
             continue
         valid_supercells.append(supercell_copy)

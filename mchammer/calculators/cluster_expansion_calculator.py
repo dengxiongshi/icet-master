@@ -3,12 +3,12 @@ from typing import List, Union
 import numpy as np
 
 from _icet import _ClusterExpansionCalculator
-from icet.input_output.logging_tools import logger
 from ase import Atoms
 from icet import ClusterExpansion
 from icet.core.structure import Structure
 from icet.core.sublattices import Sublattices
 from mchammer.calculators.base_calculator import BaseCalculator
+import warnings
 
 
 class ClusterExpansionCalculator(BaseCalculator):
@@ -53,10 +53,10 @@ class ClusterExpansionCalculator(BaseCalculator):
         cluster_expansion.prune()
 
         if cluster_expansion._cluster_space.is_supercell_self_interacting(structure):
-            logger.warning('The ClusterExpansionCalculator self-interacts, '
-                           'which may lead to erroneous results. To avoid '
-                           'self-interaction, use a larger supercell or a '
-                           'cluster space with shorter cutoffs.')
+            warnings.warn('The ClusterExpansionCalculator self-interacts, '
+                          'which may lead to erroneous results. To avoid '
+                          'self-interaction, use a larger supercell or a '
+                          'cluster space with shorter cutoffs.')
 
         self.use_local_energy_calculator = use_local_energy_calculator
         if self.use_local_energy_calculator:

@@ -14,9 +14,6 @@ from icet.core.matrix_of_equivalent_positions import \
     _get_lattice_site_matrix_of_equivalent_positions, \
     matrix_of_equivalent_positions_from_structure
 from icet.core.structure import Structure
-from icet.input_output.logging_tools import logger
-
-logger = logger.getChild('orbit_list')
 
 
 class OrbitList(_OrbitList):
@@ -58,13 +55,13 @@ class OrbitList(_OrbitList):
                                                             find_primitive=False,
                                                             symprec=symprec)
 
-        logger.info('Done getting matrix_of_equivalent_positions.')
+        print('Done getting matrix_of_equivalent_positions.')
 
         # Get a list of neighbor-lists
         neighbor_lists = get_neighbor_lists(structure=prim_structure, cutoffs=cutoffs,
                                             position_tolerance=position_tolerance)
 
-        logger.info('Done getting neighbor lists.')
+        print('Done getting neighbor lists.')
 
         # Transform matrix_of_equivalent_positions to be in lattice site format
         pm_lattice_sites = _get_lattice_site_matrix_of_equivalent_positions(
@@ -73,15 +70,15 @@ class OrbitList(_OrbitList):
             fractional_position_tolerance=fractional_position_tolerance,
             prune=True)
 
-        logger.info('Transformation of matrix of equivalent positions'
-                    ' to lattice neighbor format completed.')
+        print('Transformation of matrix of equivalent positions'
+              ' to lattice neighbor format completed.')
 
         _OrbitList.__init__(self,
                             structure=prim_structure,
                             matrix_of_equivalent_sites=pm_lattice_sites,
                             neighbor_lists=neighbor_lists,
                             position_tolerance=position_tolerance)
-        logger.info('Finished construction of orbit list.')
+        print('Finished construction of orbit list.')
 
     @property
     def primitive_structure(self):

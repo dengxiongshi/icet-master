@@ -5,8 +5,6 @@ from .canonical_annealing import _cooling_exponential
 import numpy as np
 from typing import List
 import random
-from icet.input_output.logging_tools import logger
-logger = logger.getChild('target_cluster_vector_annealing')
 
 
 class TargetClusterVectorAnnealing:
@@ -47,8 +45,8 @@ class TargetClusterVectorAnnealing:
                              'are calculators ({} != {})'.format(len(structure),
                                                                  len(calculators)))
 
-        logger.info('Initializing target cluster vector annealing '
-                    'with {} supercells'.format(len(structure)))
+        print('Initializing target cluster vector annealing '
+              'with {} supercells'.format(len(structure)))
 
         # random number generator
         if random_seed is None:
@@ -100,13 +98,13 @@ class TargetClusterVectorAnnealing:
         self._accepted_trials = 0
         while self.total_trials < self.n_steps:
             if self._total_trials % 1000 == 0:
-                logger.info('MC step {}/{} ({} accepted trials, '
-                            'temperature {:.3f}), '
-                            'best score: {:.3f}'.format(self.total_trials,
-                                                        self.n_steps,
-                                                        self.accepted_trials,
-                                                        self.temperature,
-                                                        self.best_score))
+                print('MC step {}/{} ({} accepted trials, '
+                      'temperature {:.3f}), '
+                      'best score: {:.3f}'.format(self.total_trials,
+                                                  self.n_steps,
+                                                  self.accepted_trials,
+                                                  self.temperature,
+                                                  self.best_score))
             self._do_trial_step()
         return self.best_structure
 

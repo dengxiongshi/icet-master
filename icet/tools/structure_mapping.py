@@ -6,8 +6,8 @@ from ase import Atoms
 from ase.build import make_supercell
 from ase.geometry import get_distances
 from scipy.optimize import linear_sum_assignment
-from icet.input_output.logging_tools import logger
 import scipy.linalg
+import warnings as warn
 
 
 def calculate_strain_tensor(A: np.ndarray,
@@ -146,21 +146,21 @@ def map_structure_to_reference(structure: Atoms,
                               'eigenvalue_diff': 0.1}
         if abs(volumetric_strain) > trigger_levels['volumetric_strain']:
             warnings.append('high_volumetric_strain')
-            logger.warning('High volumetric strain ({:.2f} %). {}'.format(
+            warn.warn('High volumetric strain ({:.2f} %). {}'.format(
                 100 * volumetric_strain, s))
         if max(eigenvalues) - min(eigenvalues) > trigger_levels['eigenvalue_diff']:
             warnings.append('high_anisotropic_strain')
-            logger.warning('High anisotropic strain (the difference between '
-                           'largest and smallest eigenvalues of strain tensor is '
-                           '{:.5f}). {}'.format(max(eigenvalues) - min(eigenvalues), s))
+            warn.warn('High anisotropic strain (the difference between '
+                      'largest and smallest eigenvalues of strain tensor is '
+                      '{:.5f}). {}'.format(max(eigenvalues) - min(eigenvalues), s))
         if drmax > 1.0:
             warnings.append('large_maximum_relaxation_distance')
-            logger.warning('Large maximum relaxation distance '
-                           '({:.5f} Angstrom). {}'.format(drmax, s))
+            warn.warn('Large maximum relaxation distance '
+                      '({:.5f} Angstrom). {}'.format(drmax, s))
         if dravg > 0.5:
             warnings.append('large_average_relaxation_distance')
-            logger.warning('Large average relaxation distance '
-                           '({:.5f} Angstrom). {}'.format(dravg, s))
+            warn.warn('Large average relaxation distance '
+                      '({:.5f} Angstrom). {}'.format(dravg, s))
 
     # Populate dictionary with supplementary information
     info = {'drmax': drmax,
@@ -332,13 +332,13 @@ def _match_positions(structure: Atoms, reference: Atoms) -> Tuple[Atoms, float, 
             # distances to the next three available sites
             minimum_distances.append(sorted(dists[:, j])[:n_dist_max])
             if drs[0][0] > min(dists[:, j]) + 1e-6:
-                logger.warning('An atom was mapped to a site that was further '
-                               'away than the closest site (that site was already '
-                               'occupied by another atom).')
+                warn.warn('An atom was mapped to a site that was further '
+                          'away than the closest site (that site was already '
+                          'occupied by another atom).')
                 warning = 'possible_ambiguity_in_mapping'
             elif minimum_distances[-1][0] > 0.9 * minimum_distances[-1][1]:
-                logger.warning('An atom was approximately equally far from its '
-                               'two closest sites.')
+                warn.warn('An atom was approximately equally far from its '
+                          'two closest sites.')
                 warning = 'possible_ambiguity_in_mapping'
 
     displacement_magnitudes = np.array(displacement_magnitudes, dtype=np.float64)

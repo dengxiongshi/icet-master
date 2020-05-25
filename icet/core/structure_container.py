@@ -12,8 +12,6 @@ import ase.db
 from ase import Atoms
 
 from icet import ClusterSpace
-from icet.input_output.logging_tools import logger
-logger = logger.getChild('structure_container')
 
 
 class StructureContainer:
