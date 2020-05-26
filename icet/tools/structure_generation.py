@@ -10,7 +10,6 @@ from icet.tools import (enumerate_structures,
 from icet import ClusterSpace
 from ase import Atoms
 from ase.data import chemical_symbols as periodic_table
-import warnings
 
 
 def generate_target_structure_from_supercells(cluster_space: ClusterSpace,

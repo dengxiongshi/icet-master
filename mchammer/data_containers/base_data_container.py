@@ -8,7 +8,6 @@ import shutil
 import socket
 import tarfile
 import tempfile
-import warnings
 
 from collections import OrderedDict
 from datetime import datetime
@@ -435,12 +434,10 @@ class BaseDataContainer:
         return dc
 
     def get_data(self, *args, **kwargs):
-        warnings.simplefilter('always', DeprecationWarning)
-        warnings.warn('get_data is deprecated, use get instead', DeprecationWarning)
+        print('get_data is deprecated, use get instead')
         return self.get(*args, **kwargs)
 
     def get_trajectory(self, *args, **kwargs):
         """ Returns trajectory as a list of ASE Atoms objects."""
-        warnings.simplefilter('always', DeprecationWarning)
-        warnings.warn('get_trajectory is deprecated, use get instead', DeprecationWarning)
+        print('get_trajectory is deprecated, use get instead')
         return self.get('trajectory', *args, **kwargs)

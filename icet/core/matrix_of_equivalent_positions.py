@@ -16,7 +16,6 @@ from icet.core.structure import Structure
 from icet.tools.geometry import (ase_atoms_to_spglib_cell,
                                  get_fractional_positions_from_neighbor_list,
                                  get_primitive_structure)
-import warnings
 
 
 def matrix_of_equivalent_positions_from_structure(structure: Atoms,
@@ -123,8 +122,8 @@ def _get_lattice_site_matrix_of_equivalent_positions(
         if lattice_sites is not None:
             pm_lattice_sites.append(lattice_sites)
         else:
-            warnings.warn('Unable to transform any element in a column of the'
-                          ' fractional permutation matrix to lattice site')
+            print('Unable to transform any element in a column of the'
+                  ' fractional permutation matrix to lattice site')
     if prune:
         print('Size of columns of the permutation matrix before'
               ' pruning {}'.format(len(pm_lattice_sites)))

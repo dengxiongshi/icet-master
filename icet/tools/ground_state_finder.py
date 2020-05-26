@@ -9,7 +9,6 @@ from ..core.local_orbit_list_generator import LocalOrbitListGenerator
 from ..core.structure import Structure
 from .variable_transformation import transform_parameters
 from pkg_resources import VersionConflict
-import warnings
 
 try:
     import mip
@@ -380,7 +379,8 @@ class GroundStateFinder:
         # The status of the solution is printed to the screen
         if str(self._optimization_status) != 'OptimizationStatus.OPTIMAL':
             if str(self._optimization_status) == 'OptimizationStatus.FEASIBLE':
-                warnings.warn('Solution optimality not proven.')
+                if self._model.verbose > 0:
+                    print('Solution optimality not proven.')
             else:
                 raise Exception('Optimization failed ({0})'.format(str(self._optimization_status)))
 

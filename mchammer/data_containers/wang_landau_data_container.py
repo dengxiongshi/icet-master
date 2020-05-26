@@ -1,6 +1,5 @@
 """Definition of the Wang-Landau data container class."""
 
-from warnings import warn
 from collections import Counter, OrderedDict
 from typing import Any, BinaryIO, Counter as CounterType, Dict, List, Optional, TextIO, Tuple, Union
 
@@ -227,17 +226,17 @@ class WangLandauDataContainer(BaseDataContainer):
         """
 
         if 'entropy' not in self._last_state:
-            warn('There is no entropy information in the data container.')
+            print('There is no entropy information in the data container.')
             return None
         entropy = self._last_state['entropy']
         if fill_factor_limit is not None:
             if 'entropy_history' not in self._last_state or \
                     len(self._last_state['entropy_history']) == 0:
-                warn('The entropy history is empty.')
+                print('The entropy history is empty.')
                 return None
             if self._last_state['fill_factor'] > fill_factor_limit:
-                warn('The last fill factor {} is higher than the limit'
-                     ' {}.'.format(self.fill_factor, fill_factor_limit))
+                print('The last fill factor {} is higher than the limit'
+                      ' {}.'.format(self.fill_factor, fill_factor_limit))
                 return None
             for step, fill_factor in self._last_state['fill_factor_history'].items():
                 if fill_factor <= fill_factor_limit:
@@ -362,8 +361,8 @@ def get_density_of_states_wl(dcs: Union[WangLandauDataContainer,
                              ' the data container {}.'.format(dcs))
         errors = None
         if len(dcs.fill_factor_history) == 0 or dcs.fill_factor > 1e-4:
-            warn('The data container appears to contain data from an'
-                 ' underconverged Wang-Landau simulation.')
+            print('The data container appears to contain data from an'
+                  ' underconverged Wang-Landau simulation.')
 
     elif isinstance(dcs, dict) and isinstance(dcs[next(iter(dcs))], WangLandauDataContainer):
         # minimal consistency checks
@@ -383,8 +382,8 @@ def get_density_of_states_wl(dcs: Union[WangLandauDataContainer,
                                              tagref, dcref.ensemble_parameters['n_atoms'],
                                              tag, dc.ensemble_parameters['n_atoms']))
                 if len(dc.fill_factor_history) == 0 or dc.fill_factor > 1e-4:
-                    warn('Data container {} appears to contain data from an'
-                         ' underconverged Wang-Landau simulation.'.format(tag))
+                    print('Data container {} appears to contain data from an'
+                          ' underconverged Wang-Landau simulation.'.format(tag))
 
         # fetch raw entropy data from data containers
         entropies = {}
@@ -404,7 +403,7 @@ def get_density_of_states_wl(dcs: Union[WangLandauDataContainer,
             df1 = entropies[tag1]
             df2 = entropies[tag2]
             if all(df2.energy.isin(df1.energy)):
-                warn('Window {} is a subset of {}'.format(tag2, tag1))
+                print('Window {} is a subset of {}'.format(tag2, tag1))
             left_lim = np.min(df2.energy)
             right_lim = np.max(df1.energy)
             if left_lim >= right_lim:

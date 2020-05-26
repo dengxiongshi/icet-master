@@ -29,7 +29,6 @@ from sklearn.feature_selection import RFE, RFECV
 from sklearn.preprocessing import StandardScaler
 from typing import Any, Dict, List, Union
 from .split_bregman import fit_split_bregman
-import warnings
 
 
 def fit(X: np.ndarray,
@@ -71,7 +70,7 @@ def fit(X: np.ndarray,
     if check_condition and X.shape[0] >= X.shape[1]:
         cond = np.linalg.cond(X)
         if cond > 1e10:
-            warnings.warn('Condition number is large, {}'.format(cond))
+            print('Condition number is large, {}'.format(cond))
 
     if standardize:
 

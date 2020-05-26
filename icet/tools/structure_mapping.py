@@ -7,7 +7,6 @@ from ase.build import make_supercell
 from ase.geometry import get_distances
 from scipy.optimize import linear_sum_assignment
 import scipy.linalg
-import warnings as warn
 
 
 def calculate_strain_tensor(A: np.ndarray,
@@ -129,7 +128,8 @@ def map_structure_to_reference(structure: Atoms,
 
     # Match positions
     mapped_structure, drmax, dravg, warning = _match_positions(structure_scaled,
-                                                               reference_supercell)
+                                                               reference_supercell,
+                                                               suppress_warnings=suppress_warnings)
 
     if warning:
         warnings = [warning]
@@ -146,21 +146,21 @@ def map_structure_to_reference(structure: Atoms,
                               'eigenvalue_diff': 0.1}
         if abs(volumetric_strain) > trigger_levels['volumetric_strain']:
             warnings.append('high_volumetric_strain')
-            warn.warn('High volumetric strain ({:.2f} %). {}'.format(
-                100 * volumetric_strain, s))
+            print('High volumetric strain ({:.2f} %). {}'.format(
+                  100 * volumetric_strain, s))
         if max(eigenvalues) - min(eigenvalues) > trigger_levels['eigenvalue_diff']:
             warnings.append('high_anisotropic_strain')
-            warn.warn('High anisotropic strain (the difference between '
-                      'largest and smallest eigenvalues of strain tensor is '
-                      '{:.5f}). {}'.format(max(eigenvalues) - min(eigenvalues), s))
+            print('High anisotropic strain (the difference between '
+                  'largest and smallest eigenvalues of strain tensor is '
+                  '{:.5f}). {}'.format(max(eigenvalues) - min(eigenvalues), s))
         if drmax > 1.0:
             warnings.append('large_maximum_relaxation_distance')
-            warn.warn('Large maximum relaxation distance '
-                      '({:.5f} Angstrom). {}'.format(drmax, s))
+            print('Large maximum relaxation distance '
+                  '({:.5f} Angstrom). {}'.format(drmax, s))
         if dravg > 0.5:
             warnings.append('large_average_relaxation_distance')
-            warn.warn('Large average relaxation distance '
-                      '({:.5f} Angstrom). {}'.format(dravg, s))
+            print('Large average relaxation distance '
+                  '({:.5f} Angstrom). {}'.format(dravg, s))
 
     # Populate dictionary with supplementary information
     info = {'drmax': drmax,
@@ -254,7 +254,8 @@ def _get_reference_supercell(structure: Atoms,
     return reference_supercell
 
 
-def _match_positions(structure: Atoms, reference: Atoms) -> Tuple[Atoms, float, float]:
+def _match_positions(structure: Atoms, reference: Atoms, suppress_warnings: bool = False,
+                     ) -> Tuple[Atoms, float, float]:
     """Matches the atoms in the input `structure` to the sites in the
     `reference` structure. The function returns tuple the first element of which
     is a copy of the `reference` structure, in which the chemical species are
@@ -268,6 +269,8 @@ def _match_positions(structure: Atoms, reference: Atoms) -> Tuple[Atoms, float, 
         structure with relaxed positions
     reference
         structure with idealized positions
+    suppress_warnings
+        if True, print no warnings of large strain or relaxation distances
 
     Raises
     ------
@@ -331,16 +334,17 @@ def _match_positions(structure: Atoms, reference: Atoms) -> Tuple[Atoms, float, 
             displacements.append(dvecs[0][0])
             # distances to the next three available sites
             minimum_distances.append(sorted(dists[:, j])[:n_dist_max])
-            if drs[0][0] > min(dists[:, j]) + 1e-6:
-                warn.warn('An atom was mapped to a site that was further '
-                          'away than the closest site (that site was already '
-                          'occupied by another atom).')
-                warning = 'possible_ambiguity_in_mapping'
-            elif minimum_distances[-1][0] > 0.9 * minimum_distances[-1][1]:
-                warn.warn('An atom was approximately equally far from its '
-                          'two closest sites.')
-                warning = 'possible_ambiguity_in_mapping'
-
+            if not suppress_warnings: 
+                if drs[0][0] > min(dists[:, j]) + 1e-6:
+                    warn.warn('An atom was mapped to a site that was further '
+                              'away than the closest site (that site was already '
+                              'occupied by another atom).')
+                    warning = 'possible_ambiguity_in_mapping'
+                elif minimum_distances[-1][0] > 0.9 * minimum_distances[-1][1]:
+                    warn.warn('An atom was approximately equally far from its '
+                              'two closest sites.')
+                    warning = 'possible_ambiguity_in_mapping'
+    
     displacement_magnitudes = np.array(displacement_magnitudes, dtype=np.float64)
     mapped.new_array('Displacement', displacements, float, shape=(3, ))
     mapped.new_array('Displacement_Magnitude', displacement_magnitudes, float)

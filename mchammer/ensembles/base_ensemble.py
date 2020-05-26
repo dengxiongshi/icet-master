@@ -2,7 +2,6 @@
 
 import os
 import random
-import warnings
 
 from abc import ABC, abstractmethod
 from collections import OrderedDict
@@ -109,8 +108,7 @@ class BaseEnsemble(ABC):
         # data container
         self._data_container_write_period = data_container_write_period
         if data_container is not None:
-            warnings.simplefilter('always', DeprecationWarning)
-            warnings.warn('data_container is deprecated, use dc_filename', DeprecationWarning)
+            print('data_container is deprecated, use dc_filename')
             self._data_container_filename = data_container
         else:
             self._data_container_filename = dc_filename
