@@ -701,5 +701,72 @@ class TestClusterSpaceMultiSublattice(unittest.TestCase):
         self.assertEqual(pair_counts_binary[2.045] * 2, pair_counts[2.045])
 
 
+class TestClusterSpaceMergedOrbits(unittest.TestCase):
+    """
+    Container for tests of the class functionality for merged orbits
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(TestClusterSpaceMergedOrbits, self).__init__(*args, **kwargs)
+        self.chemical_symbols = ['Au', 'Pd']
+        self.cutoffs = [5.0, 5.0]
+        self.primitive_structure = bulk('Au', a=4.0)
+        self.structure = self.primitive_structure.repeat((3,3,3))
+        for i in [3, 7, 9, 14, 18, 21]:
+            self.structure[i].symbol = 'Pd'
+
+    def setUp(self):
+        """Instantiates class before each test."""
+        self.cs = ClusterSpace(self.primitive_structure, self.cutoffs, self.chemical_symbols)
+
+    def shortDescription(self):
+        """Silences unittest from printing the docstrings in test cases."""
+        return None
+
+    def test_merge_orbits(self):
+        """ Tests merge orbits function"""
+
+        # Merge orbits
+        self.cs.merge_orbits({1: [2, 3], 4: [5, 6, 7, 8, 9, 10]})
+
+        order_target = [0, 1, 2, 3]
+        radii_target = [0, 0.0, 1.4142135623730951, 1.632993161855452]
+        multiplicity_target = [1, 1, 21, 124]
+
+        self.assertEqual([orb['order'] for orb in self.cs.orbit_data], order_target)
+        self.assertAlmostEqualList([orb['radius'] for orb in self.cs.orbit_data], radii_target)
+        self.assertEqual([orb['multiplicity'] for orb in self.cs.orbit_data], multiplicity_target)
+
+    def test_cluster_vectors(self):
+        """ Tests that the same cluster vector is produced regardless of which orbit is
+        used as key when merging """
+
+        cv_target = [1. , 0.55555556, 0.28747795, 0.13261649]
+
+        cs_1 = self.cs.copy()
+        cs_1.merge_orbits({1: [2, 3], 4: [5, 6, 7, 8, 9, 10]})
+        cv_1 = cs_1.get_cluster_vector(self.structure)
+        
+        cs_2 = self.cs.copy()
+        cs_2.merge_orbits({2: [1, 3], 9: [4, 5, 6, 7, 8, 10]})
+        cv_2 = cs_2.get_cluster_vector(self.structure)
+
+        self.assertAlmostEqualList(list(cv_1), cv_target)
+        self.assertEqual(list(cv_1), list(cv_2))
+    
+    def test_read_write(self):
+        """Tests read/write functionality."""
+        self.cs.merge_orbits({1: [2, 3], 4: [5, 6, 7, 8, 9, 10]})
+        f = tempfile.NamedTemporaryFile()
+        self.cs.write(f.name)
+        f.seek(0)
+        cs_read = ClusterSpace.read(f.name)
+        self.assertEqual(self.cs._input_structure, cs_read._input_structure)
+        self.assertEqual(list(self.cs._cutoffs), list(cs_read._cutoffs))
+        self.assertEqual(self.cs._input_chemical_symbols,
+                         cs_read._input_chemical_symbols)
+        self.assertEqual(len(self.cs), len(cs_read))
+
+
 if __name__ == '__main__':
     unittest.main()
