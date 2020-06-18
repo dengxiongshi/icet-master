@@ -49,8 +49,8 @@ class TestLocalOrbitListGenerator(unittest.TestCase):
             local_orbit_list = self.lolg.generate_local_orbit_list(index)
             for orbit_prim, orbit_super in zip(self.orbit_list.orbits,
                                                local_orbit_list.orbits):
-                for site_p, site_s in zip(orbit_prim.representative_sites,
-                                          orbit_super.representative_sites):
+                for site_p, site_s in zip(orbit_prim.sites_of_representative_cluster,
+                                          orbit_super.sites_of_representative_cluster):
                     site_p.unitcell_offset += offset
                     pos_super = self.supercell.get_position(site_s)
                     pos_prim = self.primitive.get_position(site_p)
@@ -66,8 +66,8 @@ class TestLocalOrbitListGenerator(unittest.TestCase):
             local_orbit_list = self.lolg.generate_local_orbit_list(offset)
             for orbit_prim, orbit_super in zip(self.orbit_list.orbits,
                                                local_orbit_list.orbits):
-                for site_p, site_s in zip(orbit_prim.representative_sites,
-                                          orbit_super.representative_sites):
+                for site_p, site_s in zip(orbit_prim.sites_of_representative_cluster,
+                                          orbit_super.sites_of_representative_cluster):
                     site_p.unitcell_offset += offset
                     pos_super = self.supercell.get_position(site_s)
                     pos_prim = self.primitive.get_position(site_p)
@@ -93,8 +93,8 @@ class TestLocalOrbitListGenerator(unittest.TestCase):
         for offset in self.lolg._get_unique_primcell_offsets():
             lol = self.lolg.generate_local_orbit_list(offset)
             for orbit, orbit_ in zip(lol.orbits, fol.orbits):
-                for sites in orbit.equivalent_sites:
-                    self.assertIn(sites, orbit_.equivalent_sites)
+                for sites in orbit.equivalent_clusters:
+                    self.assertIn(sites, orbit_.equivalent_clusters)
 
     def test_clear(self):
         """
@@ -187,8 +187,8 @@ class TestLocalOrbitListGeneratorHCP(unittest.TestCase):
             local_orbit_list = self.lolg.generate_local_orbit_list(offset)
             for orbit_prim, orbit_super in zip(self.orbit_list.orbits,
                                                local_orbit_list.orbits):
-                for site_p, site_s in zip(orbit_prim.representative_sites,
-                                          orbit_super.representative_sites):
+                for site_p, site_s in zip(orbit_prim.sites_of_representative_cluster,
+                                          orbit_super.sites_of_representative_cluster):
                     site_p.unitcell_offset += offset
                     pos_super = self.supercell.get_position(site_s)
                     pos_prim = self.primitive.get_position(site_p)

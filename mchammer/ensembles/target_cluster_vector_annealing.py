@@ -52,7 +52,7 @@ class TargetClusterVectorAnnealing:
 
         # random number generator
         if random_seed is None:
-            self._random_seed = random.randint(0, 1e16)
+            self._random_seed = random.randint(0, int(1e16))
         else:
             self._random_seed = random_seed
         random.seed(a=self._random_seed)
@@ -63,7 +63,7 @@ class TargetClusterVectorAnnealing:
             sub_ensembles.append(CanonicalEnsemble(structure=supercell,
                                                    calculator=calculator,
                                                    random_seed=random.randint(
-                                                       0, 1e16),
+                                                       0, int(1e16)),
                                                    user_tag='ensemble_{}'.format(
                                                        ens_id),
                                                    temperature=T_start,
@@ -72,7 +72,7 @@ class TargetClusterVectorAnnealing:
         self._current_score = self._sub_ensembles[0].calculator.calculate_total(
             self._sub_ensembles[0].configuration.occupations)
         self._best_score = self._current_score
-        self._best_structure = structure[0]
+        self._best_structure = structure[0].copy()
         self._temperature = T_start
         self._T_start = T_start
         self._T_stop = T_stop

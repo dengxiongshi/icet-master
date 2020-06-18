@@ -6,8 +6,10 @@ from _icet import ClusterCounts as _ClusterCounts
 from ase import Atoms
 from icet.core.cluster import Cluster
 from icet.core.local_orbit_list_generator import LocalOrbitListGenerator
+from icet.core.orbit import Orbit
 from icet.core.structure import Structure
 from mchammer.observers.base_observer import BaseObserver
+import copy
 
 
 class ClusterCountObserver(BaseObserver):
@@ -30,6 +32,9 @@ class ClusterCountObserver(BaseObserver):
         defines the lattice that the observer will work on
     interval : int
         observation interval during the Monte Carlo simulation
+    max_orbit : int
+        only include orbits up to the orbit with this index
+        (default is to include all orbits)
 
     Attributes
     ----------
@@ -37,12 +42,13 @@ class ClusterCountObserver(BaseObserver):
         human readable observer name
     interval : int
         the observation interval, defaults to None meaning that if the
-        observer is used in a Monte-simulation, then the Ensemble object
+        observer is used in a Monte Carlo simulation, then the Ensemble object
         will set the interval.
     """
 
     def __init__(self, cluster_space, structure: Atoms,
-                 interval: int = None) -> None:
+                 interval: int = None,
+                 max_orbit: int = None) -> None:
         super().__init__(interval=interval, return_type=dict, tag='ClusterCountObserver')
 
         self._cluster_space = cluster_space
@@ -54,13 +60,18 @@ class ClusterCountObserver(BaseObserver):
         self._full_orbit_list = local_orbit_list_generator.generate_full_orbit_list()
         self._cluster_counts_cpp = _ClusterCounts()
 
-        self._cluster_keys = []
+        if max_orbit is None:
+            self._max_orbit = len(self._full_orbit_list)
+        else:
+            self._max_orbit = max_orbit
+
+        self._cluster_keys = []  # type: List[Orbit]
         for i, orbit in enumerate(self._full_orbit_list.orbits):
             cluster = orbit.representative_cluster
             cluster.tag = i
             self._cluster_keys.append(cluster)
 
-        self._get_empty_counts()
+        self._empty_counts = self._get_empty_counts()
 
     def _get_empty_counts(self) -> Dict[Cluster, Dict[List[str], int]]:
         """ Returns the object which will be filled with counts. """
@@ -68,7 +79,7 @@ class ClusterCountObserver(BaseObserver):
         for i, cluster in enumerate(self._cluster_keys):
             order = len(cluster)
             possible_occupations = self._cluster_space.get_possible_orbit_occupations(cluster.tag)
-            assert order == len(possible_occupations[0]), '{} is not {}, {}, {}'.format(
+            assert order == len(possible_occupations[0]), '{} is not {}, {}'.format(
                 order, len(possible_occupations[0]), possible_occupations)
 
             counts[cluster] = {occupation: 0 for occupation in possible_occupations}
@@ -84,9 +95,14 @@ class ClusterCountObserver(BaseObserver):
             input atomic structure.
         """
         self._cluster_counts_cpp.count_orbit_list(Structure.from_atoms(structure),
-                                                  self._full_orbit_list, True, True)
+                                                  self._full_orbit_list, True, True,
+                                                  self._max_orbit)
 
-        empty_counts = self._get_empty_counts()
+        # Getting the empty counts sometimes constitutes a large part of the total time.
+        # Thus copy a previously constructed dictionary.
+        # Since Cluster is not picklable, we need to do a slightly awkward manual copy.
+        empty_counts = {cluster: copy.deepcopy(item)
+                        for cluster, item in self._empty_counts.items()}
         pandas_rows = []
 
         # std::unordered_map<Cluster, std::map<std::vector<int>, int>>

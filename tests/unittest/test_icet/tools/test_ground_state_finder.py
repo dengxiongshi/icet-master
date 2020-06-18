@@ -36,7 +36,7 @@ from ase.db import connect as db_connect
 from icet import ClusterExpansion, ClusterSpace
 from icet.core.local_orbit_list_generator import LocalOrbitListGenerator
 from icet.core.structure import Structure
-from icet.tools.variable_transformation import (transform_ECIs, get_transformation_matrix)
+from icet.tools.variable_transformation import (transform_parameters, get_transformation_matrix)
 try:
     import icet.tools.ground_state_finder
 except ImportError as ex:
@@ -65,7 +65,7 @@ def find_orbit_and_equivalent_site_with_indices(orbit_list, site_indices):
         if len(site_indices) != orbit.order:
             continue
 
-        for sites in orbit.get_equivalent_sites():
+        for sites in orbit.equivalent_clusters:
 
             # Check if the list of site indices matches those for the equivalent site
             if all(sites[j].index == site_indices[j] for j in range(len(site_indices))):
@@ -248,8 +248,9 @@ class TestGroundStateFinder(unittest.TestCase):
                          self.chemical_symbols[1]: len(self.supercell) - 1}
         with self.assertRaises(ValueError) as cm:
             self.gsf.get_ground_state(species_count=species_count)
-        self.assertTrue('Provide counts for one of the species on each active sublattice ({}),'
-                        ' not {}!'.format(self.gsf._active_species, list(species_count.keys()))
+        self.assertTrue('Provide counts for at most one of the species on each active sublattice '
+                        '({}), not {}!'.format(self.gsf._active_species,
+                                               list(species_count.keys()))
                         in str(cm.exception))
 
         # Check that get_ground_state fails if counts are provided for a
@@ -367,8 +368,9 @@ class TestGroundStateFinderInactiveSublattice(unittest.TestCase):
                          self.chemical_symbols[0][1]: self.n_active_sites[0] - 1}
         with self.assertRaises(ValueError) as cm:
             self.gsf.get_ground_state(species_count=species_count)
-        self.assertTrue('Provide counts for one of the species on each active sublattice ({}), '
-                        'not {}!'.format(self.gsf._active_species, list(species_count.keys()))
+        self.assertTrue('Provide counts for at most one of the species on each active sublattice '
+                        '({}), not {}!'.format(self.gsf._active_species,
+                                               list(species_count.keys()))
                         in str(cm.exception))
 
         # Check that get_ground_state fails if counts are provided for a
@@ -478,8 +480,9 @@ class TestGroundStateFinderInactiveSublatticeSameSpecies(unittest.TestCase):
                          self.chemical_symbols[0][1]: self.n_active_sites[0] - 1}
         with self.assertRaises(ValueError) as cm:
             self.gsf.get_ground_state(species_count=species_count)
-        self.assertTrue('Provide counts for one of the species on each active sublattice ({}), '
-                        'not {}!'.format(self.gsf._active_species, list(species_count.keys()))
+        self.assertTrue('Provide counts for at most one of the species on each active sublattice '
+                        '({}), not {}!'.format(self.gsf._active_species,
+                                               list(species_count.keys()))
                         in str(cm.exception))
 
         # Check that get_ground_state fails if counts are provided for a
@@ -524,11 +527,11 @@ class TestGroundStateFinderInactiveSublatticeSameSpecies(unittest.TestCase):
         self.assertEqual(target, gsf._nclusters_per_orbit)
 
 
-class TestGroundStateFinderZeroECI(unittest.TestCase):
-    """Container for test of the class functionality for a system with a zero ECI."""
+class TestGroundStateFinderZeroParameter(unittest.TestCase):
+    """Container for test of the class functionality for a system with a zero parameter."""
 
     def __init__(self, *args, **kwargs):
-        super(TestGroundStateFinderZeroECI, self).__init__(*args, **kwargs)
+        super(TestGroundStateFinderZeroParameter, self).__init__(*args, **kwargs)
         self.chemical_symbols = ['Ag', 'Au']
         self.cutoffs = [4.3]
         self.structure_prim = bulk(self.chemical_symbols[1], a=4.0)
@@ -538,13 +541,13 @@ class TestGroundStateFinderZeroECI(unittest.TestCase):
                                        Structure.from_atoms(self.structure_prim),
                                        self.cs.fractional_position_tolerance)
         full_orbit_list = lolg.generate_full_orbit_list()
-        binary_ecis_zero = transform_ECIs(self.structure_prim, full_orbit_list,
-                                          nonzero_ce.parameters)
-        binary_ecis_zero[1] = 0
+        binary_parameters_zero = transform_parameters(self.structure_prim, full_orbit_list,
+                                                      nonzero_ce.parameters)
+        binary_parameters_zero[1] = 0
         A = get_transformation_matrix(self.structure_prim, full_orbit_list)
         Ainv = np.linalg.inv(A)
-        zero_ecis = np.dot(Ainv, binary_ecis_zero)
-        self.ce = ClusterExpansion(self.cs, zero_ecis)
+        zero_parameters = np.dot(Ainv, binary_parameters_zero)
+        self.ce = ClusterExpansion(self.cs, zero_parameters)
         self.all_possible_structures = []
         self.supercell = self.structure_prim.repeat(2)
         for i in range(len(self.supercell)):
@@ -598,8 +601,8 @@ class TestGroundStateFinderTriplets(unittest.TestCase):
         structure_prim.wrap()
         self.structure_prim = structure_prim
         self.cs = ClusterSpace(self.structure_prim, self.cutoffs, self.chemical_symbols)
-        ecis = [0.0] * 4 + [0.1] * 6 + [-0.02] * 11
-        self.ce = ClusterExpansion(self.cs, ecis)
+        parameters = [0.0] * 4 + [0.1] * 6 + [-0.02] * 11
+        self.ce = ClusterExpansion(self.cs, parameters)
         self.all_possible_structures = []
         self.supercell = self.structure_prim.repeat((2, 2, 1))
         for i in range(len(self.supercell)):
@@ -639,13 +642,19 @@ class TestGroundStateFinderTriplets(unittest.TestCase):
         predicted_species1 = self.ce.predict(ground_state)
         self.assertEqual(predicted_species0, predicted_species1)
 
+        # Check that get_ground_state finds 50-50 mix when no counts are provided
+        gsf = icet.tools.ground_state_finder.GroundStateFinder(self.ce, self.supercell,
+                                                               verbose=False)
+        gs = gsf.get_ground_state(threads=1)
+        self.assertEqual(gs.get_chemical_formula(), "Au12Pd12")
+
         # Ensure that an exception is raised when no solution is found
         gsf = icet.tools.ground_state_finder.GroundStateFinder(self.ce, self.supercell,
                                                                solver_name='CBC', verbose=False)
         species_count = {self.chemical_symbols[1]: 1}
         with self.assertRaises(Exception) as cm:
             gsf.get_ground_state(species_count=species_count, max_seconds=0.0, threads=1)
-        self.assertTrue('No solution found.' in str(cm.exception))
+        self.assertTrue('Optimization failed' in str(cm.exception))
 
 
 class TestGroundStateFinderTwoActiveSublattices(unittest.TestCase):
@@ -663,8 +672,8 @@ class TestGroundStateFinderTwoActiveSublattices(unittest.TestCase):
         self.structure_prim = structure_prim
         self.cs = ClusterSpace(self.structure_prim, self.cutoffs,
                                self.chemical_symbols)
-        ecis = [0.1, -0.45, 0.333, 2, -1.42, 0.98]
-        self.ce = ClusterExpansion(self.cs, ecis)
+        parameters = [0.1, -0.45, 0.333, 2, -1.42, 0.98]
+        self.ce = ClusterExpansion(self.cs, parameters)
         self.all_possible_structures = []
         self.supercell = self.structure_prim.repeat(2)
         self.sl1_indices = [s for s, sym in enumerate(self.supercell.get_chemical_symbols()) if
@@ -750,23 +759,15 @@ class TestGroundStateFinderTwoActiveSublattices(unittest.TestCase):
 
     def test_get_ground_state_fails_for_faulty_species_to_count(self):
         """Tests that get_ground_state fails if species_to_count is faulty."""
-        # Check that get_ground_state fails if counts are provided for only one
-        # species
-        species_count = {self.chemical_symbols[0][1]: 1}
-        with self.assertRaises(ValueError) as cm:
-            self.gsf.get_ground_state(species_count=species_count)
-        self.assertTrue('Provide counts for one of the species on each active sublattice ({}),'
-                        ' not {}!'.format(self.gsf._active_species, list(species_count.keys()))
-                        in str(cm.exception))
-
         # Check that get_ground_state fails if counts are provided for a both species on one
         # of the active sublattices
         species_count = {self.chemical_symbols[0][0]: len(self.sl1_indices) - 1,
                          self.chemical_symbols[0][1]: 1, self.chemical_symbols[1][1]: 1}
         with self.assertRaises(ValueError) as cm:
             self.gsf.get_ground_state(species_count=species_count)
-        self.assertTrue('Provide counts for one of the species on each active sublattice ({}),'
-                        ' not {}!'.format(self.gsf._active_species, list(species_count.keys()))
+        self.assertTrue('Provide counts for at most one of the species on each active sublattice '
+                        '({}), not {}!'.format(self.gsf._active_species,
+                                               list(species_count.keys()))
                         in str(cm.exception))
 
         # Check that get_ground_state fails if the count exceeds the number sites on the first
@@ -796,6 +797,15 @@ class TestGroundStateFinderTwoActiveSublattices(unittest.TestCase):
                         'exceed the number of sites on the active sublattice '
                         '({})'.format(faulty_species, faulty_count, n_active_sites)
                         in str(cm.exception))
+
+    def test_get_ground_state_passes_for_partial_species_to_count(self):
+        # Check that get_ground_state passes if a single count is provided
+        species_count = {self.chemical_symbols[0][1]: 1}
+        self.gsf.get_ground_state(species_count=species_count)
+
+        # Check that get_ground_state passes no counts are provided
+        gs = self.gsf.get_ground_state()
+        self.assertEqual(gs.get_chemical_formula(), "Au8Li8")
 
 
 if __name__ == '__main__':

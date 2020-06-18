@@ -106,5 +106,63 @@ class TestClusterCountObserver(unittest.TestCase):
         self.assertEqual(expected_Au_Au_count, actual_counts)
 
 
+class TestClusterCountObserverMaxOrbit(unittest.TestCase):
+    """Container for tests of the class functionality."""
+
+    def __init__(self, *args, **kwargs):
+        super(TestClusterCountObserverMaxOrbit,
+              self).__init__(*args, **kwargs)
+
+        prim = bulk('Au')
+        self.structure = prim.repeat(3)
+        cutoffs = [6, 5]
+        subelements = ['Au', 'Pd']
+        self.cs = ClusterSpace(prim, cutoffs, subelements)
+        self.interval = 10
+
+    def shortDescription(self):
+        """Silences unittest from printing the docstrings in test cases."""
+        return None
+
+    def setUp(self):
+        """Set up observer before each test."""
+        self.observer_cut = ClusterCountObserver(
+            cluster_space=self.cs, structure=self.structure, interval=self.interval,
+            max_orbit=3)
+        self.observer_full = ClusterCountObserver(
+            cluster_space=self.cs, structure=self.structure, interval=self.interval)
+
+    def test_get_observable(self):
+        """Tests observable is returned accordingly."""
+        structure = self.structure.copy()
+        structure.set_chemical_symbols(['Au'] * len(structure))
+        # 1 Pd in pure Au sro
+        structure[0].symbol = 'Pd'
+
+        # Observer with max_orbit
+        counts = self.observer_cut.get_observable(structure)
+        self.assertEqual(len(counts), 10)
+
+        # In total there will be 12 Pd neighboring an Au atom
+        expected_Au_Pd_count = 12
+        actual_counts = 0
+        for count in counts.keys():
+            if 'Au' in count and '1' in count and 'Pd' in count:
+                actual_counts += counts[count]
+        self.assertEqual(expected_Au_Pd_count, actual_counts)
+
+        # Observer without max_orbit
+        counts = self.observer_full.get_observable(structure)
+        self.assertEqual(len(counts), 74)
+
+        # In total there will be 12 Pd neighboring an Au atom
+        expected_Au_Pd_count = 12
+        actual_counts = 0
+        for count in counts.keys():
+            if 'Au' in count and count[:2] == '1_' and 'Pd' in count:
+                actual_counts += counts[count]
+        self.assertEqual(expected_Au_Pd_count, actual_counts)
+
+
 if __name__ == '__main__':
     unittest.main()

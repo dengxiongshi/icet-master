@@ -4,8 +4,6 @@ from ase.build import bulk
 from icet import ClusterSpace, ClusterExpansion
 from mchammer.observers.cluster_expansion_observer import \
     ClusterExpansionObserver
-from mchammer.calculators.cluster_expansion_calculator import \
-    ClusterExpansionCalculator
 
 
 class TestCEObserver(unittest.TestCase):
@@ -23,7 +21,6 @@ class TestCEObserver(unittest.TestCase):
         params = list(range(params_len))
 
         self.ce = ClusterExpansion(cs, params)
-        self.calculator = ClusterExpansionCalculator(self.structure, self.ce)
 
     def shortDescription(self):
         """Silences unittest from printing the docstrings in test cases."""
@@ -44,15 +41,14 @@ class TestCEObserver(unittest.TestCase):
 
     def test_get_observable(self):
         """Tests observable is returned accordingly."""
-        self.assertEqual(self.observer.get_observable(
-            structure=self.structure), 283.0)
+        self.assertEqual(self.observer.get_observable(structure=self.structure), 283.0)
 
-        # updated occupation using calculator
-        indices = [10, 2, 4, 2]
-        elements = [32] * 4
-        self.calculator.update_occupations(indices, elements)
-        self.assertAlmostEqual(self.observer.get_observable(
-            structure=self.calculator.structure), 1808.0 / 27)
+        # updated occupations and check again
+        structure = self.structure.copy()
+        indices = [2, 4, 10]
+        for ind in indices:
+            structure[ind].symbol = 'Ge'
+        self.assertAlmostEqual(self.observer.get_observable(structure=structure), 1808.0 / 27)
 
 
 if __name__ == '__main__':

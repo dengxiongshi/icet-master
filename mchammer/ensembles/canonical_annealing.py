@@ -7,7 +7,7 @@ from ase.units import kB
 from typing import Dict, List
 
 from .. import DataContainer
-from ..calculators.base_calculator import BaseCalculator
+from ..calculators import ClusterExpansionCalculator
 from .thermodynamic_base_ensemble import ThermodynamicBaseEnsemble
 
 
@@ -75,7 +75,7 @@ class CanonicalAnnealing(ThermodynamicBaseEnsemble):
         period in units of seconds at which the data container is
         written to file; writing periodically to file provides both
         a way to examine the progress of the simulation and to back up
-        the data [default: np.inf]
+        the data [default: 600 s]
     ensemble_data_write_interval : int
         interval at which data is written to the data container; this
         includes for example the current value of the calculator
@@ -93,7 +93,7 @@ class CanonicalAnnealing(ThermodynamicBaseEnsemble):
 
     def __init__(self,
                  structure: Atoms,
-                 calculator: BaseCalculator,
+                 calculator: ClusterExpansionCalculator,
                  T_start: float,
                  T_stop: float,
                  n_steps: int,
@@ -132,7 +132,7 @@ class CanonicalAnnealing(ThermodynamicBaseEnsemble):
         self._n_steps = n_steps
 
         self._ground_state_candidate = self.configuration.structure
-        self._ground_state_candidate_potential = self.calculator.calculate_total(
+        self._ground_state_candidate_potential = calculator.calculate_total(
             occupations=self.configuration.occupations)
 
         # setup cooling function

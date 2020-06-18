@@ -3,14 +3,16 @@
 import getpass
 import json
 import numbers
+import os
+import shutil
+import socket
 import tarfile
 import tempfile
-import socket
 import warnings
 
 from collections import OrderedDict
 from datetime import datetime
-from typing import BinaryIO, Dict, List, TextIO, Tuple, Union
+from typing import Any, BinaryIO, Dict, List, Set, TextIO, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -60,10 +62,10 @@ class BaseDataContainer:
         self._ensemble_parameters = ensemble_parameters
         self._metadata = metadata
         self._add_default_metadata()
-        self._last_state = {}
+        self._last_state = {}  # type: Dict[str, Any]
 
-        self._observables = set()
-        self._data_list = []
+        self._observables = set()  # type: Set[str]
+        self._data_list = []  # type: List[Dict[str, Any]]
 
     def append(self, mctrial: int, record: Dict[str, Union[int, float, list]]):
         """
@@ -106,7 +108,7 @@ class BaseDataContainer:
         self._data_list.append(row_data)
 
     def _update_last_state(self, last_step: int, occupations: List[int],
-                           accepted_trials: int, random_state: tuple):
+                           accepted_trials: int, random_state: Any):
         """Updates last state of the simulation: last step, occupation vector
         and number of accepted trial steps.
 
@@ -153,17 +155,18 @@ class BaseDataContainer:
                     self._observables.add(observer.tag)
                 row_data.update(record)
 
-    def get(self, *input_tags, start: int = 0) \
+    def get(self,
+            *tags: str,
+            start: int = 0) \
             -> Union[np.ndarray, List[Atoms], Tuple[np.ndarray, List[Atoms]]]:
         """Returns the accumulated data for the requested observables,
         including configurations stored in the data container. The latter
-        can be achieved by including 'trajectory' as a tag.
+        can be achieved by including 'trajectory' as one of the tags.
 
         Parameters
         ----------
         tags
-            tuples of the requested properties
-
+            names of the requested properties
         start
             minimum value of trial step to consider; by default the
             smallest value in the mctrial column will be used.
@@ -215,8 +218,7 @@ class BaseDataContainer:
             >>> p = dc.get('potential')
 
             >>> import matplotlib.pyplot as plt
-            >>> # as above but this time the MC trial step and the temperature
-            >>> # are included as well
+            >>> # as above but this time the MC trial step is included as well
             >>> s, p = dc.get('mctrial', 'potential')
             >>> _ = plt.plot(s, p)
             >>> plt.show()
@@ -226,21 +228,21 @@ class BaseDataContainer:
             >>> p, confs = dc.get('potential', 'trajectory')
         """
 
-        if len(input_tags) == 0:
+        if len(tags) == 0:
             raise TypeError('Missing tags argument')
 
-        tags = ['occupations' if tag == 'trajectory' else tag for tag in input_tags]
+        local_tags = ['occupations' if tag == 'trajectory' else tag for tag in tags]
 
-        for tag in tags:
-            if tag in 'mctrial':
+        for tag in local_tags:
+            if isinstance(tag, str) and tag in 'mctrial':
                 continue
             if tag not in self.observables:
                 raise ValueError('No observable named {} in data container'.format(tag))
 
         # collect data
         mctrials = [row_dict['mctrial'] for row_dict in self._data_list]
-        data = pd.DataFrame.from_records(self._data_list, index=mctrials, columns=tags)
-        data = data.loc[start::, tags].copy()
+        data = pd.DataFrame.from_records(self._data_list, index=mctrials, columns=local_tags)
+        data = data.loc[start::, local_tags].copy()
         data.dropna(inplace=True)
 
         # handling of trajectory
@@ -250,7 +252,7 @@ class BaseDataContainer:
             return structure
 
         data_list = []
-        for tag in tags:
+        for tag in local_tags:
             if tag == 'occupations':
                 traj = [occupation_to_atoms(o) for o in data['occupations']]
                 data_list.append(traj)
@@ -289,7 +291,7 @@ class BaseDataContainer:
         """ metadata associated with data container """
         return self._metadata
 
-    def write(self, outfile: Union[str, BinaryIO, TextIO]):
+    def write(self, outfile: Union[bytes, str]):
         """
         Writes BaseDataContainer object to file.
 
@@ -312,17 +314,25 @@ class BaseDataContainer:
                           'data_container_type': data_container_type}
 
         reference_data_file = tempfile.NamedTemporaryFile()
-        with open(reference_data_file.name, 'w') as handle:
-            json.dump(reference_data, handle, cls=Int64Encoder)
+        with open(reference_data_file.name, 'w') as fileobj:
+            json.dump(reference_data, fileobj, cls=Int64Encoder)
 
         # Save runtime data
         runtime_data_file = tempfile.NamedTemporaryFile()
         np.savez_compressed(runtime_data_file, self._data_list)
 
-        with tarfile.open(outfile, mode='w') as handle:
-            handle.add(reference_structure_file.name, arcname='atoms')
-            handle.add(reference_data_file.name, arcname='reference_data')
-            handle.add(runtime_data_file.name, arcname='runtime_data')
+        # Write temporary tar file
+        with tempfile.NamedTemporaryFile('wb', delete=False) as f:
+            with tarfile.open(fileobj=f, mode='w') as handle:
+                handle.add(reference_data_file.name, arcname='reference_data')
+                handle.add(reference_structure_file.name, arcname='atoms')
+                handle.add(runtime_data_file.name, arcname='runtime_data')
+
+        # Copy to permanent location
+        file_name = f.name
+        f.close()  # Required for Windows
+        shutil.copy(file_name, outfile)
+        os.remove(file_name)
         runtime_data_file.close()
 
     def _add_default_metadata(self):
@@ -382,22 +392,19 @@ class BaseDataContainer:
         if not tarfile.is_tarfile(filename):
             raise TypeError('{} is not a tar file'.format(filename))
 
-        reference_structure_file = tempfile.NamedTemporaryFile()
-        reference_data_file = tempfile.NamedTemporaryFile()
-        runtime_data_file = tempfile.NamedTemporaryFile()
-
-        with tarfile.open(mode='r', name=filename) as tar_file:
+        with tarfile.open(mode='r', name=filename) as tf:
             # file with structures
-            reference_structure_file.write(tar_file.extractfile('atoms').read())
-
-            reference_structure_file.seek(0)
-            structure = ase_read(reference_structure_file.name, format='json')
+            with tempfile.NamedTemporaryFile() as fobj:
+                fobj.write(tf.extractfile('atoms').read())
+                fobj.flush()
+                structure = ase_read(fobj.name, format='json')
 
             # file with reference data
-            reference_data_file.write(tar_file.extractfile('reference_data').read())
-            reference_data_file.seek(0)
-            with open(reference_data_file.name, encoding='utf-8') as fd:
-                reference_data = json.load(fd)
+            with tempfile.NamedTemporaryFile() as fobj:
+                fobj.write(tf.extractfile('reference_data').read())
+                fobj.flush()
+                with open(fobj.name, encoding='utf-8') as fd:
+                    reference_data = json.load(fd)
 
             # init DataContainer
             dc = cls(structure=structure,
@@ -409,22 +416,18 @@ class BaseDataContainer:
             for tag, value in reference_data['last_state'].items():
                 if tag == 'random_state':
                     value = tuple(tuple(x) if isinstance(x, list) else x for x in value)
-                if tag in ['histogram', 'entropy']:
-                    # the following accounts for the fact that the keys of dicts are converted to
-                    # str when writing to json and have to converted back into numerical values
-                    dc._last_state[tag] = {int(k): v for k, v in value.items()}
-                else:
-                    dc._last_state[tag] = value
+                dc._last_state[tag] = value
 
             # add runtime data from file
-            runtime_data_file.write(tar_file.extractfile('runtime_data').read())
-            runtime_data_file.seek(0)
-            if old_format:
-                runtime_data = pd.read_json(runtime_data_file)
-                data = runtime_data.sort_index(ascending=True)
-                dc._data_list = data.T.apply(lambda x: x.dropna().to_dict()).tolist()
-            else:
-                dc._data_list = np.load(runtime_data_file, allow_pickle=True)['arr_0'].tolist()
+            with tempfile.NamedTemporaryFile() as fobj:
+                fobj.write(tf.extractfile('runtime_data').read())
+                fobj.seek(0)
+                if old_format:
+                    runtime_data = pd.read_json(fobj)
+                    data = runtime_data.sort_index(ascending=True)
+                    dc._data_list = data.T.apply(lambda x: x.dropna().to_dict()).tolist()
+                else:
+                    dc._data_list = np.load(fobj, allow_pickle=True)['arr_0'].tolist()
 
         dc._observables = set([key for data in dc._data_list for key in data])
         dc._observables = dc._observables - {'mctrial'}

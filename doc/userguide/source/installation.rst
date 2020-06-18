@@ -36,6 +36,8 @@ If installation via pip fails or if you want to use the most recent
     cd icet
     python3 setup.py install --user
 
+.. _run_tests:
+
 Testing
 -------
 

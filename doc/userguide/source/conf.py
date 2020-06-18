@@ -25,7 +25,6 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.todo',
     'sphinx.ext.viewcode',
-    'sphinx_autodoc_typehints',
     'sphinx_sitemap',
 ]
 
@@ -101,4 +100,9 @@ texinfo_documents = [
     (master_doc, 'icet', 'icet Documentation',
      author, 'icet', 'A Pythonic approach to cluster expansions',
      'Miscellaneous'),
+]
+
+
+html_css_files = [
+    'custom.css',
 ]

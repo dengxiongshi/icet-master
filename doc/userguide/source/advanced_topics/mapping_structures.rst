@@ -17,7 +17,7 @@ relaxation can also lead to atoms moving between sites, in which case
 remapping is mandatory.
 
 This is the purpose of the function
-:func:`~icet.tools.structure_mapping.map_structure_to_reference`. The
+:func:`~icet.tools.map_structure_to_reference`. The
 function is also useful to analyze whether the relaxation has gone too
 far for the cluster expansion to be viable, i.e., whether the ideal
 structure from which the relaxation started is not a valid
@@ -27,7 +27,7 @@ obtained.
 Import modules
 --------------
 
-The :func:`~icet.tools.structure_mapping.map_structure_to_reference`
+The :func:`~icet.tools.map_structure_to_reference`
 function needs to be imported together with some additional
 functionality from `ASE <https://wiki.fysik.dtu.dk/ase>`_.
 

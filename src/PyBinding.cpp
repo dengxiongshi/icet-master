@@ -13,7 +13,6 @@
 #include "LatticeSite.hpp"
 #include "LocalOrbitListGenerator.hpp"
 #include "ManyBodyNeighborList.hpp"
-#include "NeighborList.hpp"
 #include "Orbit.hpp"
 #include "OrbitList.hpp"
 #include "PeriodicTable.hpp"
@@ -69,11 +68,6 @@ PYBIND11_MODULE(_icet, m)
         MatrixOfEquivalentPositions
         ---------------------------
         .. autoclass:: MatrixOfEquivalentPositions
-           :members:
-
-        NeighborList
-        ------------
-        .. autoclass:: NeighborList
            :members:
 
         Orbit
@@ -328,50 +322,6 @@ PYBIND11_MODULE(_icet, m)
              py::arg("fractional_position_tolerance"))
         .def("__len__", &Structure::size);
 
-    py::class_<NeighborList>(m, "NeighborList",
-        R"pbdoc(
-        This class handles a neighbor list.
-
-        Parameters
-        ----------
-        cutoff : float
-            cutoff to be used for constructing the neighbor list
-        )pbdoc")
-        .def(py::init<const double>(),
-             "Initializes a neighbor list instance.",
-	     py::arg("cutoff"))
-        .def("build",
-             &NeighborList::build,
-             py::arg("structure"),
-             py::arg("position_tolerance"),
-             R"pbdoc(
-             Builds a neighbor list for the given atomic configuration.
-
-             Parameters
-             ----------
-             structure : icet.Structure
-                 atomic configuration
-             position_tolerance : float
-                 tolerance applied when evaluating positions in Cartesian coordinates
-             )pbdoc")
-        .def("get_neighbors",
-             &NeighborList::getNeighbors,
-             py::arg("index"),
-             R"pbdoc(
-             Returns a list of lattice sites that identify the neighbors of site in question.
-
-             Parameters
-             ----------
-             index : int
-                 index of site in structure for which neighbor list was build
-
-             Returns
-             -------
-             list(_icet.LatticeSite)
-                list of lattice sites
-             )pbdoc")
-        .def("__len__", &NeighborList::size);
-
     // @todo document ManyBodyNeighborList in pybindings
     py::class_<ManyBodyNeighborList>(m, "ManyBodyNeighborList",
 	R"pbdoc(
@@ -557,11 +507,14 @@ PYBIND11_MODULE(_icet, m)
                 before comparison (i.e., ABC != ACB)
              permute_sites : bool
                 if true the sites will be permuted according to the permutations associated with the orbit
+            max_orbit : bool
+                include only orbits with indices smaller than this (by default all orbits are included)
              )pbdoc",
              py::arg("structure"),
              py::arg("orbit_list"),
              py::arg("order_intact"),
-             py::arg("permute_sites"))
+             py::arg("permute_sites"),
+             py::arg("max_orbit") = -1)
         .def("__len__", &ClusterCounts::size)
         .def("reset", &ClusterCounts::reset)
         .def("get_cluster_counts", [](const ClusterCounts &clusterCounts) {
@@ -589,132 +542,39 @@ PYBIND11_MODULE(_icet, m)
     // @todo document Orbit in pybindings
     py::class_<Orbit>(m, "Orbit")
         .def(py::init<const Cluster &>())
-
-        /*
-        @TODO Remove the usage of these functions
-            in favor of the property versions.
-
-            It should mostly be used in clusterspace.
-            ------------ START removal -----------------------
-        */
-        .def("add_equivalent_sites",
-             (void (Orbit::*)(const std::vector<LatticeSite> &, bool)) & Orbit::addEquivalentSites,
-             py::arg("lattice_neighbors"),
-             py::arg("sort") = false)
-        .def("add_equivalent_sites",
-             (void (Orbit::*)(const std::vector<std::vector<LatticeSite>> &, bool)) & Orbit::addEquivalentSites,
-             py::arg("lattice_neighbors"),
-             py::arg("sort") = false)
-        .def("get_equivalent_sites",
-             &Orbit::getEquivalentSites)
-        .def("get_allowed_sites_permutations",
-             &Orbit::getAllowedSitesPermutations)
-        .def("get_representative_sites",
-             &Orbit::getRepresentativeSites)
-        .def("get_equivalent_sites_permutations",
-             &Orbit::getPermutationsOfEquivalentSites)
-
-        .def("get_representative_cluster", &Orbit::getRepresentativeCluster,
-             R"pbdoc(
-             The representative cluster represents the geometrical version of what
-             this orbit is.
-             )pbdoc")
-        /*
-        ------------ END removal -----------------------
-        */
         .def_property_readonly(
-             "representative_cluster", &Orbit::getRepresentativeCluster,
-             R"pbdoc(
-             The representative cluster is the cluster to which all other symmetry equivalent clusters can be related.
-             )pbdoc")
-        .def_property(
-             "permutations_to_representative",
-             &Orbit::getPermutationsOfEquivalentSites, &Orbit::setEquivalentSitesPermutations,
-             R"pbdoc(
-             Get the list of permutations. Where `permutations_to_representative[i]` takes
-             `self.equivalent_sites[i]` to the same order as `self.representative_sites`.
-
-             This can be used if one for example wants to count elements and is
-             interested in difference between ABB, BAB, BBA and so on. If one
-             counts the lattice sites that are permuted according to these
-             permutations one will get the correct counts.
-             )pbdoc")
+             "representative_cluster",
+             &Orbit::getRepresentativeCluster,
+             "cluster to which all other symmetry equivalent clusters can be related")
+        .def_property_readonly(
+             "sites_of_representative_cluster", &Orbit::getSitesOfRepresentativeCluster,
+             "list of sites that comprise the representative cluster")
         .def_property_readonly(
              "order",
              [](const Orbit &orbit) { return orbit.getRepresentativeCluster().order(); },
-             R"pbdoc(
-             Returns the order of the orbit. The order is the same as the numberof bodies in the
-             representative cluster or the number of lattice sites per element in equivalent_sites.
-             )pbdoc")
+             "number of sites in the representative cluster")
         .def_property_readonly(
              "radius",
              [](const Orbit &orbit) { return orbit.getRepresentativeCluster().radius(); },
-             R"pbdoc(
-             Returns the radius of the
-             representative cluster.
-             )pbdoc")
-        .def_property_readonly(
-             "permuted_sites",
-             &Orbit::getPermutedEquivalentSites,
-             "equivalent sites but permuted to representative site.")
-        .def_property_readonly(
-             "representative_sites", &Orbit::getRepresentativeSites,
-             R"pbdoc(
-             The representative sites is a list of lattice sites that are
-             uniquely picked out for this orbit which can be used to represent
-             and distinguish between orbits.
-             )pbdoc")
+             "radius of the representative cluster")
         .def_property(
-             "equivalent_sites",
-             &Orbit::getEquivalentSites,
-             &Orbit::setEquivalentSites,
-             "list of equivalent lattice sites")
-        .def("get_permuted_sites_by_index",
-             &Orbit::getPermutedSitesByIndex,
+             "permutations_to_representative",
+             &Orbit::getPermutationsOfEquivalentClusters,
+             &Orbit::setPermutationsOfEquivalentClusters,
              R"pbdoc(
-             Returns the equivalent sites at position `index` using
-             the permutation of the representative cluster.
+             list of permutations;
+             permutations_to_representative[i] takes self.equivalent_clusters[i] to
+             the same sorting as self.representative_cluster.
 
-             Parameters
-             ----------
-             index : int
-                index of site to return
-             )pbdoc",
-             py::arg("index"))
-        .def("get_mc_vectors", &Orbit::getMultiComponentVectors,
-             R"pbdoc(
-             Return the mc vectors for this orbit given the allowed components.
-             The mc vectors are returned as a list of tuples
-
-             Parameters
-             ----------
-             allowed_components : list(int)
-                The allowed components for the lattice sites,
-                allowed_components[i] correspond to the number
-                of allowed compoments at lattice site
-                orbit.representative_sites[i].)pbdoc")
-        .def("sort", &Orbit::sort,
-             R"pbdoc(
-             Sorts the list of equivalent sites.
-             )pbdoc")
-        .def("get_all_possible_mc_vector_permutations",
-             &Orbit::getAllPossibleMultiComponentVectorPermutations,
-             R"pbdoc(
-             Similar to get all permutations but needs to be filtered through the number of allowed elements.
-
-             Parameters
-             ----------
-             allowed_components : list(int)
-                 The allowed components for the lattice sites,
-                 `allowed_components[i]` correspond to the lattice site
-                 `self.representative_sites[i]`.
-
-             returns all_mc_vectors : list(list(int)
+             This can be used if you for example want to count elements and are
+             interested in difference between ABB, BAB, BBA and so on. If you count
+             the lattice sites that are permuted according to these permutations
+             then you will get the correct counts.
              )pbdoc")
         .def_property("allowed_permutations",
              [](const Orbit &orbit)
              {
-                 std::set<std::vector<int>> allowedPermutations = orbit.getAllowedSitesPermutations();
+                 std::set<std::vector<int>> allowedPermutations = orbit.getAllowedClusterPermutations();
                  std::vector<std::vector<int>> retPermutations(allowedPermutations.begin(), allowedPermutations.end());
                  return retPermutations;
              },
@@ -725,7 +585,7 @@ PYBIND11_MODULE(_icet, m)
                  {
                      allowedPermutations.insert(perm);
                  }
-                 orbit.setAllowedSitesPermutations(allowedPermutations);
+                 orbit.setAllowedClusterPermutations(allowedPermutations);
              },
              R"pbdoc(
              Gets the list of equivalent permutations for this orbit. If this
@@ -736,18 +596,53 @@ PYBIND11_MODULE(_icet, m)
              to (0,0,1).
              )pbdoc")
         .def_property(
-             "permutations_to_representative",
-             &Orbit::getPermutationsOfEquivalentSites,
-             &Orbit::setEquivalentSitesPermutations,
+             "equivalent_clusters",
+             &Orbit::getEquivalentClusters,
+             &Orbit::setEquivalentClusters,
+             "list of symmetry equivalent clusters")
+        .def_property_readonly(
+             "permuted_equivalent_clusters",
+             &Orbit::getPermutedEquivalentClusters,
+             "equivalent clusters permuted to match the sorting of the representative cluster")
+        .def("get_permuted_cluster_by_index",
+             &Orbit::getPermutedClusterByIndex,
              R"pbdoc(
-             list of permutations;
-             permutations_to_representative[i] takes self.equivalent_sites[i] to
-             the same order as self.representative_sites.
+             Returns the equivalent cluster at position `index` using
+             the permutation of the representative cluster.
 
-             This can be used if you for example want to count elements and are
-             interested in difference between ABB, BAB, BBA and so on. If you count
-             the lattice sites that are permuted according to these permutations
-             then you will get the correct counts.
+             Parameters
+             ----------
+             index : int
+                index of site to return
+             )pbdoc",
+             py::arg("index"))
+        .def("get_mc_vectors", &Orbit::getMultiComponentVectors,
+             R"pbdoc(
+             Return the multi-component vectors for this orbit given the allowed components.
+             The multi-component vectors are returned as a list of tuples.
+
+             Parameters
+             ----------
+             allowed_components : list(int)
+                The allowed components for the lattice sites,
+                allowed_components[i] correspond to the number
+                of allowed compoments at lattice site
+                orbit.representative_cluster[i].)pbdoc")
+        .def("sort", &Orbit::sort,
+             "Sorts the list of equivalent sites.")
+        .def("get_all_possible_mc_vector_permutations",
+             &Orbit::getAllPossibleMultiComponentVectorPermutations,
+             R"pbdoc(
+             Similar to get all permutations but needs to be filtered through the number of allowed elements.
+
+             Parameters
+             ----------
+             allowed_components : list(int)
+                 The allowed components for the lattice sites,
+                 `allowed_components[i]` correspond to the lattice site
+                 `self.representative_cluster[i]`.
+
+             returns all_mc_vectors : list(list(int)
              )pbdoc")
         .def("__len__", &Orbit::size)
         .def("__str__",
@@ -755,8 +650,8 @@ PYBIND11_MODULE(_icet, m)
              {
                  std::ostringstream msg;
                  msg << "radius: " << orbit.radius();
-                 msg << "  equivalent_sites:";
-                 for (const auto sites : orbit._equivalentSites)
+                 msg << "  equivalent_clusters:";
+                 for (const auto sites : orbit._equivalentClusters)
                  {
                      msg << "  ";
                      for (const auto site : sites)
@@ -781,7 +676,7 @@ PYBIND11_MODULE(_icet, m)
             (supercell) structure for which to generate orbit list
         matrix_of_equivalent_sites : list(list(_icet.LatticeSite))
             matrix of symmetry equivalent sites
-        neighbor_lists : list(icet.NeighborList)
+        neighbor_lists : list(list(list(_icet.LatticeSite)))
             neighbor lists for each (cluster) order
         position_tolerance
             tolerance applied when comparing positions in Cartesian coordinates
@@ -789,7 +684,7 @@ PYBIND11_MODULE(_icet, m)
         .def(py::init<>())
         .def(py::init<const Structure &,
                       const std::vector<std::vector<LatticeSite>> &,
-                      const std::vector<NeighborList> &,
+                      const std::vector<std::vector<std::vector<LatticeSite>>> &,
                       const double>(),
              "Constructs an OrbitList object from a matrix of equivalent sites.",
              py::arg("structure"),
@@ -801,19 +696,7 @@ PYBIND11_MODULE(_icet, m)
              &OrbitList::getOrbits,
              "list(_icet.Orbit) : list of orbits")
         .def("get_orbit_list", &OrbitList::getOrbits,
-             "Returns the list of orbits")             
-        .def("check_equivalent_clusters",
-             &OrbitList::checkEquivalentClusters,
-             R"pbdoc(
-             Debug function for checking that all equivalent sites in every
-             orbit yield the same radius.
-
-             Parameters
-             ----------
-             position_tolerance : float
-                 tolerance applied when evaluating positions in Cartesian coordinates
-             )pbdoc",
-             py::arg("position_tolerance"))
+             "Returns the list of orbits")
         .def("add_orbit",
              &OrbitList::addOrbit,
              "Adds an orbit.")
@@ -877,7 +760,7 @@ PYBIND11_MODULE(_icet, m)
              py::arg("lattice_neighbors"),
              py::arg("sort_it"))
         .def("_get_all_columns_from_sites",
-             &OrbitList::getAllColumnsFromSites,
+             &OrbitList::getAllColumnsFromCluster,
              R"pbdoc(
              Finds the sites in column1, extract and return all columns along with their unit cell
              translated indistinguishable sites.
@@ -886,14 +769,8 @@ PYBIND11_MODULE(_icet, m)
              ----------
              sites : list(_icet.LatticeSite)
                  sites that correspond to the columns that will be returned
-             column1 : list(_icet.LatticeSite)
-                 sites in the first column of matrix of equivalent sites
-             matrix_of_equivalent_sites : list(list(_icet.LatticeSite))
-                 matrix of equivalent sites
              )pbdoc",
-             py::arg("sites"),
-             py::arg("column1"),
-             py::arg("permutation_matrix"))
+             py::arg("sites"))
         .def("get_primitive_structure",
              &OrbitList::getPrimitiveStructure,
              "Returns the primitive atomic structure used to construct the OrbitList instance.")
@@ -1060,8 +937,25 @@ PYBIND11_MODULE(_icet, m)
               ignored_indices : list(int)
                   list of indices that have already had their local energy calculated;
                   this is required to prevent double counting
-              )pbdoc",
+              )pbdoc",              
               py::arg("occupations"),
               py::arg("index"),
-              py::arg("ignored_indices"));
+              py::arg("ignored_indices"))
+        .def("get_full_cluster_vector",
+             [](ClusterExpansionCalculator &calc,
+                const std::vector<int> &occupations)
+             {
+                auto cv = calc.getClusterVector(occupations);
+                return py::array(cv.size(), cv.data());
+              },
+              R"pbdoc(
+              Returns full cluster vector used in total property calculations.
+
+              Parameters
+              ----------
+              occupations : list(int)
+                  the occupation vector for the supercell              
+              )pbdoc",              
+              py::arg("occupations"))
+              ;
 }

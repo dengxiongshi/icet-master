@@ -47,7 +47,7 @@ class ClusterExpansionCalculator(BaseCalculator):
                  name: str = 'Cluster Expansion Calculator',
                  scaling: Union[float, int] = None,
                  use_local_energy_calculator: bool = True) -> None:
-        super().__init__(structure=structure, name=name)
+        super().__init__(name=name)
 
         structure_cpy = structure.copy()
         cluster_expansion.prune()
@@ -71,6 +71,8 @@ class ClusterExpansionCalculator(BaseCalculator):
         else:
             self._property_scaling = scaling
 
+        self._sublattices = self.cluster_expansion._cluster_space.get_sublattices(structure)
+
     @property
     def cluster_expansion(self) -> ClusterExpansion:
         """ cluster expansion from which calculator was constructed """
@@ -86,51 +88,68 @@ class ClusterExpansionCalculator(BaseCalculator):
         occupations
             the entire occupation vector (i.e. list of atomic species)
         """
-        self.structure.set_atomic_numbers(occupations)
-        return self.cluster_expansion.predict(self.structure) * \
-            self._property_scaling
 
-    def calculate_local_contribution(self, *, local_indices: List[int],
-                                     occupations: List[int]) -> float:
+        cv = self.cpp_calc.get_full_cluster_vector(occupations)
+        return np.dot(cv, self.cluster_expansion.parameters) * self._property_scaling
+
+    def calculate_change(self, *, sites: List[int],
+                         current_occupations: List[int],
+                         new_site_occupations: List[int]) -> float:
         """
         Calculates and returns the sum of the contributions to the property
         due to the sites specified in `local_indices`
 
         Parameters
         ----------
-        local_indices
-            sites over which to sum up the local contribution
-        occupations
-            entire occupation vector
+        sites
+            index of sites at which occupations will be changed
+        current_occupations
+            entire occupation vector (atomic numbers) before change
+        new_site_occupations
+            atomic numbers after change at the sites defined by `sites`
         """
-        if not self.use_local_energy_calculator:
-            return self.calculate_total(occupations=occupations)
+        occupations = np.array(current_occupations)
+        new_site_occupations = np.array(new_site_occupations)
 
-        self.structure.set_atomic_numbers(occupations)
+        if not self.use_local_energy_calculator:
+            e_before = self.calculate_total(occupations=occupations)
+            occupations[sites] = np.array(new_site_occupations)
+            e_after = self.calculate_total(occupations=occupations)
+            return e_after - e_before
 
         local_contribution = 0
-        exclude_indices = []  # type: List[int]
+        try:
+            exclude_indices = []  # type: List[int]
+            for index in sites:
+                local_contribution -= self._calculate_local_contribution(
+                    occupations=occupations, index=index,
+                    exclude_indices=exclude_indices)
+                exclude_indices.append(index)
 
-        for index in local_indices:
-            try:
+            occupations[sites] = np.array(new_site_occupations)
+            exclude_indices = []  # type: List[int]
+            for index in sites:
                 local_contribution += self._calculate_local_contribution(
-                    index, exclude_indices=exclude_indices)
-            except Exception as e:
-                msg = "caugh exception {}. Try setting flag ".format(e)
-                msg += "`use_local_energy_calculator to False` in init"
-                raise RuntimeError(msg)
-
-            exclude_indices.append(index)
+                    occupations=occupations, index=index,
+                    exclude_indices=exclude_indices)
+                exclude_indices.append(index)
+        except Exception as e:
+            msg = 'Caught exception {}. Try setting parameter '.format(e)
+            msg += 'use_local_energy_calculator to False in init'
+            raise RuntimeError(msg)
 
         return local_contribution * self._property_scaling
 
-    def _calculate_local_contribution(self, index: int, exclude_indices: List[int] = []):
+    def _calculate_local_contribution(self, occupations: List[int], index: int,
+                                      exclude_indices: List[int] = []):
         """
         Internal method to calculate the local contribution for one
         index.
 
         Parameters
         ----------
+        occupations
+            entire occupation vector
         index : int
             lattice index
         exclude_indices
@@ -139,11 +158,10 @@ class ClusterExpansionCalculator(BaseCalculator):
 
         """
         local_cv = self.cpp_calc.get_local_cluster_vector(
-            self.structure.get_atomic_numbers(), index, exclude_indices)
+            occupations, index, exclude_indices)
         return np.dot(local_cv, self.cluster_expansion.parameters)
 
     @property
     def sublattices(self) -> Sublattices:
         """Sublattices of the calculators structure."""
-        sl = self.cluster_expansion._cluster_space.get_sublattices(self.structure)
-        return sl
+        return self._sublattices

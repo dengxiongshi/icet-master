@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from collections import OrderedDict
 from math import gcd
 from time import time
-from typing import BinaryIO, Dict, List, TextIO, Union
+from typing import Any, Dict, List, Optional, Type, Union
 
 import numpy as np
 
@@ -67,14 +67,14 @@ class BaseEnsemble(ABC):
                  random_seed: int = None,
                  dc_filename: str = None,
                  data_container: str = None,
-                 data_container_class: BaseDataContainer = BaseDataContainer,
+                 data_container_class: Type[BaseDataContainer] = BaseDataContainer,
                  data_container_write_period: float = 600,
                  ensemble_data_write_interval: int = None,
                  trajectory_write_interval: int = None) -> None:
 
         # initialize basic variables
         self._accepted_trials = 0
-        self._observers = {}
+        self._observers = {}  # type: Dict[str, BaseObserver]
         self._step = 0
 
         # calculator and configuration
@@ -94,12 +94,14 @@ class BaseEnsemble(ABC):
 
         # random number generator
         if random_seed is None:
-            self._random_seed = random.randint(0, 1e16)
+            self._random_seed = random.randint(0, int(1e16))
         else:
             self._random_seed = random_seed
         random.seed(a=self._random_seed)
 
         # add ensemble parameters and metadata
+        if not self._ensemble_parameters:
+            self._ensemble_parameters = {}  # type: Dict[str, Any]
         self._ensemble_parameters['n_atoms'] = len(self.structure)
         metadata = OrderedDict(ensemble_name=self.__class__.__name__,
                                user_tag=user_tag, seed=self.random_seed)
@@ -114,7 +116,7 @@ class BaseEnsemble(ABC):
             self._data_container_filename = dc_filename
 
         if dc_filename is not None and os.path.isfile(dc_filename):
-            self._data_container = data_container_class.read(dc_filename)
+            self._data_container = data_container_class.read(dc_filename)  # type: BaseDataContainer
 
             dc_ensemble_parameters = self.data_container.ensemble_parameters
             if not dicts_equal(self.ensemble_parameters,
@@ -155,7 +157,7 @@ class BaseEnsemble(ABC):
     @property
     def structure(self) -> Atoms:
         """ current configuration (copy) """
-        return self.configuration.structure.copy()
+        return self.configuration.structure
 
     @property
     def data_container(self) -> BaseDataContainer:
@@ -174,7 +176,7 @@ class BaseEnsemble(ABC):
 
     @property
     def step(self) -> int:
-        """ current configuration (copy) """
+        """ current trial step counter """
         return self._step
 
     def run(self, number_of_trial_steps: int):
@@ -277,12 +279,13 @@ class BaseEnsemble(ABC):
 
         # Observer data
         for observer in self.observers.values():
+            assert isinstance(observer.interval, int), 'interval is not an int'
             if step % observer.interval == 0:
                 if observer.return_type is dict:
-                    for key, value in observer.get_observable(self.calculator.structure).items():
-                        row_dict[key] = value
+                    for key, val in observer.get_observable(self.configuration.structure).items():
+                        row_dict[key] = val
                 else:
-                    row_dict[observer.tag] = observer.get_observable(self.calculator.structure)
+                    row_dict[observer.tag] = observer.get_observable(self.configuration.structure)
 
         if len(row_dict) > 0:
             self._data_container.append(mctrial=step, record=row_dict)
@@ -292,7 +295,7 @@ class BaseEnsemble(ABC):
         pass
 
     @property
-    def user_tag(self) -> str:
+    def user_tag(self) -> Optional[str]:
         """ tag used for labeling the ensemble """
         return self._user_tag
 
@@ -312,7 +315,7 @@ class BaseEnsemble(ABC):
         """
         return self._observer_interval
 
-    def _find_observer_interval(self) -> int:
+    def _find_observer_interval(self) -> None:
         """
         Finds the greatest common denominator from the observation intervals.
         """
@@ -323,6 +326,7 @@ class BaseEnsemble(ABC):
         if self._trajectory_write_interval is not np.inf:
             intervals.append(self._trajectory_write_interval)
         if intervals:
+            assert all([isinstance(k, int) for k in intervals]), 'intervals must be ints'
             self._observer_interval = self._get_gcd(intervals)
 
     def _get_gcd(self, values: List[int]) -> int:
@@ -402,20 +406,9 @@ class BaseEnsemble(ABC):
         species
             new occupations (species) by atomic number
         """
-        current_species = self.configuration.occupations[sites]
-        current_property = self.calculator.calculate_local_contribution(
-            local_indices=sites,
-            occupations=self.configuration.occupations)
-
-        self.update_occupations(sites=sites, species=species)
-        new_property = self.calculator.calculate_local_contribution(
-            local_indices=sites,
-            occupations=self.configuration.occupations)
-        property_change = new_property - current_property
-
-        # Restore initial configuration
-        self.update_occupations(sites, current_species)
-        return property_change
+        return self.calculator.calculate_change(sites=sites,
+                                                current_occupations=self.configuration.occupations,
+                                                new_site_occupations=species)
 
     def _get_ensemble_data(self) -> dict:
         """ Returns the current calculator property. """
@@ -459,7 +452,7 @@ class BaseEnsemble(ABC):
         # Restart state of random number generator
         random.setstate(self.data_container._last_state['random_state'])
 
-    def write_data_container(self, outfile: Union[str, BinaryIO, TextIO]):
+    def write_data_container(self, outfile: Union[str, bytes]):
         """Updates last state of the Monte Carlo simulation and
         writes data container to file.
 

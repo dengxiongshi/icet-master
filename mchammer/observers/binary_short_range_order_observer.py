@@ -25,7 +25,7 @@ class BinaryShortRangeOrderObserver(BaseObserver):
         defines the lattice which the observer will work on
     interval : int
         the observation interval, defaults to None meaning that if the
-        observer is used in a Monte-simulations, then the Ensemble object
+        observer is used in a Monte Carlo simulations, then the Ensemble object
         will set the interval.
     radius : float
         the maximum radius  for the neigbhor shells considered

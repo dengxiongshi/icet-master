@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Any
 
 import numpy as np
 from math import isclose
@@ -111,7 +111,7 @@ class HybridEnsemble(ThermodynamicBaseEnsemble):
         period in units of seconds at which the data container is
         written to file; writing periodically to file provides both
         a way to examine the progress of the simulation and to
-        back up the data [default: np.inf]
+        back up the data [default: 600 s]
     ensemble_data_write_interval : int
         interval at which data is written to the data container;
         this includes for example the current value of the
@@ -233,17 +233,16 @@ class HybridEnsemble(ThermodynamicBaseEnsemble):
         return self._ensemble_parameters['temperature']
 
     @property
-    def probabilities(self) -> float:
+    def probabilities(self) -> List[float]:
         """ Ensemble propabilities """
         return self._probabilities
 
     @property
-    def trial_steps_per_ensemble(self) -> Dict[str, float]:
+    def trial_steps_per_ensemble(self) -> Dict[str, int]:
         """ Number of Monte Carlo trial steps for each ensemble """
         return self._trial_steps_per_ensemble
 
-    def _process_ensemble_specs(
-            self, ensemble_specs: List[Dict]):
+    def _process_ensemble_specs(self, ensemble_specs: List[Dict]) -> None:
         """Process the list of ensembles and parameters
 
         Parameters
@@ -267,7 +266,7 @@ class HybridEnsemble(ThermodynamicBaseEnsemble):
 
         for ind, ensemble_spec in enumerate(ensemble_specs):
 
-            ensemble_arg = {}
+            ensemble_arg = {}  # type: Dict[str, Any]
             tag = "ensemble_{}".format(ind)
             ensemble_arg['tag'] = tag
 

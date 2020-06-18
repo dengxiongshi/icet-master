@@ -51,10 +51,10 @@ def init_cpp_orbit(number_of_sites):
         structure, lattice_site_for_cluster, True)
 
     orbit_pair_cpp = Orbit(pair_cluster)
-    orbit_pair_cpp.equivalent_sites = lattice_sites_pairs_cpp
+    orbit_pair_cpp.equivalent_clusters = lattice_sites_pairs_cpp
 
     orbit_triplet_cpp = Orbit(triplet_cluster)
-    orbit_triplet_cpp.equivalent_sites = lattice_sites_triplets_cpp
+    orbit_triplet_cpp.equivalent_clusters = lattice_sites_triplets_cpp
 
     return orbit_pair_cpp, orbit_triplet_cpp
 
@@ -85,7 +85,7 @@ def time_orbit_sites_permutations(orbit, iterations=5000):
 
     t = time.process_time()
     for i in range(iterations):
-        orbit.permuted_sites
+        orbit.permuted_equivalent_clusters
 
     total_time = time.process_time() - t
     return total_time / iterations

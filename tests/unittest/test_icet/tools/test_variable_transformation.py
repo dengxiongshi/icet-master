@@ -47,7 +47,7 @@ def find_orbit_and_equivalent_site_with_indices(orbit_list, site_indices):
         if len(site_indices) != orbit.order:
             continue
 
-        for sites in orbit.get_equivalent_sites():
+        for sites in orbit.equivalent_clusters:
 
             # Check if the list of site indices matches those for the equivalent site
             if all(sites[j].index == site_indices[j] for j in range(len(site_indices))):
@@ -128,8 +128,8 @@ class TestVariableTransformationTriplets(unittest.TestCase):
         structure_prim.wrap()
         self.structure_prim = structure_prim
         self.cs = ClusterSpace(self.structure_prim, self.cutoffs, self.chemical_symbols)
-        ecis = [0.0] * 4 + [0.1] * 6 + [-0.02] * 11
-        self.ce = ClusterExpansion(self.cs, ecis)
+        parameters = [0.0] * 4 + [0.1] * 6 + [-0.02] * 11
+        self.ce = ClusterExpansion(self.cs, parameters)
         self.all_possible_structures = []
         self.supercell = self.structure_prim.repeat((2, 2, 1))
         for i in range(len(self.supercell)):

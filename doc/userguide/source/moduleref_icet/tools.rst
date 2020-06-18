@@ -68,6 +68,17 @@ Convex hull construction
 
 
 .. index::
+   single: Function reference; Constraints
+   single: Class reference; Constraints
+
+Fitting with constraints
+------------------------
+
+.. automodule:: icet.tools.constraints
+   :members:
+
+
+.. index::
    single: Function reference; Wyckoff sites
    single: Class reference; Wyckoff sites
    single: Function reference; Other structure tools

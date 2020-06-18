@@ -80,7 +80,6 @@ class TestClusterCounts(unittest.TestCase):
         cluster_map = self.cluster_counts.get_cluster_counts()
 
         count = cluster_map[cluster]
-        print(count)
         self.assertEqual(count, {('Ni', 'Fe'): 1, ('Ni', 'Ni'): 1})
 
     def test_count_orbit_list(self):

@@ -64,9 +64,9 @@ class TestClusterExpansion(unittest.TestCase):
         """Tests orders property."""
         self.assertEqual(self.ce.orders, list(range(len(self.cutoffs) + 2)))
 
-    def test_property_parameters_as_dataframe(self):
-        """Tests parameters_as_dataframe property."""
-        df = self.ce.parameters_as_dataframe
+    def test_property_to_dataframe(self):
+        """Tests to_dataframe() property."""
+        df = self.ce.to_dataframe()
         self.assertIn('radius', df.columns)
         self.assertIn('order', df.columns)
         self.assertIn('eci', df.columns)
@@ -137,7 +137,7 @@ class TestClusterExpansion(unittest.TestCase):
         len_after = len(self.ce)
         self.assertEqual(len_before, len_after)
 
-        # Set all ECIs to zero except three
+        # Set all parameters to zero except three
         self.ce._parameters = np.array([0.0] * len_after)
         self.ce._parameters[0] = 1.0
         self.ce._parameters[1] = 2.0
@@ -153,7 +153,7 @@ class TestClusterExpansion(unittest.TestCase):
         len_after = len(self.ce)
         self.assertEqual(len_before, len_after)
 
-        # Set all ECIs to zero except two, one of which is
+        # Set all parameters to zero except two, one of which is
         # non-zero but below the tolerance
         self.ce._parameters = np.array([0.0] * len_after)
         self.ce._parameters[0] = 1.0
@@ -164,11 +164,11 @@ class TestClusterExpansion(unittest.TestCase):
 
     def test_prune_pairs(self):
         """Tests pruning pairs only."""
-        df = self.ce.parameters_as_dataframe
+        df = self.ce.to_dataframe()
         pair_indices = df.index[df['order'] == 2].tolist()
         self.ce.prune(indices=pair_indices)
 
-        df_new = self.ce.parameters_as_dataframe
+        df_new = self.ce.to_dataframe()
         pair_indices_new = df_new.index[df_new['order'] == 2].tolist()
         self.assertEqual(pair_indices_new, [])
 
@@ -178,18 +178,15 @@ class TestClusterExpansion(unittest.TestCase):
             self.ce.prune(indices=[0])
         self.assertTrue('zerolet may not be pruned' in str(context.exception))
 
-    def test_plot_parameters(self):
-        """Tests plot_parameters."""
-        file = tempfile.NamedTemporaryFile()
-        self.ce.plot_parameters(file.name+'.pdf')
+    def test_plot_ecis(self):
+        """Tests plot_ecis."""
+        self.ce.plot_ecis()
 
     def test_repr(self):
         """Tests repr functionality."""
-
         retval = self.ce.__repr__()
-
         target = """
-========================================== Cluster Expansion ===========================================
+================================================ Cluster Expansion =================================================
  space group                            : Fm-3m (225)
  chemical species                       : ['Au', 'Pd'] (sublattice A)
  cutoffs                                : 3.0000 3.0000 3.0000
@@ -200,27 +197,24 @@ class TestClusterExpansion(unittest.TestCase):
  symprec                                : 1e-05
  total number of nonzero parameters     : 4
  number of nonzero parameters by order  : 0= 0  1= 1  2= 1  3= 1  4= 1
---------------------------------------------------------------------------------------------------------
-index | order |  radius  | multiplicity | orbit_index | multi_component_vector | sublattices |    ECI
---------------------------------------------------------------------------------------------------------
-   0  |   0   |   0.0000 |        1     |      -1     |           .            |      .      |         0
-   1  |   1   |   0.0000 |        1     |       0     |          [0]           |      A      |         1
-   2  |   2   |   1.4425 |        6     |       1     |         [0, 0]         |     A-A     |         2
-   3  |   3   |   1.6657 |        8     |       2     |       [0, 0, 0]        |    A-A-A    |         3
-   4  |   4   |   1.7667 |        2     |       3     |      [0, 0, 0, 0]      |   A-A-A-A   |         4
-========================================================================================================
-
+--------------------------------------------------------------------------------------------------------------------
+index | order |  radius  | multiplicity | orbit_index | multi_component_vector | sublattices | parameter |    ECI
+--------------------------------------------------------------------------------------------------------------------
+   0  |   0   |   0.0000 |        1     |      -1     |           .            |      .      |         0 |         0
+   1  |   1   |   0.0000 |        1     |       0     |          [0]           |      A      |         1 |         1
+   2  |   2   |   1.4425 |        6     |       1     |         [0, 0]         |     A-A     |         2 |     0.333
+   3  |   3   |   1.6657 |        8     |       2     |       [0, 0, 0]        |    A-A-A    |         3 |     0.375
+   4  |   4   |   1.7667 |        2     |       3     |      [0, 0, 0, 0]      |   A-A-A-A   |         4 |         2
+====================================================================================================================
 """  # noqa
 
         self.assertEqual(strip_surrounding_spaces(target), strip_surrounding_spaces(retval))
 
     def test_get_string_representation(self):
         """Tests _get_string_representation functionality."""
-
         retval = self.ce._get_string_representation(print_threshold=2, print_minimum=1)
-
         target = """
-========================================== Cluster Expansion ===========================================
+================================================ Cluster Expansion =================================================
  space group                            : Fm-3m (225)
  chemical species                       : ['Au', 'Pd'] (sublattice A)
  cutoffs                                : 3.0000 3.0000 3.0000
@@ -231,13 +225,13 @@ index | order |  radius  | multiplicity | orbit_index | multi_component_vector |
  symprec                                : 1e-05
  total number of nonzero parameters     : 4
  number of nonzero parameters by order  : 0= 0  1= 1  2= 1  3= 1  4= 1
---------------------------------------------------------------------------------------------------------
-index | order |  radius  | multiplicity | orbit_index | multi_component_vector | sublattices |    ECI
---------------------------------------------------------------------------------------------------------
-   0  |   0   |   0.0000 |        1     |      -1     |           .            |      .      |         0
+--------------------------------------------------------------------------------------------------------------------
+index | order |  radius  | multiplicity | orbit_index | multi_component_vector | sublattices | parameter |    ECI
+--------------------------------------------------------------------------------------------------------------------
+   0  |   0   |   0.0000 |        1     |      -1     |           .            |      .      |         0 |         0
  ...
-   4  |   4   |   1.7667 |        2     |       3     |      [0, 0, 0, 0]      |   A-A-A-A   |         4
-========================================================================================================
+   4  |   4   |   1.7667 |        2     |       3     |      [0, 0, 0, 0]      |   A-A-A-A   |         4 |         2
+====================================================================================================================
 """  # noqa
         self.assertEqual(strip_surrounding_spaces(target), strip_surrounding_spaces(retval))
 
@@ -284,11 +278,11 @@ class TestClusterExpansionTernary(unittest.TestCase):
     def test_prune_pairs(self):
         """Tests pruning pairs only"""
 
-        df = self.ce.parameters_as_dataframe
+        df = self.ce.to_dataframe()
         pair_indices = df.index[df['order'] == 2].tolist()
         self.ce.prune(indices=pair_indices)
 
-        df_new = self.ce.parameters_as_dataframe
+        df_new = self.ce.to_dataframe()
         pair_indices_new = df_new.index[df_new['order'] == 2].tolist()
         self.assertEqual(pair_indices_new, [])
 

@@ -101,7 +101,7 @@ class SemiGrandCanonicalEnsemble(ThermodynamicBaseEnsemble):
         period in units of seconds at which the data container is
         written to file; writing periodically to file provides both
         a way to examine the progress of the simulation and to back up
-        the data [default: np.inf]
+        the data [default: 600 s]
     ensemble_data_write_interval : int
         interval at which data is written to the data container; this
         includes for example the current value of the calculator
@@ -219,7 +219,8 @@ class SemiGrandCanonicalEnsemble(ThermodynamicBaseEnsemble):
         return data
 
 
-def get_chemical_potentials(chemical_potentials: Dict[Union[int, str], float]):
+def get_chemical_potentials(chemical_potentials: Union[Dict[str, float], Dict[int, float]]) \
+        -> Dict[int, float]:
     """ Gets values of chemical potentials."""
     if not isinstance(chemical_potentials, dict):
         raise TypeError('chemical_potentials has the wrong type: {}'

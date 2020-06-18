@@ -4,7 +4,7 @@ This module provides the ConvexHull class.
 
 import itertools
 import numpy as np
-from typing import List, Union
+from typing import List, Sized, Union
 from scipy.interpolate import griddata
 from scipy.spatial import ConvexHull as ConvexHullSciPy
 from scipy.spatial.qhull import QhullError
@@ -89,8 +89,8 @@ generated/scipy.spatial.ConvexHull.html>`_.
         hull = ConvexHullSciPy(points)
 
         # Collect convex hull points in handy arrays
-        concentrations = []
-        energies = []
+        concentrations = []  # type: ignore
+        energies = []  # type: ignore
         for vertex in hull.vertices:
             if self.dimensions == 1:
                 concentrations.append(points[vertex][0])
@@ -199,7 +199,7 @@ generated/scipy.spatial.ConvexHull.html>`_.
             to be provided as a list of lists, such as ``[[0.1, 0.2],
             [0.3, 0.1], ...]``.
         """
-        if self.dimensions > 1:
+        if self.dimensions > 1 and isinstance(target_concentrations[0], Sized):
             assert len(target_concentrations[0]) == self.dimensions
 
         # Loop over all complexes of N+1 points to make sure that the lowest

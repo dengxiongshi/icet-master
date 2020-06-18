@@ -55,14 +55,14 @@ over orbits (symmetry equivalent clusters) of increasing order and size.
 @param structure input configuration
 @param fractionalPositionTolerance tolerance applied when comparing positions in fractional coordinates
 
-@todo review the necessity for having the orderIntact argument to e.g., countOrbitList.
+@todo review the necessity for having the keepOrder argument to e.g., countOrbitList.
 **/
 std::vector<double> ClusterSpace::getClusterVector(const Structure &structure,
                                                    const double fractionalPositionTolerance) const
 {
 
     // Do not sort clusters.
-    bool orderIntact = true;
+    bool keepOrder = true;
 
     // Count the clusters in the orbit with the same order as the prototype cluster
     bool permuteSites = true;
@@ -75,7 +75,7 @@ std::vector<double> ClusterSpace::getClusterVector(const Structure &structure,
     for (size_t i = 0; i < uniqueOffsets; i++)
     {
         const auto localOrbitList = localOrbitListGenerator.getLocalOrbitList(i);
-        clusterCounts.countOrbitList(structure, localOrbitList, orderIntact, permuteSites);
+        clusterCounts.countOrbitList(structure, localOrbitList, keepOrder, permuteSites);
     }
 
     // Check that the number of unique offsets equals the number of unit cells in the supercell.
@@ -101,13 +101,13 @@ std::vector<double> ClusterSpace::getClusterVector(const Structure &structure,
     {
 
         auto representativeCluster = _orbitList.getOrbit(i).getRepresentativeCluster();
-        // @todo This is necessary. Side effects need to carefully evaluated. Ideally move this task elsewhere as it is repeated for every structure, for which the cluster vector is computed.
+        // @todo This is necessary. Side effects need to be carefully evaluated. Ideally move this task elsewhere as it is repeated for every structure, for which the cluster vector is computed.
         representativeCluster.setTag(i);
 
         std::vector<int> numberOfAllowedSpeciesBySite;
         try
         {
-            numberOfAllowedSpeciesBySite = getNumberOfAllowedSpeciesBySite(_primitiveStructure, _orbitList.getOrbit(i).getRepresentativeSites());
+            numberOfAllowedSpeciesBySite = getNumberOfAllowedSpeciesBySite(_primitiveStructure, _orbitList.getOrbit(i).getSitesOfRepresentativeCluster());
         }
         catch (const std::exception &e)
         {
@@ -122,11 +122,11 @@ std::vector<double> ClusterSpace::getClusterVector(const Structure &structure,
         {
             continue;
         }
-        auto representativeSites = _orbitList.getOrbit(i).getRepresentativeSites();
-        std::vector<int> representativeSitesIndices;
-        for(const auto site : representativeSites)
+        auto sitesOfRepresentativeCluster = _orbitList.getOrbit(i).getSitesOfRepresentativeCluster();
+        std::vector<int> representativeClusterIndices;
+        for(const auto site : sitesOfRepresentativeCluster)
         {
-            representativeSitesIndices.push_back(site.index());
+            representativeClusterIndices.push_back(site.index());
         }
 
         // First we obtain the multi-component vectors for this orbit, i.e. a vector
@@ -152,7 +152,7 @@ std::vector<double> ClusterSpace::getClusterVector(const Structure &structure,
                 for (const auto &perm : sitePermutations[currentMultiComponentVectorIndex])
                 {
                     auto permutedMultiComponentVector = icet::getPermutedVector(multiComponentVector, perm);
-                    auto permutedRepresentativeIndices = icet::getPermutedVector(representativeSitesIndices, perm);
+                    auto permutedRepresentativeIndices = icet::getPermutedVector(representativeClusterIndices, perm);
                     auto permutedNumberOfAllowedSpeciesBySite = icet::getPermutedVector(numberOfAllowedSpeciesBySite, perm);
 
                     clusterVectorElement += evaluateClusterProduct(permutedMultiComponentVector, permutedNumberOfAllowedSpeciesBySite, speciesCountPair.first, permutedRepresentativeIndices) * speciesCountPair.second;
@@ -191,7 +191,7 @@ std::vector<double> ClusterSpace::getClusterVector(const Structure &structure,
 
 std::vector<std::vector<std::vector<int>>> ClusterSpace::getMultiComponentVectorPermutations(const std::vector<std::vector<int>> &multiComponentVectors, const int orbitIndex) const
 {
-    const auto allowedPermutations = _orbitList.getOrbit(orbitIndex).getAllowedSitesPermutations();
+    const auto allowedPermutations = _orbitList.getOrbit(orbitIndex).getAllowedClusterPermutations();
 
     std::vector<std::vector<std::vector<int>>> elementPermutations;
     std::vector<int> selfPermutation;
@@ -306,7 +306,7 @@ void ClusterSpace::computeMultiComponentVectors()
     {
 
         std::vector<std::vector<int>> permutedMCVector;
-        auto numberOfAllowedSpecies = getNumberOfAllowedSpeciesBySite(_primitiveStructure, _orbitList.getOrbit(i).getRepresentativeSites());
+        auto numberOfAllowedSpecies = getNumberOfAllowedSpeciesBySite(_primitiveStructure, _orbitList.getOrbit(i).getSitesOfRepresentativeCluster());
 
         auto multiComponentVectors = _orbitList.getOrbit(i).getMultiComponentVectors(numberOfAllowedSpecies);
         if (std::none_of(numberOfAllowedSpecies.begin(), numberOfAllowedSpecies.end(), [](int n) { return n < 2; }))

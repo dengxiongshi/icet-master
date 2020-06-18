@@ -29,7 +29,7 @@
     @param saveBothWays if true then both @a i,j,k and @a j,i,k etc.. will be saved; otherwise only @a i,j,k will be saved if @a i<j<k.
 */
 
-std::vector<std::pair<std::vector<LatticeSite>, std::vector<LatticeSite>>> ManyBodyNeighborList::build(const std::vector<NeighborList> &neighborLists,
+std::vector<std::pair<std::vector<LatticeSite>, std::vector<LatticeSite>>> ManyBodyNeighborList::build(const std::vector<std::vector<std::vector<LatticeSite>>> &neighborLists,
                                                                                                        int index,
                                                                                                        bool saveBothWays)
 {
@@ -45,7 +45,8 @@ std::vector<std::pair<std::vector<LatticeSite>, std::vector<LatticeSite>>> ManyB
 
     for (size_t c = 2; c < neighborLists.size() + 2; c++)
     {
-        auto Ni = neighborLists[c - 2].getNeighbors(index);
+        //auto Ni = neighborLists[c - 2].getNeighbors(index);
+        auto Ni = neighborLists[c - 2][index];
         Vector3d zeroVector = {0.0, 0.0, 0.0};
         std::vector<LatticeSite> currentOriginalNeighbors;
         currentOriginalNeighbors.push_back(LatticeSite(index, zeroVector));  // index is always first index
@@ -71,7 +72,7 @@ void ManyBodyNeighborList::addSinglet(const int index,
 
 /// Add all pairs originating from index using neighbor_list
 void ManyBodyNeighborList::addPairs(const int index,
-                                    const NeighborList &neighborList,
+                                    const std::vector<std::vector<LatticeSite>> &neighborList,
                                     std::vector<std::pair<std::vector<LatticeSite>, std::vector<LatticeSite>>> &manyBodyNeighborIndices,
                                     bool saveBothWays) const
 
@@ -80,7 +81,7 @@ void ManyBodyNeighborList::addPairs(const int index,
     LatticeSite latticeNeighborIndex = LatticeSite(index, zeroVector);
 
     std::vector<LatticeSite> firstSite = {latticeNeighborIndex};
-    std::vector<LatticeSite> Ni = neighborList.getNeighbors(index);
+    std::vector<LatticeSite> Ni = neighborList[index];
     //exclude smaller neighbors
     if (!saveBothWays)
     {
@@ -125,7 +126,7 @@ be removed/overlooked when moving to the next vector<LatticeSite>.
     all k in N_ij are then neighbors with i,j
     what is saved is then i,j and N_ij up to the desired order "maxorder"
 */
-void ManyBodyNeighborList::combineToHigherOrder(const NeighborList &nl,
+void ManyBodyNeighborList::combineToHigherOrder(const std::vector<std::vector<LatticeSite>> &nl,
                                                 std::vector<std::pair<std::vector<LatticeSite>, std::vector<LatticeSite>>> &manyBodyNeighborIndices,
                                                 const std::vector<LatticeSite> &Ni,
                                                 std::vector<LatticeSite> &currentOriginalNeighbors,
@@ -168,7 +169,7 @@ void ManyBodyNeighborList::combineToHigherOrder(const NeighborList &nl,
         auto originalNeighborCopy = currentOriginalNeighbors;
         originalNeighborCopy.push_back(j); // put j in originalNeigbhors
 
-        auto Nj = nl.getNeighbors(j.index());
+        auto Nj = nl[j.index()];
 
         //translate the neighbors
         translateAllNi(Nj, j.unitcellOffset());

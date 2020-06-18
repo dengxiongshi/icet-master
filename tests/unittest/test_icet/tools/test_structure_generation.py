@@ -532,9 +532,8 @@ class TestStructureGenerationInactiveSublatticeFCC(unittest.TestCase):
 
     def test_get_sqs_cluster_vector(self):
         """Test SQS cluster vector generation."""
-        target_concentrations = {'Au': 0.7, 'Pd': 0.3}
-
         # It should be the same as for cs without inactive lattice
+        target_concentrations = {'Au': 0.7, 'Pd': 0.3}
         target_cv = _get_sqs_cluster_vector(self.cs_with_only_active_sl, target_concentrations)
         cv = _get_sqs_cluster_vector(self.cs, target_concentrations)
         self.assertTrue(np.allclose(cv, target_cv))
@@ -583,6 +582,19 @@ class TestStructureGenerationInactiveSublatticeFCC(unittest.TestCase):
                                                 optimality_weight=0.0)
         target_cv = [1., 0., -0.16666667, 0., 0., 0.,
                      0., 0., 0., 0., 0., 0., 0.]
+        self.assertTrue(np.allclose(
+            self.cs.get_cluster_vector(structure), target_cv))
+
+        target_conc = {'Pd': 1 / 3, 'Au': 2 / 3}
+        target_cv = [1., 0., -0.16666667, 0., 0., 0.,
+                     0., 0., 0., 0., 0., 0., 0.]
+        target_cv = [1, 1/3, -1/9, 1/9, 1/3, -1/9,
+                     -1/3, -1/9, 1/9, -1/9, 1/9, 1/3, -1/3]
+        structure = generate_sqs_by_enumeration(cluster_space=self.cs,
+                                                max_size=3,
+                                                target_concentrations=target_conc,
+                                                optimality_weight=0.0,
+                                                pbc=True)
         self.assertTrue(np.allclose(
             self.cs.get_cluster_vector(structure), target_cv))
 

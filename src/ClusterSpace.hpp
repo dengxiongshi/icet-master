@@ -86,6 +86,10 @@ class ClusterSpace
     /// Prunes the orbit list.
     void pruneOrbitList(std::vector<size_t> &);
 
+    /// Primitive (prototype) structure.
+    Structure _primitiveStructure;
+
+
   private:
 
     /// Multi-component vectors for each orbit. The first index (int)
@@ -93,8 +97,6 @@ class ClusterSpace
     /// refers to a multi-component vector.
     std::vector<std::pair<int, std::vector<int>>> _multiComponentVectorsByOrbit;
 
-    /// Primitive (prototype) structure.
-    Structure _primitiveStructure;
 
     /// Number of allowed components on each site of the primitive structure.
     std::vector<int> _numberOfAllowedSpeciesPerSite;

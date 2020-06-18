@@ -1,7 +1,7 @@
 import time
 from ase.build import bulk
 from icet.core.structure import Structure
-from icet.core.neighbor_list import NeighborList
+from icet.core.neighbor_list import get_neighbor_lists
 from icet.core.many_body_neighbor_list import ManyBodyNeighborList
 
 
@@ -14,11 +14,9 @@ def build_many_body_neighbor_list_cpp(structure, order, cutoff):
     neighbor_lists = []
     position_tolerance = 1e-5
 
-    for co in cutoffs:
-        nl = NeighborList(co)
-        nl.build(structure=structure, position_tolerance=position_tolerance)
-        neighbor_lists.append(nl)
-
+    neighbor_lists = get_neighbor_lists(structure=structure,
+                                        cutoffs=cutoffs,
+                                        position_tolerance=position_tolerance)
     t = time.process_time()
     mbnl = ManyBodyNeighborList()
     for i in range(len(structure)):

@@ -101,3 +101,5 @@ For analysis functions see :ref:`here <data_container_analysis_functions>`.
    :members:
    :undoc-members:
    :inherited-members:
+
+.. autofunction:: mchammer.ensembles.wang_landau_ensemble.get_bins_for_parallel_simulations

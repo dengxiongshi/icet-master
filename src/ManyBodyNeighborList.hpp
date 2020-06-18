@@ -6,8 +6,7 @@
 #include <pybind11/stl.h>
 #include <Eigen/Dense>
 #include "LatticeSite.hpp"
-#include "NeighborList.hpp"
-#include "VectorOperations.hpp"
+using namespace Eigen;
 
 /**
 Design approach:
@@ -23,9 +22,9 @@ class ManyBodyNeighborList
         //empty...
     }
 
-    std::vector<std::pair<std::vector<LatticeSite>, std::vector<LatticeSite>>> build(const std::vector<NeighborList> &, int index, bool);
+    std::vector<std::pair<std::vector<LatticeSite>, std::vector<LatticeSite>>> build(const std::vector<std::vector<std::vector<LatticeSite>>> &, int index, bool);
 
-    void combineToHigherOrder(const NeighborList &nl,
+    void combineToHigherOrder(const std::vector<std::vector<LatticeSite>> &nl,
                               std::vector<std::pair<std::vector<LatticeSite>,
 			      std::vector<LatticeSite>>> &many_bodyNeighborIndex,
                               const std::vector<LatticeSite> &Ni,
@@ -57,7 +56,7 @@ class ManyBodyNeighborList
                                       const unsigned int &) const;
 
     void addSinglet(const int, std::vector<std::pair<std::vector<LatticeSite>, std::vector<LatticeSite>>> &) const;
-    void addPairs(const int, const NeighborList &, std::vector<std::pair<std::vector<LatticeSite>, std::vector<LatticeSite>>> &, bool) const;
+    void addPairs(const int, const std::vector<std::vector<LatticeSite>> &, std::vector<std::pair<std::vector<LatticeSite>, std::vector<LatticeSite>>> &, bool) const;
 
   private:
     std::vector<LatticeSite> getFilteredNj(const std::vector<LatticeSite> &, const LatticeSite &) const;

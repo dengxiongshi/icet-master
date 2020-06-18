@@ -1,6 +1,6 @@
 import itertools
 import random
-from typing import List, Union, Tuple
+from typing import List, Dict, Tuple, Union
 import numpy as np
 from mchammer.ensembles import TargetClusterVectorAnnealing
 from mchammer.calculators import (TargetVectorCalculator,
@@ -19,7 +19,7 @@ def generate_target_structure_from_supercells(cluster_space: ClusterSpace,
                                               target_cluster_vector: List[float],
                                               T_start: float = 5.0,
                                               T_stop: float = 0.001,
-                                              n_steps: float = None,
+                                              n_steps: int = None,
                                               optimality_weight: float = 1.0,
                                               random_seed: int = None,
                                               tol: float = 1e-5) -> Atoms:
@@ -77,8 +77,9 @@ def generate_target_structure_from_supercells(cluster_space: ClusterSpace,
     valid_supercells = []
     warning_issued = False
     for supercell in supercells:
+        supercell_copy = supercell.copy()
         try:
-            occupy_structure_randomly(supercell, cluster_space,
+            occupy_structure_randomly(supercell_copy, cluster_space,
                                       target_concentrations)
         except ValueError:
             if not warning_issued:
@@ -86,8 +87,8 @@ def generate_target_structure_from_supercells(cluster_space: ClusterSpace,
                                'target concentrations.')
                 warning_issued = True
             continue
-        valid_supercells.append(supercell)
-        calculators.append(TargetVectorCalculator(supercell, cluster_space,
+        valid_supercells.append(supercell_copy)
+        calculators.append(TargetVectorCalculator(supercell_copy, cluster_space,
                                                   target_cluster_vector,
                                                   optimality_weight=optimality_weight,
                                                   optimality_tol=tol))
@@ -107,10 +108,10 @@ def generate_target_structure(cluster_space: ClusterSpace,
                               target_concentrations: dict,
                               target_cluster_vector: List[float],
                               include_smaller_cells: bool = True,
-                              pbc: Tuple[Union[bool, int]] = None,
+                              pbc: Union[Tuple[bool, bool, bool], Tuple[int, int, int]] = None,
                               T_start: float = 5.0,
                               T_stop: float = 0.001,
-                              n_steps: float = None,
+                              n_steps: int = None,
                               optimality_weight: float = 1.0,
                               random_seed: int = None,
                               tol: float = 1e-5) -> Atoms:
@@ -177,7 +178,7 @@ def generate_target_structure(cluster_space: ClusterSpace,
 
     supercells = []
     if include_smaller_cells:
-        sizes = range(1, max_size + 1)
+        sizes = list(range(1, max_size + 1))
     else:
         sizes = [max_size]
 
@@ -216,7 +217,7 @@ def generate_sqs_from_supercells(cluster_space: ClusterSpace,
                                  target_concentrations: dict,
                                  T_start: float = 5.0,
                                  T_stop: float = 0.001,
-                                 n_steps: float = None,
+                                 n_steps: int = None,
                                  optimality_weight: float = 1.0,
                                  random_seed: int = None,
                                  tol: float = 1e-5) -> Atoms:
@@ -283,10 +284,10 @@ def generate_sqs(cluster_space: ClusterSpace,
                  max_size: int,
                  target_concentrations: dict,
                  include_smaller_cells: bool = True,
-                 pbc: Tuple[Union[bool, int]] = None,
+                 pbc: Union[Tuple[bool, bool, bool], Tuple[int, int, int]] = None,
                  T_start: float = 5.0,
                  T_stop: float = 0.001,
-                 n_steps: float = None,
+                 n_steps: int = None,
                  optimality_weight: float = 1.0,
                  random_seed: int = None,
                  tol: float = 1e-5) -> Atoms:
@@ -362,7 +363,7 @@ def generate_sqs_by_enumeration(cluster_space: ClusterSpace,
                                 max_size: int,
                                 target_concentrations: dict,
                                 include_smaller_cells: bool = True,
-                                pbc: Tuple[Union[bool, int]] = None,
+                                pbc: Union[Tuple[bool, bool, bool], Tuple[int, int, int]] = None,
                                 optimality_weight: float = 1.0,
                                 tol: float = 1e-5) -> Atoms:
     """
@@ -417,17 +418,13 @@ def generate_sqs_by_enumeration(cluster_space: ClusterSpace,
                                          target_concentrations=target_concentrations)
     # Translate concentrations to the format required for concentration
     # restricted enumeration
-    cr = {}
+    cr = {}  # type: Dict[str, tuple]
     sublattices = cluster_space.get_sublattices(cluster_space.primitive_structure)
     for sl in sublattices:
         mult_factor = len(sl.indices) / len(cluster_space.primitive_structure)
         if sl.symbol in target_concentrations:
             sl_conc = target_concentrations[sl.symbol]
         else:
-            if len(sl.chemical_symbols) > 1:  # Should be prevented by _validate_concentrations
-                raise ValueError('A sublattice ({}: {}) is missing in '
-                                 'target_concentrations'.format(sl.symbol,
-                                                                list(sl.chemical_symbol)))
             sl_conc = {sl.chemical_symbols[0]: 1.0}
         for species, value in sl_conc.items():
             c = value * mult_factor
@@ -445,7 +442,7 @@ def generate_sqs_by_enumeration(cluster_space: ClusterSpace,
     best_score = 1e9
 
     if include_smaller_cells:
-        sizes = range(1, max_size + 1)
+        sizes = list(range(1, max_size + 1))
     else:
         sizes = [max_size]
 
@@ -503,7 +500,7 @@ def occupy_structure_randomly(structure: Atoms, cluster_space: ClusterSpace,
 
     symbols_all = [''] * len(structure)
     for sl in cluster_space.get_sublattices(structure):
-        symbols = []  # chemical_symbols in one sublattice
+        symbols = []  # type: List[str] # chemical_symbols in one sublattice
         chemical_symbols = sl.chemical_symbols
         if len(chemical_symbols) == 1:
             symbols += [chemical_symbols[0]] * len(sl.indices)
@@ -527,7 +524,7 @@ def occupy_structure_randomly(structure: Atoms, cluster_space: ClusterSpace,
     structure.set_chemical_symbols(symbols_all)
 
 
-def _validate_concentrations(concentrations: Union[dict, List[dict]],
+def _validate_concentrations(concentrations: dict,
                              cluster_space: ClusterSpace,
                              tol: float = 1e-5) -> dict:
     """
@@ -574,14 +571,14 @@ def _validate_concentrations(concentrations: Union[dict, List[dict]],
                 raise ValueError('Chemical symbols on a sublattice ({}: {}) are '
                                  'not the same as those in the specified '
                                  'concentrations {}'.format(sl.symbol, list(sl.chemical_symbols),
-                                                            sl.symbol, list(sl_conc.keys())))
+                                                            list(sl_conc.keys())))
 
     return concentrations
 
 
 def _concentrations_fit_structure(structure: Atoms,
                                   cluster_space: ClusterSpace,
-                                  concentrations: List[dict],
+                                  concentrations: Dict[str, Dict[str, float]],
                                   tol: float = 1e-5) -> bool:
     """
     Check if specified concentrations are commensurate with a
@@ -594,7 +591,7 @@ def _concentrations_fit_structure(structure: Atoms,
     cluster_space
         corresponding cluster space
     concentrations
-        which concentrations, per sublattice, e.g., ``[{'Ag': 0.3, 'Au': 0.7}]``
+        which concentrations, per sublattice, e.g., ``{'A': {'Ag': 0.3, 'Au': 0.7}}``
     tol
         numerical tolerance
     """
@@ -610,7 +607,7 @@ def _concentrations_fit_structure(structure: Atoms,
 
 
 def _get_sqs_cluster_vector(cluster_space: ClusterSpace,
-                            target_concentrations: List[dict]) -> np.ndarray:
+                            target_concentrations: Dict[str, Dict[str, float]]) -> np.ndarray:
     """
     Get the SQS vector for a certain cluster space and certain
     concentration. Here SQS vector refers to the cluster vector of an
@@ -622,7 +619,7 @@ def _get_sqs_cluster_vector(cluster_space: ClusterSpace,
         the kind of lattice to be occupied
     target_concentrations
         concentration of each species in the target structure,
-        per sublattice (for example `[{'Ag': 0.5, 'Pd': 0.5}]`)
+        per sublattice (for example `{'A': {'Ag': 0.5, 'Pd': 0.5}}`)
     """
     target_concentrations = _validate_concentrations(concentrations=target_concentrations,
                                                      cluster_space=cluster_space)
@@ -637,17 +634,12 @@ def _get_sqs_cluster_vector(cluster_space: ClusterSpace,
     # Internally, icet sorts species according to atomic numbers.
     # Also check that each symbol only occurs in one sublattice.
     symbol_to_integer_map = {}
-    found_species = []
+    found_species = []  # type: List[str]
     for sublattice in all_sublattices:
-        syms = sublattice.chemical_symbols
-        if len(syms) < 2:
+        if len(sublattice.chemical_symbols) < 2:
             continue
-        atomic_numbers = [periodic_table.index(sym) for sym in syms]
+        atomic_numbers = [periodic_table.index(sym) for sym in sublattice.chemical_symbols]
         for i, species in enumerate(sorted(atomic_numbers)):
-            if species in found_species:
-                raise ValueError('Each chemical symbol can only occur on one '
-                                 'sublattice, {} occurred more than '
-                                 'once.'.format(periodic_table[species]))
             found_species.append(species)
             symbol_to_integer_map[periodic_table[species]] = i
 

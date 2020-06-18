@@ -5,7 +5,7 @@ import spglib
 from ase.build import bulk
 
 from icet.core.structure import Structure
-from icet.core.neighbor_list import NeighborList
+from icet.core.neighbor_list import get_neighbor_lists
 from icet.core.matrix_of_equivalent_positions import (
     MatrixOfEquivalentPositions, matrix_of_equivalent_positions_from_structure)
 from icet.core.matrix_of_equivalent_positions import (
@@ -33,9 +33,10 @@ class TestMatrixOfEquivalentPositions(unittest.TestCase):
         self.structure = bulk('Ni', 'hcp', a=3.0).repeat([2, 2, 1])
         self.cutoff = 5.0
         self.structure_prim = get_primitive_structure(self.structure)
-        neighbor_list = NeighborList(self.cutoff)
         icet_structure_prim = Structure.from_atoms(self.structure_prim)
-        neighbor_list.build(icet_structure_prim, self.position_tolerance)
+        neighbor_list = get_neighbor_lists(self.structure_prim,
+                                           cutoffs=[self.cutoff],
+                                           position_tolerance=self.position_tolerance)[0]
         self.frac_positions = get_fractional_positions_from_neighbor_list(
             icet_structure_prim, neighbor_list)
 

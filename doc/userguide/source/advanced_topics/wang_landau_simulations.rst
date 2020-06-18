@@ -8,7 +8,7 @@ Wang-Landau simulations
 
 This example illustrates how to carry out `Wang-Landau (WL)
 <https://en.wikipedia.org/wiki/Wang_and_Landau_algorithm>`_ simulations with
-:program:`icet`. Compared to :term:`Monte-Carlo (MC) <MC>` simulations in
+:program:`icet`. Compared to :term:`Monte Carlo (MC) <MC>` simulations in
 conventional thermodynamic ensembles there are a few differences to be aware
 of. It is therefore strongly recommended to work through this entire example
 before running your own :term:`WL` simulations.
@@ -157,26 +157,24 @@ And then run the WL simulation for a number of :term:`MCS`:
 Analyzing a WL simulation
 -------------------------
 
-The data container file contains all the information that is needed for
-extracting thermodynamic data from a :term:`WL` simulation. In addition to the
-regular fields found in most data containers such as ``mctrial``,
-``potential``, or ``acceptance_ratio``, a :term:`WL` data container contains
-the fields ``fill_factor``, which is the current value of :math:`f`,
-``histogram``, and ``entropy``. These data are not written at every step as
-they consume quite a lot of space. Rather they are only added to the data
-container when the fill factor :math:`f` is updated or the maximum number of
-MC trial steps has been reached.
+The data container file contains all the information that is needed for extracting thermodynamic data from a :term:`WL` simulation.
+In addition to the regular fields found in most data containers (e.g., ``mctrial``, ``potential``, or ``acceptance_ratio``), a :term:`WL` data container contains the fields ``fill_factor``, which is the current value of :math:`f`, ``histogram``, and ``entropy``.
+These data are not written at every step as they consume quite a lot of space.
+Rather they are only added to the data container when the fill factor :math:`f` is updated or the maximum number of MC trial steps has been reached.
+While the ``entropy`` data and ``fill_factor`` values are recorded during the entire simulation, the ``histogram`` data is only stored for the last state.
 
-:program:`icet` provides support functions to make the analysis of these data
-particularly simple. One can for example extract the (relative) entropy as
-well as the :term:`DOS`.
+:program:`icet` provides support functions to make the simplify analysis of these data.
+One can for example extract the (relative) entropy as well as the :term:`DOS`.
+In particular, it is possible to check the convergence of the properties of interest by specifying a `fill_factor_limit` to the analysis function, in this case `get_density_of_states_wl`.
+By doing so, the results obained corresponds to data collected up to the point when the ``fill_factor`` reached below the specified limit.
 
 .. literalinclude:: ../../../../examples/advanced_topics/wang_landau/2_analyze_simulation.py
-   :start-after: # Get density and entropy
-   :end-before: # Plot density
+   :start-after: # Extract and plot the DOS
+   :end-before: # Plot DOS
 
-For the present, very small system, the number of energy bins is small and
-the :term:`DOS` is relatively rough.
+For the present, very small system, the number of energy bins is small and the :term:`DOS` is relatively rough.
+
+.. _wl-density-figure:
 
 .. figure:: _static/wang_landau_density.svg
    :width: 70%
@@ -199,7 +197,7 @@ averages of other observables can be extracted using
 <mchammer.data_containers.get_average_observables_wl>`:
 
 .. literalinclude:: ../../../../examples/advanced_topics/wang_landau/2_analyze_simulation.py
-   :start-after: # Compute thermodynamic
+   :start-after: # Compute thermodynamic averages
    :end-before: # Plot heat capacity
 
 The heat capacity obtained using the :term:`WL` approach matches those from a
@@ -207,28 +205,26 @@ series of MC simulations in the canonical ensemble (not described here). The
 availability of the full :term:`DOS` enables one, however, to extract the heat
 capacity as a practically continuous function of temperature.
 
+.. _wl-heat-capacity-sro-figure:
+
 .. figure:: _static/wang_landau_heat_capacity_sro.svg
    :width: 70%
 
-   Heat capacity (top) and short-range order parameter from Wang-Landau
+   Heat capacity (top) and short-range order parameter (bottom) from Wang-Landau
    simulation of a :math:`4\times4` two-dimensional Ising model.
 
-Using the same approach one can also extract thermodynamic averages of other
-observables. This is illustrated here by the first-nearest neighbor
-short-range order parameter. Notably the standard deviation of the latter
-correlates with the heat capacity, corresponding to the increase (and for an
-infinite system, divergence) of the correlation length at the transition
-temperature.
+Using the same approach one can also extract thermodynamic averages of other observables.
+This is illustrated here by the first-nearest neighbor short-range order parameter.
+Notably the standard deviation of the latter correlates with the heat capacity, corresponding to the increase (and for an infinite system, divergence) of the correlation length at the transition temperature.
+Since both the :ref:`density of states <wl-density-figure>`, the :ref:`heat capacity, and the short-ranged order <wl-heat-capacity-sro-figure>` show small variations with respect to the fill factor limit, the calculations can be considered already rather well converged.
+If this had not been the case, one could have continued the simulations by rerunning the script, after having reduced the value on the ``fill_factor_limit``.
 
 
 Representative configurations
 -----------------------------
 
-In addition to common thermodynamic observables one can also be interested in
-the evolution of the structure itself as a function of temperature. To this
-end, :program:`icet` provides the :func:`get_average_cluster_vectors_wl
-<mchammer.data_container.get_average_cluster_vectors_wl>` function, which
-allows one to obtain the average cluster vectors at different temperatures:
+In addition to common thermodynamic observables one can also be interested in the evolution of the structure itself as a function of temperature.
+To this end, :program:`icet` provides the :func:`get_average_cluster_vectors_wl <mchammer.data_containers.get_average_cluster_vectors_wl>` function, which allows one to obtain the average cluster vectors at different temperatures:
 
 .. literalinclude:: ../../../../examples/advanced_topics/wang_landau/3_extract_structures.py
    :start-after: # Get average cluster vectors
@@ -292,42 +288,102 @@ advantages:
    number of steps required to converge the :term:`DOS` without binning.
 
 :program:`icet` allows one to run binned simulations by setting the
-``energy_range_left`` and ``energy_range_right`` keyword arguments of the
+``energy_limit_left`` and ``energy_limit_right`` keyword arguments of the
 :class:`WangLandauEnsemble <mchammer.ensembles.WangLandauEnsemble>` class.
 For very small systems such as the one considered above, binning the energy
 range is actually ineffective. The number of energy levels is simply too
 small. To demonstrate the benefit of binning, here, we therefore show results
-from a set of simulations for a system with :math:`16\times 16=256` sites.
+from a set of simulations for a system with :math:`8\times8=64` sites,
+which is set up in the same way as before.
 
-Firstly, regardless of the number of bins one recovers the correct density of
-states and heat capacity. The middle and right-hand panels below show distinct
-features in the low-energy range, which correspond to the occurrence of
-ordered structures.
+.. literalinclude:: ../../../../examples/advanced_topics/wang_landau/4_run_binned_simulation.py
+   :start-after: # Prepare cluster expansion
+   :end-before: # Define parameters
+
+As is detailed in a separate example, :ref:`Monte Carlo simulations can be run
+in parallel <advanced_topics_parallel_monte_carlo_simulations>` using the
+`multiprocessing package
+<https://docs.python.org/3/library/multiprocessing.html>`_. The same approach
+can be applied in the present case, i.e. to run multiple :term:`WL` simulations
+for separate energy bins, provided that the run script presented in the previous
+sections has been appropriately modified. Firstly, one needs to define a wrapper
+function, which sets up and runs a single simulation using the
+:class:`WangLandauEnsemble <mchammer.ensembles.WangLandauEnsemble>` class,
+given a dictionary containing all the required arguments:
+
+.. literalinclude:: ../../../../examples/advanced_topics/wang_landau/4_run_binned_simulation.py
+   :start-after: # Define a function
+   :end-before: # Prepare cluster expansion
+
+In order to be able to define the input parameters for the individual
+simulations, one should begin by generating sets of overlapping energy bins
+using, e.g., the :func:`get_bins_for_parallel_simulations
+<mchammer.ensembles.wang_landau_ensemble.get_bins_for_parallel_simulations>`
+function. The output from the latter, in the form of a list of tuples containing
+the lower and upper energy limits for each of the bins, are then collected,
+together with all common arguments, in a list of dictionaries:
+
+.. literalinclude:: ../../../../examples/advanced_topics/wang_landau/4_run_binned_simulation.py
+   :start-after: # Define parameters
+   :end-before: # Initiate a Pool
+
+The final step is to initiate a `multiprocessing Pool object
+<https://docs.python.org/3.7/library/multiprocessing.html#multiprocessing.pool
+.Pool>`_ and, at the same time, decide the number of processes that will be run
+simultaneously. Although the latter could, potentially, be set equal to the
+number of available cores, one should also take the memory requirements into
+account. Next, the simulations are started by mapping the list of input
+arguments to the wrapper function:
+
+.. literalinclude:: ../../../../examples/advanced_topics/wang_landau/4_run_binned_simulation.py
+   :start-after: # Initiate a Pool
+
+The functions that were previosuly used for analyzing the output from the
+serial simulations can be applied in this case as well. More precisely, this is
+achieved by providing a dictionary with the :class:`WangLandauDataContainer
+<mchammer.WangLandauDataContainer>` objects obtained from the separate runs to,
+e.g., :func:`get_density_of_states_wl
+<mchammer.data_containers.get_density_of_states_wl>`, for the purpose of
+collecting the :term:`DOS`:
+
+.. literalinclude:: ../../../../examples/advanced_topics/wang_landau/5_analyze_binned_simulation.py
+   :start-after: # Get density and entropy
+   :end-before: # Plot density
+
+An analysis of the resulting diagrams reveals that one recovers the
+correct density of states, as well as the heat capacity, regardless of
+the number of bins. In particular the distinctive features in the
+low-energy range, which are visible in the middle panel and correspond
+to the occurrence of ordered structures, are reproduced for all bin
+sizes.
 
 .. figure:: _static/wang_landau_binned_density.svg
    :width: 70%
 
-   Density of states (left) and heat capacity (right) from binned :term:`WL`
-   simulations for a :math:`16 \times 16` system using a varying number of
-   bins :math:`n_b`.
+   Density of states from binned Wang-Landau simulations for a
+   :math:`8\times8` system using a varying number of bins :math:`n_b`.
 
 The number of :term:`Monte Carlo sweeps (MCS) <MCS>` required to reach
 convergence, here :math:`f<10^{-6}`, in a certain energy range, scales
-inversely with the :term:`DOS` in the respective bin. The low and high-energy
-regions therefore require a much larger number of :term:`MCSs` than the
-central regions (see figure below). Moreover, the smaller the energy range
-(and hence the smaller the number of distinct energies) the lower the number
-of :term:`MCSs` required to achieve convergence.
+approximately inversely with the :term:`DOS` in the respective
+bin. The low and high-energy regions therefore require a much larger
+number of :term:`MCSs` than the central regions (see figure
+below). Moreover, the smaller the energy range (and hence the smaller
+the number of distinct energies) the lower the number of :term:`MCSs`
+required to achieve convergence.
 
 .. figure:: _static/wang_landau_binned_nsteps_vs_energy.svg
    :width: 70%
+
+.. _wl-binned-nsteps-figure:
+
 .. figure:: _static/wang_landau_binned_nsteps_vs_nbins.svg
    :width: 70%
 
    Number of :term:`MCSs` required to achieve convergence (:math:`f<10^{-6}`)
-   as a function of energy from simulations using a varying number of bins
-   :math:`n_b` (top) and number of bins (bottom) for a :math:`16 \times 16`
-   system.
+   as a function of the energy from simulations using a varying number of bins
+   :math:`n_b` (top) as well as with and without a cutoff (bottom) for a
+   :math:`8\times8` system.
 
 This demonstrates how binning can be beneficial not only since it allows for
 parallelization but since a limited energy range can be sampled more quickly,
@@ -337,23 +393,34 @@ A further reduction of computational cost can be achieved by realizing that
 one often does not require the :term:`DOS` to be converged in the entire
 energy range. It is usually the low energy range that dominates under most
 thermodynamically relevant conditions. Under such circumstances, it is thus
-sufficient to only include bins up to a certain cutoff energy :math:`E_c`. In
-the present case, this is illustrated for the heat capacity. Even if the
-integration over the :term:`DOS` is cut off beyond :math:`E_c` one still
-achieves very good agreement with the data obtained using the full energy
-range up to a temperature of approximately 9 to 10.
+sufficient to only include bins up to a certain cutoff energy :math:`E_c`.
+In practice, this is achieved by only including data containers that
+correspond to bins for which the upper energy limit is smaller than :math:`E_c`.
+One can, for instance, use the :func:`get_average_observables_wl
+<mchammer.data_containers.get_average_observables_wl>`, to calculate the heat
+capacity for a range of different cutoffs:
+
+.. literalinclude:: ../../../../examples/advanced_topics/wang_landau/5_analyze_binned_simulation.py
+   :start-after: # Determine the heat
+   :end-before: # Plot the heat
+
+This analysis reveals (see diagram below) that a very good agreement is achieved
+up to a temperature of approximately 6, compared with the data obtained using
+the full energy range, even if the integration over the :term:`DOS` is cut
+off beyond :math:`E_c=0`.
 
 .. figure:: _static/wang_landau_binned_heat_capacity_ecut.svg
    :width: 70%
 
-   Heat capacity obtained by integrating over DOS only up to a certain cutoff
-   energy :math:`E_c` for a :math:`16 \times 16` system.
+   Heat capacity obtained by integrating over the DOS up to a certain
+   cutoff energy :math:`E_c` for a :math:`8\times8` system.
 
-This translates to a further reduction in the number of :term:`MCSs` required
-for convergence (orange symbols in figure above). The data above suggest that
-further optimization is possible by using an inhomogeneous distribution of bin
-sizes with smaller/larger bin sizes at the boundaries/center of the energy
-range.
+This translates to a further reduction in the number of :term:`MCSs`
+required for convergence (orange symbols in :ref:`the figure presented earlier
+<wl-binned-nsteps-figure>`). The data above suggest that further optimization
+could be possible by using an inhomogeneous distribution of bin sizes with
+smaller/larger bin sizes at the boundaries/center of the energy range. An option
+that is not further explored here.
 
 
 Further tips
@@ -407,3 +474,21 @@ Source code
        ``examples/3_extract_structures.py``
 
     .. literalinclude:: ../../../../examples/advanced_topics/wang_landau/3_extract_structures.py
+
+.. container:: toggle
+
+    .. container:: header
+
+       The complete source code is available in
+       ``examples/4_run_binned_simulation.py``
+
+    .. literalinclude:: ../../../../examples/advanced_topics/wang_landau/4_run_binned_simulation.py
+
+.. container:: toggle
+
+    .. container:: header
+
+       The complete source code is available in
+       ``examples/5_analyze_binned_simulation.py``
+
+    .. literalinclude:: ../../../../examples/advanced_topics/wang_landau/5_analyze_binned_simulation.py

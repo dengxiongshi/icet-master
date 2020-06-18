@@ -113,12 +113,22 @@ later use.
 Optimizers
 ----------
 
-Optimizers allow one to train the effective cluster interaction (ECI)
-parameters associated with each :term:`orbit` in the :ref:`cluster space
-<workflow_cluster_space>`. They are available in the form of optimizer classes
-such as :class:`Optimizer <icet.fitting.Optimizer>`, :class:`EnsembleOptimizer
-<icet.fitting.EnsembleOptimizer>`, or :class:`CrossValidationEstimator
+Optimizers allow one to train the effective cluster interactions
+(:term:`ECI`) associated with each :term:`orbit` in the :ref:`cluster
+space <workflow_cluster_space>`. They are available in the form of
+optimizer classes such as :class:`Optimizer <icet.fitting.Optimizer>`,
+:class:`EnsembleOptimizer <icet.fitting.EnsembleOptimizer>`, or
+:class:`CrossValidationEstimator
 <icet.fitting.CrossValidationEstimator>`.
+
+.. note::
+
+   The optimized parameters returned by the optimizer are actually not
+   the :term:`ECIs` themselves but the :term:`ECIs` times the
+   multiplicity of the respective orbit. The distinction is handled
+   internally but it is something to be aware of when inspecting the
+   parameters directly.
+
 
 .. _workflow_cluster_expansion:
 

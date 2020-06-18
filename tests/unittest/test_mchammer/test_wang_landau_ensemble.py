@@ -4,12 +4,14 @@ import unittest
 import numpy as np
 from ase import Atoms
 from ase.build import bulk
-from pandas import DataFrame
 
 from icet import ClusterExpansion, ClusterSpace
+from icet.input_output.logging_tools import set_log_config
 from mchammer.calculators import ClusterExpansionCalculator
 from mchammer.ensembles import WangLandauEnsemble
 from mchammer.observers.base_observer import BaseObserver
+
+set_log_config(level=100)
 
 
 class ConcreteObserver(BaseObserver):
@@ -161,35 +163,63 @@ class TestEnsemble(unittest.TestCase):
                                  random_seed=42)
         ens.run(10)
 
+        # use unreachable energy window to test window approach aspects
+        # - prepare initial configuration with energy -32 (ground state)
+        structure = self.prim.repeat((2, 2, 1))
+        structure[0].symbol = 'Ag'
+        structure[3].symbol = 'Ag'
+        structure = structure.repeat((2, 2, 1))
+        ens = WangLandauEnsemble(structure, self.calculator, energy_spacing=1,
+                                 energy_limit_right=-60,
+                                 energy_limit_left=-70,
+                                 ensemble_data_write_interval=1,
+                                 random_seed=42)
+        ens.run(10)  # Run to get something in the data container
+
+        # Approaching the window should always be allowed
+        self.assertTrue(ens._acceptance_condition(-10))
+
+        # Stepping far away from window should not be allowed
+        self.assertFalse(ens._acceptance_condition(10000.0))
+
+        # Do the same thing from below
+        ens._potential = -100
+        self.assertTrue(ens._acceptance_condition(10))
+        self.assertFalse(ens._acceptance_condition(-10000.0))
+
+        # Take a step that would be rejected due to entropy but accepted
+        # because it takes us closer to window
+        self.assertEqual(ens._potential, -90)
+        ens._histogram[-80] = 1e9
+        ens._entropy[-80] = 1e9
+        self.assertTrue(ens._acceptance_condition(10))
+
+        # Take a step that would be accepted due to entropy but rejected
+        # because it takes us away to window
+        self.assertEqual(ens._potential, -80)
+        ens._histogram[-80] = 100
+        ens._entropy[-80] = 100
+        ens._histogram[-10000] = 1
+        ens._entropy[-10000] = 1
+        self.assertFalse(ens._acceptance_condition(-9920))
+
+        # Stepping away should not be allowed if the penalty is high
+        ens._potential = -80
+        ens._histogram[-81] = 1
+        ens._entropy[-81] = 1
+        ens._window_search_penalty = 100
+        self.assertFalse(ens._acceptance_condition(-1))
+
+        # Stepping away should be allowed if the penalty is low
+        ens._window_search_penalty = 0.0001
+        self.assertTrue(ens._acceptance_condition(-1))
+
+        # Finally step inside the window
+        ens._potential = -59
+        self.assertTrue(ens._acceptance_condition(-5))
+        self.assertTrue(ens._reached_energy_window)
+
         # Todo: come up with more sensitive tests
-
-    def test_get_entropy(self):
-        """Tests retrieval of entropy."""
-        ret = self.ensemble.get_entropy()
-        self.assertIsInstance(ret, DataFrame)
-        self.assertIn('energy', ret)
-        self.assertIn('entropy', ret)
-        self.assertTrue(len(ret) == 0)
-        self.ensemble.run(4)
-        ret = self.ensemble.get_entropy()
-        self.assertIsInstance(ret, DataFrame)
-        self.assertIn('energy', ret)
-        self.assertIn('entropy', ret)
-        self.assertTrue(len(ret) > 0)
-
-    def test_get_histogram(self):
-        """Tests retrieval of histogram."""
-        ret = self.ensemble.get_histogram()
-        self.assertIsInstance(ret, DataFrame)
-        self.assertIn('energy', ret)
-        self.assertIn('histogram', ret)
-        self.assertTrue(len(ret) == 0)
-        self.ensemble.run(4)
-        ret = self.ensemble.get_histogram()
-        self.assertIsInstance(ret, DataFrame)
-        self.assertIn('energy', ret)
-        self.assertIn('histogram', ret)
-        self.assertTrue(len(ret) > 0)
 
     def test_property_fill_factor(self):
         """Tests behavior of flatness_limit."""
@@ -272,6 +302,22 @@ class TestEnsemble(unittest.TestCase):
         self.assertEqual(self.ensemble._trajectory_write_interval,
                          self.trajectory_write_interval)
 
+    def test_entropy_history(self):
+        """ Tests if the entropy history is updated """
+        self.assertTrue(len(self.ensemble._entropy_history)
+                        == len(self.ensemble._fill_factor_history) - 1)
+        self.ensemble.flatness_check_interval = 2
+        self.ensemble.run(4)
+        self.assertTrue(len(self.ensemble._entropy_history)
+                        == len(self.ensemble._fill_factor_history) - 1)
+        self.ensemble.flatness_limit = 0
+        self.ensemble.run(4)
+        self.assertTrue(len(self.ensemble._entropy_history)
+                        == len(self.ensemble._fill_factor_history) - 1)
+        for target_mctrial, ret_mctrial in zip(list(self.ensemble._fill_factor_history.keys())[1:],
+                                               self.ensemble._entropy_history.keys()):
+            self.assertEqual(target_mctrial, ret_mctrial)
+
     def test_mc_with_one_filled_sublattice(self):
         """ Tests if WL simulation works with two sublattices
         where one sublattice is filled/empty. """
@@ -335,8 +381,6 @@ class TestEnsemble(unittest.TestCase):
         chemical_symbols = [['W', 'Ti'], ['C', 'N']]
         cs = ClusterSpace(prim, cutoffs=[0], chemical_symbols=chemical_symbols)
         ce = ClusterExpansion(cs, [1] * len(cs))
-
-        # structure
         structure = prim.repeat(2)
         structure[0].symbol = 'Ti'
         structure[1].symbol = 'N'
@@ -360,6 +404,7 @@ class TestEnsemble(unittest.TestCase):
     def test_restart_ensemble(self):
         """ Tests the restart functionality. """
         dc_filename = 'my-test.dc'
+        # ensemble for first run
         ens1 = WangLandauEnsemble(structure=self.structure,
                                   calculator=self.calculator,
                                   dc_filename=dc_filename,
@@ -367,15 +412,27 @@ class TestEnsemble(unittest.TestCase):
                                   ensemble_data_write_interval=2)
         ens1.run(10)
 
-        # restart from file
+        # ensemble for second run
         ens2 = WangLandauEnsemble(structure=self.structure,
                                   calculator=self.calculator,
                                   dc_filename=dc_filename,
-                                  energy_spacing=self.energy_spacing)
+                                  energy_spacing=self.energy_spacing,
+                                  ensemble_data_write_interval=2)
         self.assertEqual(len(ens1.data_container.data), len(ens2.data_container.data))
         self.assertTrue(np.allclose(list(ens1.data_container.data.potential),
-                                    list(ens1.data_container.data.potential)))
-        ens1.run(10)
+                                    list(ens2.data_container.data.potential)))
+
+        # ensure that the simulation is not run if converged
+        ens2._converged = True
+        ens2.run(10)
+        self.assertEqual(ens1.step, ens2.step)
+        self.assertEqual(len(ens1.data_container.data), len(ens2.data_container.data))
+
+        # ensure that the simulation is not run if converged
+        ens2._converged = False
+        ens2.run(10)
+        self.assertEqual(ens1.step + 10, ens2.step)
+        self.assertEqual(len(ens1.data_container.data) + 5, len(ens2.data_container.data))
 
         os.remove(dc_filename)
 
@@ -448,6 +505,52 @@ class TestEnsemble(unittest.TestCase):
                                  energy_limit_right=4)
         self.assertFalse(ens._inside_energy_window(-1))
         self.assertTrue(ens._inside_energy_window(1))
+
+    def test_reached_energy_window(self):
+        """ Tests the reached_energy_window property. """
+        # with no limit
+        ens = WangLandauEnsemble(structure=self.structure,
+                                 calculator=self.calculator,
+                                 energy_spacing=self.energy_spacing)
+        self.assertTrue(ens._reached_energy_window)
+        # with left limit < energy of structure (0)
+        ens = WangLandauEnsemble(structure=self.structure,
+                                 calculator=self.calculator,
+                                 energy_spacing=self.energy_spacing,
+                                 energy_limit_left=-1)
+        self.assertTrue(ens._reached_energy_window)
+        # with left limit > energy of structure (0)
+        ens = WangLandauEnsemble(structure=self.structure,
+                                 calculator=self.calculator,
+                                 energy_spacing=self.energy_spacing,
+                                 energy_limit_left=1)
+        self.assertFalse(ens._reached_energy_window)
+        # with right limit < energy of structure (0)
+        ens = WangLandauEnsemble(structure=self.structure,
+                                 calculator=self.calculator,
+                                 energy_spacing=self.energy_spacing,
+                                 energy_limit_right=-1)
+        self.assertFalse(ens._reached_energy_window)
+        # with right limit > energy of structure (0)
+        ens = WangLandauEnsemble(structure=self.structure,
+                                 calculator=self.calculator,
+                                 energy_spacing=self.energy_spacing,
+                                 energy_limit_right=1)
+        self.assertTrue(ens._reached_energy_window)
+        # with energy of structure (0) within left and right limits
+        ens = WangLandauEnsemble(structure=self.structure,
+                                 calculator=self.calculator,
+                                 energy_spacing=self.energy_spacing,
+                                 energy_limit_left=-1,
+                                 energy_limit_right=1)
+        self.assertTrue(ens._reached_energy_window)
+        # with energy of structure (0) outside left and right limits
+        ens = WangLandauEnsemble(structure=self.structure,
+                                 calculator=self.calculator,
+                                 energy_spacing=self.energy_spacing,
+                                 energy_limit_left=1,
+                                 energy_limit_right=2)
+        self.assertFalse(ens._reached_energy_window)
 
 
 if __name__ == '__main__':

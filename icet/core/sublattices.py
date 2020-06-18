@@ -1,6 +1,6 @@
 from copy import deepcopy
 from icet.core.structure import Structure
-from typing import List
+from typing import List, Iterator
 from ase import Atoms
 import copy
 from itertools import product
@@ -119,6 +119,10 @@ class Sublattices:
     def __len__(self):
         """ Returns number of sublattices. """
         return len(self._sublattices)
+
+    def __iter__(self) -> Iterator[Sublattice]:
+        """ Generator over sublattices. """
+        yield from self._sublattices
 
     def get_sublattice_index(self, index: int) -> int:
         """ Returns the index of the sublattice the symbol
