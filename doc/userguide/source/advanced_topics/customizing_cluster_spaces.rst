@@ -50,10 +50,10 @@ representing such a system and construct a corresponding cluster space.
     ============================================================================================
 
 
-This cluster space comprises 5 singlets and 15 pairs. For a binary system one
-thus obtains 21 :term:`ECIs` (including the zerolet). In practice, one would
-typically use longer cutoffs and higher orders, leading to an even larger
-number of parameters.
+This cluster space comprises 5 singlets and 15 pairs. For this binary system
+one thus obtains 21 :term:`ECIs` (including the zerolet). In practice, one
+would typically use longer cutoffs and higher orders, leading to an even
+larger number of parameters.
 
 Inspect orbits
 --------------
@@ -86,11 +86,10 @@ corresponds to which layer.
     orbit_index: 3  pos:   0.000   0.000  17.101
     orbit_index: 4  pos:   1.450   0.837  19.469
 
-As one can expect, there is one singlet for each symmetry *inequivalent* layer
-with the first/second/third... singlet corresponding to the
-first/second/third... layer. Based on physical intuition, we can expect
-corresponding clusters
-in the center of the slab to behave nearly identical, i.e. the :term:`ECIs`
+In this case, there is one singlet for each symmetry *inequivalent* layer with
+the first/second/third... singlet corresponding to the first/second/third...
+layer. Based on physical intuition, we can expect corresponding clusters in
+the center of the slab to behave nearly identical, i.e. the :term:`ECIs`
 associated with, say, the fourth and fifth singlets should be very close if
 not identical, and similarly for pairs, triplets etc.
 
