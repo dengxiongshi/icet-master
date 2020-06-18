@@ -23,6 +23,7 @@ command line::
    wang_landau_simulations
    parallel_monte_carlo
    sqs_generation
+   customizing_cluster_spaces
    cluster_counts
    cluster_vectors
    data_container

@@ -563,8 +563,12 @@ class ClusterSpace(_ClusterSpace):
             the keys of this dictionary denote the indices of the orbit into
             which to merge, the values are the indices of the orbits that are
             supposed to be merged into the orbit of the orbit denoted by the
-            key; **Important**: The `orbit_index` should not be confused with
-            the `index` when printing the cluster space.
+            key
+
+        Note
+        ----
+        The `orbit_index` should not be confused with the `index` shown when
+        printing the cluster space.
 
         Examples
         --------
@@ -572,7 +576,8 @@ class ClusterSpace(_ClusterSpace):
         cluster space for a (111) FCC surface, in which only the singlets for
         the first and second layer are distinct as well as the in-plane pair
         interaction in the topmost layer. All other singlets and pairs are
-        respectively merged into one orbit.
+        respectively merged into one orbit. After merging there will be only 3
+        singlets and 2 pairs left with correspondingly higher multiplicities.
 
             >>> from icet import ClusterSpace
             >>> from ase.build import fcc111
@@ -591,8 +596,6 @@ class ClusterSpace(_ClusterSpace):
             >>> # the one corresponding to the in-plane interaction in the outmost surface
             >>> # layer
             >>> cs.merge_orbits({2: [3], 4: [6, 7, 8, 9, 10, 11]})
-            >>> # After merging there will be only 3 singlets and 2 pairs left with correspondingly
-            >>> # higher multiplicities.
         """
 
         self._pruning_history.append(('merge', equivalent_orbits))
