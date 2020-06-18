@@ -209,6 +209,22 @@ class TestCECalculatorBinary(unittest.TestCase):
             self.structure.get_atomic_numbers(), index, [])
 
 
+class TestMergedOrbitCECalculator(TestCECalculatorBinary):
+    """
+    Container for tests of CE calculator based on a clusterspace with merged
+    orbits
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        print(self.cs)
+        merge_orbits_data = {2: [3], 8: [6, 9, 10]}
+        self.cs.merge_orbits(merge_orbits_data)
+        params_len = len(self.cs)
+        params = [1.1] * params_len
+        self.ce = ClusterExpansion(self.cs, params)
+
+
 class TestCECalculatorBinaryHCP(unittest.TestCase):
     """Container for tests of the class functionality."""
 
