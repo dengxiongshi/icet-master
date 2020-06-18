@@ -711,7 +711,7 @@ class TestClusterSpaceMergedOrbits(unittest.TestCase):
         self.chemical_symbols = ['Au', 'Pd']
         self.cutoffs = [5.0, 5.0]
         self.primitive_structure = bulk('Au', a=4.0)
-        self.structure = self.primitive_structure.repeat((3,3,3))
+        self.structure = self.primitive_structure.repeat((3, 3, 3))
         for i in [3, 7, 9, 14, 18, 21]:
             self.structure[i].symbol = 'Pd'
 
@@ -741,19 +741,19 @@ class TestClusterSpaceMergedOrbits(unittest.TestCase):
         """ Tests that the same cluster vector is produced regardless of which orbit is
         used as key when merging """
 
-        cv_target = [1. , 0.55555556, 0.28747795, 0.13261649]
+        cv_target = [1., 0.55555556, 0.28747795, 0.13261649]
 
         cs_1 = self.cs.copy()
         cs_1.merge_orbits({1: [2, 3], 4: [5, 6, 7, 8, 9, 10]})
         cv_1 = cs_1.get_cluster_vector(self.structure)
-        
+
         cs_2 = self.cs.copy()
         cs_2.merge_orbits({2: [1, 3], 9: [4, 5, 6, 7, 8, 10]})
         cv_2 = cs_2.get_cluster_vector(self.structure)
 
         self.assertAlmostEqualList(list(cv_1), cv_target)
         self.assertEqual(list(cv_1), list(cv_2))
-    
+
     def test_read_write(self):
         """Tests read/write functionality."""
         self.cs.merge_orbits({1: [2, 3], 4: [5, 6, 7, 8, 9, 10]})
