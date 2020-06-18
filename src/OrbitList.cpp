@@ -461,7 +461,7 @@ std::vector<std::vector<LatticeSite>> OrbitList::getSitesTranslatedToUnitcell(co
 }
 
 /**
-@detail Takes all lattice sites in vector latticeSites and subtracts the unitcell offset of site latticeSites[index].
+@details Takes all lattice sites in vector latticeSites and subtracts the unitcell offset of site latticeSites[index].
 @param latticeSites list of lattice sites, typically a cluster
 @param index index of site relative to which to shift
 */

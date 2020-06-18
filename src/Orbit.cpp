@@ -193,7 +193,7 @@ void Orbit::removeClustersWithSiteIndex(const size_t indexToRemove, bool onlyCon
 
 
 /**
-@param indexToRemove site index
+@param index site index
 @param onlyConsiderSitesWithZeroOffset if true only consider sites with zero offset
 */
 void Orbit::removeClustersWithoutIndex(const size_t index, bool onlyConsiderSitesWithZeroOffset)
