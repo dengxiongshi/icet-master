@@ -576,23 +576,23 @@ class ClusterSpace(_ClusterSpace):
             >>> from icet import ClusterSpace
             >>> from ase.build import fcc111
             >>>
-            >>> # create primitive surface unit cell
+            >>> # Create primitive surface unit cell
             >>> structure = fcc111('Au', size=(1, 1, 8), a=4.1, vacuum=10, periodic=True)
             >>>
-            >>> # set up initial cluster space
+            >>> # Set up initial cluster space
             >>> cs = ClusterSpace(structure=structure, cutoffs=[3.8], chemical_symbols=['Au', 'Ag'])
-            >>> print(cs)
             >>>
-            >>> # at this point, one can inspect the orbits in the cluster space using the
-            >>> # `get_coordinates_of_representative_cluster()` method of the ClusterSpace
-            >>> # object
+            >>> # At this point, one can inspect the orbits in the cluster space by printing the `cs`
+            >>> # object and by using its `get_coordinates_of_representative_cluster()` method.
+            >>> # There will be 4 singlets and 8 pairs.
             >>>
-            >>> # merge singlets for third and fourth layers as well as all pairs except for
+            >>> # Merge singlets for third and fourth layers as well as all pairs except for
             >>> # the one corresponding to the in-plane interaction in the outmost surface
             >>> # layer
             >>> cs.merge_orbits({2: [3],
             >>>                  4: [6, 7, 8, 9, 10, 11]})
-            >>> print(cs)
+            >>> # After merging there will be only 3 singlets and 2 pairs with correspondingly
+            >>> # higher multiplicities.
         """
 
         self._pruning_history.append(('merge', equivalent_orbits))
