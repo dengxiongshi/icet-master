@@ -217,7 +217,6 @@ class TestMergedOrbitCECalculator(TestCECalculatorBinary):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        print(self.cs)
         merge_orbits_data = {2: [3], 8: [6, 9, 10]}
         self.cs.merge_orbits(merge_orbits_data)
         params_len = len(self.cs)
