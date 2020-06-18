@@ -599,7 +599,7 @@ class ClusterSpace(_ClusterSpace):
         orbit_to_delete = []
         for k1, orbit_indices in equivalent_orbits.items():
             for k2 in orbit_indices:
-                self.merge_orbit(k1, k2)
+                self._merge_orbit(k1, k2)
                 orbit_to_delete.append(k2)
 
         # update merge/prune history

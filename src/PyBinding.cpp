@@ -882,11 +882,28 @@ PYBIND11_MODULE(_icet, m)
              )pbdoc",
              py::arg("structure"),
              py::arg("fractional_position_tolerance"))
-          .def("merge_orbit", [](ClusterSpace &clusterSpace,
-                int index1, int index2)
-             {
-                clusterSpace._orbitList._orbits[index1] += clusterSpace._orbitList._orbits[index2];
-              })
+          .def("_merge_orbit",
+               [](ClusterSpace &clusterSpace,
+                  int index1,
+                  int index2)
+                  {
+                    clusterSpace._orbitList._orbits[index1] += clusterSpace._orbitList._orbits[index2];
+                  },
+             R"pbdoc(
+             Merges the two orbits. This implies that the equivalent clusters
+             from the second orbit are added to to the list of equivalent
+             clusters of the first orbit, after which the second orbit is
+             removed.
+
+             Parameters
+             ----------
+             index1 : int
+                 index of the first orbit in the list of orbits of the cluster space
+             index3 : int
+                 index of the first orbit in the list of orbits of the cluster space
+\             )pbdoc",
+             py::arg("index1"),
+             py::arg("index2"))
 
         .def("_get_orbit_list", &ClusterSpace::getOrbitList)
         .def("get_orbit", &ClusterSpace::getOrbit)
@@ -937,7 +954,7 @@ PYBIND11_MODULE(_icet, m)
               ignored_indices : list(int)
                   list of indices that have already had their local energy calculated;
                   this is required to prevent double counting
-              )pbdoc",              
+              )pbdoc",
               py::arg("occupations"),
               py::arg("index"),
               py::arg("ignored_indices"))
@@ -954,8 +971,8 @@ PYBIND11_MODULE(_icet, m)
               Parameters
               ----------
               occupations : list(int)
-                  the occupation vector for the supercell              
-              )pbdoc",              
+                  the occupation vector for the supercell
+              )pbdoc",
               py::arg("occupations"))
               ;
 }
