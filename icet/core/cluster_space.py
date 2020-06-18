@@ -551,6 +551,49 @@ class ClusterSpace(_ClusterSpace):
             raise ValueError('Input structure must have periodic boundary conditions')
 
     def merge_orbits(self, equivalent_orbits: Dict[int, List[int]]) -> None:
+        """ Combines several orbits into one. This allows one to make custom
+        cluster spaces by manually declaring the clusters in two or more
+        orbits to be equivalent. This is a powerful approach for simplifying
+        the cluster spaces of low-dimensional structures such as, e.g.,
+        surfaces or nanoparticles.
+
+        Parameters
+        ----------
+        equivalent_orbits
+            the keys of this dictionary denote the indices of the orbit into
+            which to merge, the values are the indices of the orbits that are
+            supposed to be merged into the orbit of the orbit denoted by the
+            key
+
+        Examples
+        --------
+        The following snippet illustrates the use of this method to create a
+        cluster space for a (111) FCC surface, in which only the singlets for
+        the first and second layer are distinct as well as the in-plane pair
+        interaction in the topmost layer. All other singlets and pairs are
+        respectively merged into one orbit.
+
+            >>> from icet import ClusterSpace
+            >>> from ase.build import fcc111
+            >>>
+            >>> # create primitive surface unit cell
+            >>> structure = fcc111('Au', size=(1, 1, 8), a=4.1, vacuum=10, periodic=True)
+            >>>
+            >>> # set up initial cluster space
+            >>> cs = ClusterSpace(structure=structure, cutoffs=[3.8], chemical_symbols=['Au', 'Ag'])
+            >>> print(cs)
+            >>>
+            >>> # at this point, one can inspect the orbits in the cluster space using the
+            >>> # `get_coordinates_of_representative_cluster()` method of the ClusterSpace
+            >>> # object
+            >>>
+            >>> # merge singlets for third and fourth layers as well as all pairs except for
+            >>> # the one corresponding to the in-plane interaction in the outmost surface
+            >>> # layer
+            >>> cs.merge_orbits({2: [3],
+            >>>                  4: [6, 7, 8, 9, 10, 11]})
+            >>> print(cs)
+        """
 
         self._pruning_history.append(('merge', equivalent_orbits))
         orbit_to_delete = []
