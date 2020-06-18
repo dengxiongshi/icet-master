@@ -582,9 +582,9 @@ class ClusterSpace(_ClusterSpace):
             >>> # Set up initial cluster space
             >>> cs = ClusterSpace(structure=structure, cutoffs=[3.8], chemical_symbols=['Au', 'Ag'])
             >>>
-            >>> # At this point, one can inspect the orbits in the cluster space by printing the `cs`
-            >>> # object and by using its `get_coordinates_of_representative_cluster()` method.
-            >>> # There will be 4 singlets and 8 pairs.
+            >>> # At this point, one can inspect the orbits in the cluster space by printing the
+            >>> #  `cs` object and by using its `get_coordinates_of_representative_cluster()`
+            >>> # method. There will be 4 singlets and 8 pairs.
             >>>
             >>> # Merge singlets for third and fourth layers as well as all pairs except for
             >>> # the one corresponding to the in-plane interaction in the outmost surface
