@@ -737,6 +737,24 @@ class TestClusterSpaceMergedOrbits(unittest.TestCase):
         self.assertAlmostEqualList([orb['radius'] for orb in self.cs.orbit_data], radii_target)
         self.assertEqual([orb['multiplicity'] for orb in self.cs.orbit_data], multiplicity_target)
 
+    def test_merge_orbits_fails_for_self_merge(self):
+        """ Tests that merging orbit with itself fails. """
+        with self.assertRaises(ValueError) as cm:
+            self.cs.merge_orbits({2: [2, 3]})
+        self.assertTrue('Cannot merge' in str(cm.exception) and 'with itself' in str(cm.exception))
+
+    def test_merge_orbits_fails_when_merging_multiple_times(self):
+        """ Tests that merging orbit multiple times fails. """
+        with self.assertRaises(ValueError) as cm:
+            self.cs.merge_orbits({1: [3], 2: [3]})
+        self.assertTrue('was already merged with another orbit' in str(cm.exception))
+
+    def test_merge_orbits_fails_when_merging_different_orders(self):
+        """ Tests that merging orbits with different orders fails. """
+        with self.assertRaises(ValueError) as cm:
+            self.cs.merge_orbits({0: [5]})
+        self.assertTrue('does not match the order' in str(cm.exception))
+
     def test_cluster_vectors(self):
         """ Tests that the same cluster vector is produced regardless of which orbit is
         used as key when merging """

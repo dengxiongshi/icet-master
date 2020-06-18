@@ -563,7 +563,8 @@ class ClusterSpace(_ClusterSpace):
             the keys of this dictionary denote the indices of the orbit into
             which to merge, the values are the indices of the orbits that are
             supposed to be merged into the orbit of the orbit denoted by the
-            key
+            key; **Important**: The `orbit_index` should not be confused with
+            the `index` when printing the cluster space.
 
         Examples
         --------
@@ -589,21 +590,35 @@ class ClusterSpace(_ClusterSpace):
             >>> # Merge singlets for third and fourth layers as well as all pairs except for
             >>> # the one corresponding to the in-plane interaction in the outmost surface
             >>> # layer
-            >>> cs.merge_orbits({2: [3],
-            >>>                  4: [6, 7, 8, 9, 10, 11]})
-            >>> # After merging there will be only 3 singlets and 2 pairs with correspondingly
+            >>> cs.merge_orbits({2: [3], 4: [6, 7, 8, 9, 10, 11]})
+            >>> # After merging there will be only 3 singlets and 2 pairs left with correspondingly
             >>> # higher multiplicities.
         """
 
         self._pruning_history.append(('merge', equivalent_orbits))
-        orbit_to_delete = []
+        orbits_to_delete = []
         for k1, orbit_indices in equivalent_orbits.items():
+            order1 = self.orbit_data[k1+1]['order']
+
             for k2 in orbit_indices:
+
+                # sanity checks
+                if k1 == k2:
+                    raise ValueError(f'Cannot merge orbit {k1} with itself.')
+                if k2 in orbits_to_delete:
+                    raise ValueError(f'Orbit {k2} cannot be merged into orbit {k1}'
+                                     ' since was already merged with another orbit.')
+                order2 = self.orbit_data[k2+1]['order']
+                if order1 != order2:
+                    raise ValueError(f'The order of orbit {k1} ({order1}) does not'
+                                     f' match the order of orbit {k2} ({order2}).')
+
+                # merge
                 self._merge_orbit(k1, k2)
-                orbit_to_delete.append(k2)
+                orbits_to_delete.append(k2)
 
         # update merge/prune history
-        self._prune_orbit_list(orbit_to_delete, keep_prune_history=False)
+        self._prune_orbit_list(orbits_to_delete, keep_prune_history=False)
 
     def is_supercell_self_interacting(self, structure: Atoms) -> bool:
         """
