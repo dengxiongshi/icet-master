@@ -907,7 +907,7 @@ PYBIND11_MODULE(_icet, m)
                  index of the first orbit in the list of orbits of the cluster space
              index3 : int
                  index of the first orbit in the list of orbits of the cluster space
-\             )pbdoc",
+             )pbdoc",
              py::arg("index1"),
              py::arg("index2"))
 

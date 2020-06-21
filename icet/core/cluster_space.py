@@ -482,8 +482,7 @@ class ClusterSpace(_ClusterSpace):
         """Orbit list that defines the cluster in the cluster space"""
         return self._orbit_list
 
-    def get_possible_orbit_occupations(self, orbit_index: int) \
-            -> List[List[str]]:
+    def get_possible_orbit_occupations(self, orbit_index: int) -> List[List[str]]:
         """Returns possible occupation of the orbit.
 
         Parameters
@@ -500,8 +499,7 @@ class ClusterSpace(_ClusterSpace):
         return list(itertools.product(*allowed_species))
 
     def get_sublattices(self, structure: Atoms) -> Sublattices:
-        """
-        Returns the sublattices of the input structure.
+        """ Returns the sublattices of the input structure.
 
         Parameters
         ----------
@@ -517,22 +515,17 @@ class ClusterSpace(_ClusterSpace):
     def assert_structure_compatibility(self, structure: Atoms, vol_tol: float = 1e-5) -> None:
         """ Raises error if structure is not compatible with ClusterSpace.
 
-        Todo
-        ----
-        Add check for if structure is relaxed.
-
         Parameters
         ----------
         structure
-            structure to check if compatible with ClusterSpace
+            structure to check for compatibility with ClusterSpace
         """
         # check volume
-        prim = self.primitive_structure
-        vol1 = prim.get_volume() / len(prim)
+        vol1 = self.primitive_structure.get_volume() / len(prim)
         vol2 = structure.get_volume() / len(structure)
         if abs(vol1 - vol2) > vol_tol:
-            raise ValueError('Volume per atom of structure does not match the volume of '
-                             'ClusterSpace.primitive_structure')
+            raise ValueError('Volume per atom of structure does not match the volume of'
+                             ' ClusterSpace.primitive_structure.')
 
         # check occupations
         sublattices = self.get_sublattices(structure)
@@ -540,7 +533,7 @@ class ClusterSpace(_ClusterSpace):
 
         # check pbc
         if not all(structure.pbc):
-            raise ValueError('Input structure must have periodic boundary conditions')
+            raise ValueError('Input structure must have periodic boundary conditions.')
 
     def merge_orbits(self, equivalent_orbits: Dict[int, List[int]]) -> None:
         """ Combines several orbits into one. This allows one to make custom
