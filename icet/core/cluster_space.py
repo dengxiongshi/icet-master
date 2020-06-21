@@ -521,7 +521,7 @@ class ClusterSpace(_ClusterSpace):
             structure to check for compatibility with ClusterSpace
         """
         # check volume
-        vol1 = self.primitive_structure.get_volume() / len(prim)
+        vol1 = self.primitive_structure.get_volume() / len(self.primitive_structure)
         vol2 = structure.get_volume() / len(structure)
         if abs(vol1 - vol2) > vol_tol:
             raise ValueError('Volume per atom of structure does not match the volume of'
