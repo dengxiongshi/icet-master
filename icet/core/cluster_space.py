@@ -351,19 +351,16 @@ class ClusterSpace(_ClusterSpace):
             local_Mi = self.get_number_of_allowed_species_by_site(
                 self._get_primitive_structure(), orbit.sites_of_representative_cluster)
             mc_vectors = orbit.get_mc_vectors(local_Mi)
-            mc_permutations = self.get_multi_component_vector_permutations(
-                mc_vectors, orbit_index)
+            mc_permutations = self.get_multi_component_vector_permutations(mc_vectors, orbit_index)
             mc_index = mc_vectors.index(mc_vector)
             mc_permutations_multiplicity = len(mc_permutations[mc_index])
             cluster = self.get_orbit(orbit_index).representative_cluster
+            multiplicity = len(self.get_orbit(orbit_index).equivalent_clusters)
 
-            multiplicity = len(self.get_orbit(
-                orbit_index).equivalent_clusters)
             record = OrderedDict([('index', index),
                                   ('order', cluster.order),
                                   ('radius', cluster.radius),
-                                  ('multiplicity', multiplicity *
-                                   mc_permutations_multiplicity),
+                                  ('multiplicity', multiplicity * mc_permutations_multiplicity),
                                   ('orbit_index', orbit_index)])
             record['multi_component_vector'] = mc_vector
             record['sublattices'] = orbit_sublattices
@@ -414,20 +411,15 @@ class ClusterSpace(_ClusterSpace):
 
     def get_coordinates_of_representative_cluster(self, orbit_index: int) -> List[Tuple[float]]:
         """
-        Returns the positions of atoms in the selected orbit
+        Returns the positions of the sites in the representative cluster of the selected orbit.
 
         Parameters
         ----------
         orbit_index
-            index of the orbit from which to calculate the positions of the atoms
-
-        Returns
-        -------
-        list of positions of atoms in the selected orbit
-
+            index of the orbit for which to return the positions of the sites
         """
         # Raise exception if chosen orbit index not in current list of orbit indices
-        if not (orbit_index in range(len(self._orbit_list))):
+        if not orbit_index in range(len(self._orbit_list)):
             raise ValueError('The input orbit index is not in the list of possible values.')
 
         lattice_sites = self._orbit_list.get_orbit(orbit_index).sites_of_representative_cluster

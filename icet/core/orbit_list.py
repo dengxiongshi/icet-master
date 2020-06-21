@@ -93,13 +93,12 @@ class OrbitList(_OrbitList):
 
     def __str__(self):
         """String representation."""
-        nice_str = 'Number of orbits: {}'.format(len(self))
-
-        for i, orbit in enumerate(self.orbits):
-            cluster_str = self.orbits[i].representative_cluster.__str__()
-            nice_str += '\norbit {} - Multiplicity {} - Cluster: {}'.format(
-                i, len(orbit), cluster_str)
-        return nice_str
+        s = []
+        s += ['Number of orbits: {}'.format(len(self))]
+        for k, orbit in enumerate(self.orbits):
+            c = self.orbits[k].representative_cluster.__str__()
+            s += [f'orbit: {k}   multiplicity: {len(orbit)}   {c}']
+        return '\n'.join(s)
 
     def get_supercell_orbit_list(self,
                                  structure: Atoms,
