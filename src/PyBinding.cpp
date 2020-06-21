@@ -709,9 +709,6 @@ PYBIND11_MODULE(_icet, m)
         .def("add_orbit",
              &OrbitList::addOrbit,
              "Adds an orbit.")
-        .def("get_number_of_nbody_clusters",
-             &OrbitList::getNumberOfNBodyClusters,
-             "Returns the number of orbits.")
         .def("get_orbit",
              &OrbitList::getOrbit,
              "Returns a copy of the orbit at position i in the orbit list.")

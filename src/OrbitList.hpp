@@ -66,9 +66,6 @@ class OrbitList
     /// Returns the number of orbits.
     size_t size() const { return _orbits.size(); }
 
-    /// Returns the number of orbits which are made up of a certain number of bodies.
-    unsigned int getNumberOfNBodyClusters(unsigned int) const;
-
     // Returns the first column of the matrix of equivalent sites.
     std::vector<LatticeSite> getReferenceLatticeSites(bool = true) const;
 

@@ -99,11 +99,6 @@ class TestOrbitList(unittest.TestCase):
         self.orbit_list.add_orbit(orbit)
         self.assertEqual(len(self.orbit_list), 3)
 
-    def test_get_number_of_nbody_clusters(self):
-        """Tests that only a pair is counted in the orbit list."""
-        NPairs = self.orbit_list.get_number_of_nbody_clusters(2)
-        self.assertEqual(NPairs, 1)
-
     def test_get_orbit(self):
         """Tests function returns the number of orbits of a given order."""
         # get singlet

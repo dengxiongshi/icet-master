@@ -156,22 +156,6 @@ void OrbitList::addOrbit(const Orbit &orbit) {
 }
 
 /**
-@param nbody number of bodies for which to return the number of clusters
-**/
-unsigned int OrbitList::getNumberOfNBodyClusters(unsigned int nbody) const
-{
-    unsigned int count = 0;
-    for (const auto &orbit : _orbits)
-    {
-        if (orbit.getRepresentativeCluster().order() == nbody)
-        {
-            count++;
-        }
-    }
-    return count;
-}
-
-/**
 @details Returns the index of the orbit for which the given cluster is representative.
 @param cluster cluster to search for
 @param clusterIndexMap map of cluster indices for fast lookup
