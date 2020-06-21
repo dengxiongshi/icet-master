@@ -419,7 +419,7 @@ class ClusterSpace(_ClusterSpace):
             index of the orbit for which to return the positions of the sites
         """
         # Raise exception if chosen orbit index not in current list of orbit indices
-        if not orbit_index in range(len(self._orbit_list)):
+        if orbit_index not in range(len(self._orbit_list)):
             raise ValueError('The input orbit index is not in the list of possible values.')
 
         lattice_sites = self._orbit_list.get_orbit(orbit_index).sites_of_representative_cluster
