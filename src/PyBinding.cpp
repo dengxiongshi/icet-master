@@ -383,7 +383,7 @@ PYBIND11_MODULE(_icet, m)
              {
                  std::ostringstream msg;
                  msg << "radius: " << cluster.radius();
-                 msg << " vertex distances:";
+                 msg << " vertices:";
                  for (const auto dist : cluster.distances())
                  {
                      msg << " " << std::to_string(dist);
@@ -551,11 +551,11 @@ PYBIND11_MODULE(_icet, m)
              "list of sites that comprise the representative cluster")
         .def_property_readonly(
              "order",
-             [](const Orbit &orbit) { return orbit.getRepresentativeCluster().order(); },
+             [](const Orbit &orbit) { return orbit.order(); },
              "number of sites in the representative cluster")
         .def_property_readonly(
              "radius",
-             [](const Orbit &orbit) { return orbit.getRepresentativeCluster().radius(); },
+             [](const Orbit &orbit) { return orbit.radius(); },
              "radius of the representative cluster")
         .def_property(
              "permutations_to_representative",
@@ -649,14 +649,23 @@ PYBIND11_MODULE(_icet, m)
              [](const Orbit &orbit)
              {
                  std::ostringstream msg;
-                 msg << "radius: " << orbit.radius();
-                 msg << "  equivalent_clusters:";
+                 msg << "order: " << orbit.order() << std::endl;
+                 msg << "multiplicity: " << orbit.size() << std::endl;
+                 msg << "radius: " << orbit.radius() << std::endl;
+                 msg << "representative_cluster:" << std::endl;
+                 for (const auto site : orbit.getSitesOfRepresentativeCluster())
+                 {
+                     msg << "    site: " << site << std::endl;
+                 }
+                 msg << "equivalent_clusters:" << std::endl;
+                 int k = -1;
                  for (const auto sites : orbit._equivalentClusters)
                  {
-                     msg << "  ";
+                     k += 1;
+                     msg << "  cluster: " << k << std::endl;
                      for (const auto site : sites)
                      {
-                         msg << " " << site;
+                         msg << "    site: " << site << std::endl;
                      }
                  }
                  return msg.str();
@@ -738,9 +747,9 @@ PYBIND11_MODULE(_icet, m)
 
              Parameters
              ----------
-             taken_rows: set(tuple(int))
+             taken_rows : set(tuple(int))
                  unique collection of row index
-             rows: list(int)
+             rows : list(int)
                  row indices
              )pbdoc",
              py::arg("taken_rows"),
@@ -752,13 +761,13 @@ PYBIND11_MODULE(_icet, m)
 
              Parameters
              ----------
-             lattice_neighbors: list(_icet.LatticeSite)
+             lattice_neighbors : list(_icet.LatticeSite)
                 set of lattice sites that might be representative for a cluster
-             sort_it: bool
+             sort : bool
                 If true sort translasted sites.
              )pbdoc",
              py::arg("lattice_neighbors"),
-             py::arg("sort_it"))
+             py::arg("sort"))
         .def("_get_all_columns_from_sites",
              &OrbitList::getAllColumnsFromCluster,
              R"pbdoc(

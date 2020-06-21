@@ -64,7 +64,7 @@ public:
     void sort() { std::sort(_equivalentClusters.begin(), _equivalentClusters.end()); }
 
     /// Returns the number of bodies of the cluster that represent this orbit.
-    unsigned int getClusterSize() const { return _representativeCluster.order(); }
+    unsigned int order() const { return _representativeCluster.order(); }
 
     /// Returns permutations of equivalent clusters.
     std::vector<std::vector<int>> getPermutationsOfEquivalentClusters() const { return _equivalentClusterPermutations; }

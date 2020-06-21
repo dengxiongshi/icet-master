@@ -346,7 +346,7 @@ void OrbitList::addPermutationInformationToOrbits()
         if (sitePermutations.size() != _orbits[i].getEquivalentClusters().size() || sitePermutations.size() == 0)
         {
             std::ostringstream msg;
-            msg << "Not each set of site got a permutation (OrbitList::addPermutationInformationToOrbits) " << std::endl;
+            msg << "Not each set of site has a permutation (OrbitList::addPermutationInformationToOrbits) " << std::endl;
             msg << sitePermutations.size() << " != " << _orbits[i].getEquivalentClusters().size();
             throw std::runtime_error(msg.str());
         }
@@ -443,7 +443,7 @@ std::vector<std::vector<LatticeSite>> OrbitList::getSitesTranslatedToUnitcell(co
     Vector3d zeroVector = {0.0, 0.0, 0.0};
     for (size_t i = 0; i < latticeSites.size(); i++)
     {
-        if ((latticeSites[i].unitcellOffset() - zeroVector).norm() > 0.5) // only translate those outside unitcell
+        if ((latticeSites[i].unitcellOffset() - zeroVector).norm() > 0.5)  // only translate those outside unitcell
         {
             auto translatedSites = translateSites(latticeSites, i);
             if (sort)
@@ -650,7 +650,7 @@ Orbit OrbitList::getSuperCellOrbit(const Structure &supercell,
     if (orbitIndex >= _orbits.size())
     {
         std::ostringstream msg;
-        msg << "Orbit index out of range (OrbitList::getSuperCellOrbit).";
+        msg << "Orbit index out of range (OrbitList::getSuperCellOrbit): ";
         msg << orbitIndex << " >= " << _orbits.size();
         throw std::out_of_range(msg.str());
     }

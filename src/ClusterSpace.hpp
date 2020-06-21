@@ -12,7 +12,8 @@
 
 /**
 @brief This class handles the cluster space.
-@details It provides functionality for setting up a cluster space, calculating cluster vectors as well as retrieving various types of associated information.
+@details It provides functionality for setting up a cluster space, calculating
+cluster vectors as well as retrieving various types of associated information.
 */
 
 class ClusterSpace
