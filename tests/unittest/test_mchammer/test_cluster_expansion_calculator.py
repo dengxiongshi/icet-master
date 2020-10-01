@@ -211,7 +211,7 @@ class TestCECalculatorBinary(unittest.TestCase):
 
 class TestMergedOrbitCECalculatorBinary(TestCECalculatorBinary):
     """
-    Container for tests of CE calculator based on a clusterspace with merged
+    Container for tests of CE calculator based on a cluster space with merged
     orbits
     """
     def __init__(self, *args, **kwargs):
@@ -359,7 +359,7 @@ class TestCECalculatorBinaryHCP(unittest.TestCase):
 
 class TestMergedOrbitCECalculatorBinaryHCP(TestCECalculatorBinaryHCP):
     """
-    Container for tests of CE calculator based on a clusterspace with merged
+    Container for tests of CE calculator based on a cluster space with merged
     orbits
     """
     def __init__(self, *args, **kwargs):
