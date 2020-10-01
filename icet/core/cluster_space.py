@@ -740,7 +740,10 @@ class ClusterSpace(_ClusterSpace):
 
 
 def _rebuild_orbit_list(cluster_space: ClusterSpace) -> None:
+    """Rebuild the Python-side orbit list using the orbits from the
+    C++-side orbit list. This is necessary in order to ensure the
+    consistency of Python and C++ orbit lists particular after merging
+    orbits."""
     cluster_space._orbit_list.clear()
     for i in range(max([(d['orbit_index']) for d in cluster_space.orbit_data])+1):
         cluster_space._orbit_list.add_orbit(cluster_space.get_orbit(i))
-
