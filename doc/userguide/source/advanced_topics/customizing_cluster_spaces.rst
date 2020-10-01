@@ -160,9 +160,9 @@ representative clusters of all pair orbits.
       site: 1   pos:  -0.000   1.674  14.734
     ...
 
-According to this analysis, orbits 4, 5 and 14 correspond, respectively, to
-nearest-neighbor in-plane, first nearest-neighbor out-of-plane and
-next-nearest-neighbor interactions. We can thus merge all remaining clusters.
+According to this analysis, orbits 4, 5 and 14 are related to
+interactions involving the surface layer. We can thus keep these
+orbits separate and merge all remaining ones.
 
 .. testcode::
 
