@@ -607,6 +607,7 @@ class ClusterSpace(_ClusterSpace):
 
         # update merge/prune history
         self._prune_orbit_list(orbits_to_delete, keep_prune_history=False)
+        _rebuild_orbit_list(self)
 
     def is_supercell_self_interacting(self, structure: Atoms) -> bool:
         """
@@ -718,6 +719,7 @@ class ClusterSpace(_ClusterSpace):
                 for value in items['pruning_history']:
                     cs._pruning_history(value)
 
+        _rebuild_orbit_list(cs)
         return cs
 
     def copy(self):
@@ -733,4 +735,12 @@ class ClusterSpace(_ClusterSpace):
                 cs_copy._prune_orbit_list(value)
             elif key == 'merge':
                 cs_copy.merge_orbits(value)
+        _rebuild_orbit_list(cs_copy)
         return cs_copy
+
+
+def _rebuild_orbit_list(cluster_space: ClusterSpace) -> None:
+    cluster_space._orbit_list.clear()
+    for i in range(max([(d['orbit_index']) for d in cluster_space.orbit_data])+1):
+        cluster_space._orbit_list.add_orbit(cluster_space.get_orbit(i))
+
