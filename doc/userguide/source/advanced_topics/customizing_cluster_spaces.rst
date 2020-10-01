@@ -123,11 +123,11 @@ first two layers distinct.
      ...
     ============================================================================================
 
-There are now only 3 singlets but we are still left with 10 first and 5
-second-nearest neighbor orbits. Applying a similar logic as above, we could
-now decide to merge the bulk orbits and leave only orbits distinct that
-involve the first surface layer. To this end, we inspect the representative
-cluster of all pair orbits.
+There are now only 3 singlets but we are still left with 10 first and
+5 second-nearest neighbor orbits. Applying a similar logic as above,
+we could now decide to merge the bulk orbits and keep only orbits that
+involve the first surface layer distinct. To this end, we inspect the
+representative clusters of all pair orbits.
 
 .. testcode::
 
@@ -160,8 +160,8 @@ cluster of all pair orbits.
       site: 1   pos:  -0.000   1.674  14.734
     ...
 
-According to this analysis orbits 4, 5, and 14 correspond, respectively, to
-nearest-neighbor in-plane, first nearest-neighbor out-of-plane, and
+According to this analysis, orbits 4, 5 and 14 correspond, respectively, to
+nearest-neighbor in-plane, first nearest-neighbor out-of-plane and
 next-nearest-neighbor interactions. We can thus merge all remaining clusters.
 
 .. testcode::
