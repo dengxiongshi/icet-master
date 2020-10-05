@@ -586,7 +586,7 @@ class ClusterSpace(_ClusterSpace):
         self._pruning_history.append(('merge', equivalent_orbits))
         orbits_to_delete = []
         for k1, orbit_indices in equivalent_orbits.items():
-            order1 = self.orbit_data[k1+1]['order']
+            order1 = self.get_orbit(k1).order
 
             for k2 in orbit_indices:
 
@@ -596,7 +596,7 @@ class ClusterSpace(_ClusterSpace):
                 if k2 in orbits_to_delete:
                     raise ValueError(f'Orbit {k2} cannot be merged into orbit {k1}'
                                      ' since was already merged with another orbit.')
-                order2 = self.orbit_data[k2+1]['order']
+                order2 = self.get_orbit(k2).order
                 if order1 != order2:
                     raise ValueError(f'The order of orbit {k1} ({order1}) does not'
                                      f' match the order of orbit {k2} ({order2}).')
