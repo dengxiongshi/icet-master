@@ -594,7 +594,7 @@ class ClusterSpace(_ClusterSpace):
                     raise ValueError(f'Cannot merge orbit {k1} with itself.')
                 if k2 in orbits_to_delete:
                     raise ValueError(f'Orbit {k2} cannot be merged into orbit {k1}'
-                                     ' since was already merged with another orbit.')
+                                     ' since it was already merged with another orbit.')
                 order2 = self.get_orbit(k2).order
                 if order1 != order2:
                     raise ValueError(f'The order of orbit {k1} ({order1}) does not'
@@ -714,7 +714,7 @@ class ClusterSpace(_ClusterSpace):
                         cs._prune_orbit_list(value)
                     elif key == 'merge':
                         cs.merge_orbits(value)
-            else:
+            else:  # for backwards compatibility
                 for value in items['pruning_history']:
                     cs._pruning_history(value)
 
