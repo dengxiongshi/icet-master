@@ -238,12 +238,3 @@ representative clusters.
 The cluster space obtained in this fashion can be used for constructing and
 sampling cluster expansions in exactly the same way as if no orbits had been
 merged.
-
-Further considerations
-----------------------
-
-The example above illustrates the basic principles that can be applied reduce
-the dimensionality of cluster spaces. In applications it is can be impractical
-to "manually" inspect all orbits. Instead one can define to a simple set of
-criteria including, e.g., radii (and order) of the orbits as well as the sites
-that are involved.
