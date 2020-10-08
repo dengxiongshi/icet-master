@@ -547,8 +547,7 @@ class ClusterSpace(_ClusterSpace):
         equivalent_orbits
             the keys of this dictionary denote the indices of the orbit into
             which to merge, the values are the indices of the orbits that are
-            supposed to be merged into the orbit of the orbit denoted by the
-            key
+            supposed to be merged into the orbit denoted by the key
 
         Note
         ----
