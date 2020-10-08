@@ -96,12 +96,14 @@ not identical, and similarly for pairs, triplets etc.
 Merge orbits
 ------------
 
-To handle such situations, :program:`icet` allows one to merge orbits via the
-:func:`merge_orbits <icet.ClusterSpace.merge_orbits>` method. Which orbits
-should be merged is entirely up to the user. In the present example, one could
-for example merge the singlets for the third, fourth, and fifth layers,
-effectively treating them as bulk sites, while keeping the singlets for the
-first two layers distinct.
+To handle such situations, :program:`icet` allows one to merge orbits
+via the :func:`merge_orbits <icet.ClusterSpace.merge_orbits>`
+method. Which orbits should be merged is entirely up to the user. In
+the present example, one could for example merge the singlets for the
+third, fourth, and fifth layers, effectively treating them as bulk
+sites, while keeping the singlets for the first two layers
+distinct. The following snippet achieves this by merging the orbits
+with indices 3 and 4 into the one with index 2 (compare output above).
 
 .. testcode::
 
