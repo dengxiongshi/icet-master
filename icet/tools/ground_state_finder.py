@@ -200,14 +200,14 @@ class GroundStateFinder:
                 for atom in cluster:
                     model.add_constr(ys[i] <= xs[atom],
                                      'Decoration -> cluster {}'.format(constraint_count))
-                    constraint_count += 1
+                    constraint_count = constraint_count + 1
 
             if len(cluster) < 2 or parameter > 0:  # no "upwards" pressure
                 model.add_constr(ys[i] >= 1 - len(cluster) +
                                  mip.xsum(xs[atom]
                                           for atom in cluster),
                                  'Decoration -> cluster {}'.format(constraint_count))
-                constraint_count += 1
+                constraint_count = constraint_count + 1
 
         for sym, subl in zip(self._count_symbols, self._active_sublattices):
             # Create slack variable
@@ -296,7 +296,7 @@ class GroundStateFinder:
         E = [0.0 for _ in self._transformed_parameters]
         for i in range(len(cluster_instance_activities)):
             orbit = self._cluster_to_orbit_map[i]
-            E[orbit + 1] += cluster_instance_activities[i]
+            E[orbit + 1] = E[orbit + 1] + cluster_instance_activities[i]
         E[0] = 1
 
         E = [0.0 if np.isclose(self._transformed_parameters[orbit], 0.0) else

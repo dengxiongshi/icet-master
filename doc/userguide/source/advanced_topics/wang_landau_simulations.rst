@@ -338,6 +338,20 @@ arguments to the wrapper function:
 .. literalinclude:: ../../../../examples/advanced_topics/wang_landau/4_run_binned_simulation.py
    :start-after: # Initiate a Pool
 
+.. note::
+    It is strongly recommended to use the functions for asynchronus mapping,
+    specifically `Pool.map_async <https://docs.python.org/3.7/library/
+    multiprocessing.html#multiprocessing.pool.Pool.map_async>`_ and
+    `Pool.starmap_async <https://docs.python.org/3.7/library/multiprocessing
+    .html#multiprocessing.pool.Pool.starmap_async>`_. The reason for this is
+    that these, in contrast to `Pool.map <https://docs.python.org/3.7/library/m
+    ultiprocessing.html#multiprocessing.pool.Pool.map>`_ and `Pool.starmap
+    <https://docs.python.org/3.7/library/multiprocessing.html#multiprocessing
+    .pool.Pool.starmap>`_, do not block the main process, which can cause some
+    of the child processes to hang when running Monte Carlo simulations using
+    functionalities imported from the :ref:`mchammer <moduleref_mchammer>`
+    module.
+
 The functions that were previosuly used for analyzing the output from the
 serial simulations can be applied in this case as well. More precisely, this is
 achieved by providing a dictionary with the :class:`WangLandauDataContainer

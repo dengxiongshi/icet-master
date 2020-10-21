@@ -69,10 +69,13 @@ Generate structures with vacancies
 ----------------------------------
 
 The steps above are now repeated to enumerate all palladium hydride structures
-based on up to four primitive cells, which contain up to 4 Pd atoms and between
-0 and 4 H atoms. Vacancies, represented by vanadium, are included, which
-results in a ternary system. The structures thus obtained are stored in a
-database named ``PdHVac-fcc.db``.
+based on up to four primitive cells, having up to 4 Pd atoms and between
+0 and 4 H atoms (note, however, that in this example, no structure with 4 H
+atoms will be generated, as a structure with 4 Pd and 4 H is always
+symmetrically equivalent to the primitive structure with 1 Pd and 1 H).
+Vacancies, represented by 'X', are explicitly included, which results in a
+ternary system. The structures thus obtained are stored in a database named
+``PdHVac-fcc.db``.
 
 .. literalinclude:: ../../../../examples/advanced_topics/enumerate_structures.py
    :start-after: # either a hydrogen

@@ -40,11 +40,11 @@ print('Cluster vector of generated structure:', cs.get_cluster_vector(sqs))
 # Generate SQS for a system with two sublattices
 primitive_structure = bulk('Au', a=4.0)
 primitive_structure.append(Atom('H', position=(2.0, 2.0, 2.0)))
-cs = ClusterSpace(primitive_structure, [7.0], [['Au', 'Cu', 'Pd'], ['H', 'V']])
+cs = ClusterSpace(primitive_structure, [7.0], [['Au', 'Cu', 'Pd'], ['H', 'X']])
 print(cs)
 # Target concentrations are specified per sublattice
 target_concentrations = {'A': {'Au': 6 / 8, 'Cu': 1 / 8, 'Pd': 1 / 8},
-                         'B': {'H': 1 / 4, 'V': 3 / 4}}
+                         'B': {'H': 1 / 4, 'X': 3 / 4}}
 sqs = generate_sqs(cluster_space=cs,
                    max_size=16,
                    include_smaller_cells=False,

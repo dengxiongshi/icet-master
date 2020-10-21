@@ -107,7 +107,7 @@ Generate SQS cells for a system with sublattices
 It is possible to generate SQS cells also for systems with sublattices. In the
 below example, an SQS cell is generated for a system with two sublattices; one
 :term:`FCC` sublattice on which Au, Cu, and Pd are allowed, and another
-:term:`FCC` sublattice on which H and vacancies (V) are allowed. Target
+:term:`FCC` sublattice on which H and vacancies (X) are allowed. Target
 concentrations are specified per sublattice. The sublattices are defined by
 the letters shown at the top of the printout of a `ClusterSpace`. 
 
@@ -119,7 +119,7 @@ This should result in something similar to this::
 
   ====================================== Cluster Space =======================================
    space group                            : Fm-3m (225)
-   chemical species                       : ['Au', 'Cu', 'Pd'] (sublattice A), ['H', 'V'] (sublattice B)
+   chemical species                       : ['Au', 'Cu', 'Pd'] (sublattice A), ['H', 'X'] (sublattice B)
    cutoffs                                : 7.0000
    total number of parameters             : 40
    number of parameters by order          : 0= 1  1= 3  2= 36
@@ -137,7 +137,7 @@ This should result in something similar to this::
   ...
 
 Here we see that the sublattice with Au, Cu and Pd is sublattice `A`, while H
-and V are on sublattice B. These letters can now be used when the target
+and X are on sublattice B. These letters can now be used when the target
 concentrations are specified.
 
 In the below example, an SQS cell is generated for a supercell that is 16

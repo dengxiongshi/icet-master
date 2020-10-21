@@ -76,7 +76,7 @@ def assert_no_correlation(cvs, tol=0.99):
 
 # Create a list of the chemical_species that shall be considered and set the
 # cutoff distance for singlets to 2.0 Å.
-chemical_species = ['Pd', 'H', 'V']
+chemical_species = ['Pd', 'H', 'X']
 cutoffs = [2.0]
 repeat = 8
 

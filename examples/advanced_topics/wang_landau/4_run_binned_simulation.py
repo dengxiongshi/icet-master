@@ -55,4 +55,5 @@ for k, (energy_limit_left, energy_limit_right) in enumerate(bins):
 
 # Initiate a Pool object with the desired number of processes and run
 pool = Pool(processes=4)
-pool.map(run_simulation, args)
+results = pool.map_async(run_simulation, args)
+results.get()

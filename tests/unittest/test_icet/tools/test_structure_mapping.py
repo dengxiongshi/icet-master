@@ -88,6 +88,13 @@ class TestStructureMapping(unittest.TestCase):
         """
         Tests that the final step in mapping works.
         """
+        # Match 1 atom structure
+        mapped, drmax, dravg, warning = _match_positions(bulk('Au'), bulk('Au'))
+        self.assertEqual(len(mapped), 1)
+        self.assertAlmostEqual(drmax, 0)
+        self.assertAlmostEqual(dravg, 0)
+        self.assertTrue(warning is None)
+
         # Mismatching cell metrics
         with self.assertRaises(ValueError) as context:
             _match_positions(self.structure, self.reference.repeat(2))
@@ -302,6 +309,13 @@ class TestStructureMapping(unittest.TestCase):
         self.assertIn('large_average_relaxation_distance', info['warnings'])
         self.assertIn('large_average_relaxation_distance', info['warnings'])
         self.assertIn('possible_ambiguity_in_mapping', info['warnings'])
+
+        # Match 1 atom structure
+        logfile_lines, info = test_mapping(bulk('Au'), reference=bulk('Au'),
+                                           expected_dravg=0, expected_drmax=0,
+                                           expected_chemical_formula='Au')
+        self.assertEqual(len(logfile_lines), 0)
+        self.assertEqual(len(info['warnings']), 0)
 
     def test_calculate_strain_tensor(self):
         """

@@ -30,11 +30,11 @@ for structure in enumerate_structures(primitive_structure,
 # Enumerate all palladium hydride structures with up to 4 primitive
 # cells (= up to 4 Pd atoms and between 0 and 4 H atoms). We want to
 # specify that one site should always be Pd while the other can be
-# either a hydrogen or a vacancy (vanadium will serve as our "vacancy")
+# either a hydrogen or a vacancy ('X' will serve as our vacancy)
 a = 4.0
 primitive_structure = bulk('Au', a=a)
 primitive_structure.append(Atom('H', (a / 2, a / 2, a / 2)))
-species = [['Pd'], ['H', 'V']]
+species = [['Pd'], ['H', 'X']]
 db = connect('PdHVac-fcc.db')
 for structure in enumerate_structures(primitive_structure, range(1, 5), species):
     db.write(structure)

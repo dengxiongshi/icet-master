@@ -331,15 +331,16 @@ def _match_positions(structure: Atoms, reference: Atoms) -> Tuple[Atoms, float, 
             displacements.append(dvecs[0][0])
             # distances to the next three available sites
             minimum_distances.append(sorted(dists[:, j])[:n_dist_max])
-            if drs[0][0] > min(dists[:, j]) + 1e-6:
-                logger.warning('An atom was mapped to a site that was further '
-                               'away than the closest site (that site was already '
-                               'occupied by another atom).')
-                warning = 'possible_ambiguity_in_mapping'
-            elif minimum_distances[-1][0] > 0.9 * minimum_distances[-1][1]:
-                logger.warning('An atom was approximately equally far from its '
-                               'two closest sites.')
-                warning = 'possible_ambiguity_in_mapping'
+            if len(structure) > 1:
+                if drs[0][0] > min(dists[:, j]) + 1e-6:
+                    logger.warning('An atom was mapped to a site that was further '
+                                   'away than the closest site (that site was already '
+                                   'occupied by another atom).')
+                    warning = 'possible_ambiguity_in_mapping'
+                elif minimum_distances[-1][0] > 0.9 * minimum_distances[-1][1]:
+                    logger.warning('An atom was approximately equally far from its '
+                                   'two closest sites.')
+                    warning = 'possible_ambiguity_in_mapping'
 
     displacement_magnitudes = np.array(displacement_magnitudes, dtype=np.float64)
     mapped.new_array('Displacement', displacements, float, shape=(3, ))

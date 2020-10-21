@@ -39,10 +39,24 @@ Finally, a `multiprocessing Pool object <https://docs.python.org/3.7/library/m
 ultiprocessing.html#multiprocessing.pool.Pool>`_ is created. At this step, the
 number of processes is specified. It is typically advisable to use the same
 number of processes as available cores. The simulation is started by
-mapping the sets of parameters to the run function:
+mapping the sets of parameters to the run function.
 
 .. literalinclude:: ../../../../examples/advanced_topics/parallel_monte_carlo.py
    :start-after: # step 4
+
+.. note::
+    It is strongly recommended to use the functions for asynchronus mapping,
+    specifically `Pool.map_async <https://docs.python.org/3.7/library/
+    multiprocessing.html#multiprocessing.pool.Pool.map_async>`_ and
+    `Pool.starmap_async <https://docs.python.org/3.7/library/multiprocessing
+    .html#multiprocessing.pool.Pool.starmap_async>`_. The reason for this is
+    that these, in contrast to `Pool.map <https://docs.python.org/3.7/library/m
+    ultiprocessing.html#multiprocessing.pool.Pool.map>`_ and `Pool.starmap
+    <https://docs.python.org/3.7/library/multiprocessing.html#multiprocessing
+    .pool.Pool.starmap>`_, do not block the main process, which can cause some
+    of the child processes to hang when running Monte Carlo simulations using
+    functionalities imported from the :ref:`mchammer <moduleref_mchammer>`
+    module.
 
 Note that in the above example, an ensemble object will always be initialized
 with the same supercell, which means that the system needs to be equilibrated

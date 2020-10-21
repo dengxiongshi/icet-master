@@ -7,7 +7,8 @@ import numpy as np
 
 # step 1: Set up structure to simulate as well as calculator
 ce = ClusterExpansion.read('mixing_energy.ce')
-structure = make_supercell(ce.cluster_space.primitive_structure,
+cs = ce.get_cluster_space_copy()
+structure = make_supercell(cs.primitive_structure,
                            3 * np.array([[-1, 1, 1],
                                          [1, -1, 1],
                                          [1, 1, -1]]))
@@ -35,4 +36,5 @@ for temperature in range(600, 199, -100):
 
 # step 4: Define a Pool object with the desired number of processes and run
 pool = Pool(processes=4)
-pool.map(run_mc, args)
+results = pool.map_async(run_mc, args)
+results.get()
