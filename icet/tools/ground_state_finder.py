@@ -1,3 +1,4 @@
+
 from math import inf
 import numpy as np
 from typing import List, Dict
@@ -114,6 +115,11 @@ class GroundStateFinder:
         if any(len(species) > 2 for species in active_species):
             raise NotImplementedError('Currently, systems with more than two allowed species on '
                                       'any sublattice are not supported.')
+        
+        # Check that there are no merged orbits
+        if any(['merge' in elem for elem in cluster_space._pruning_history]):
+            raise NotImplementedError('Currently, systems with merged orbits are not supported.')
+
         self._active_species = active_species
 
         # Define cluster functions for elements
