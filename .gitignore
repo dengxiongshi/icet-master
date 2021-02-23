@@ -34,3 +34,5 @@ htmlcov
 *.png
 *.eps
 *.so
+
+ssh_config.*

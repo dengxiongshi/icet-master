@@ -1,0 +1,54 @@
+- name: "Verifying if conda exist"
+  stat: path=/opt/Anaconda3/bin/conda
+  register: conda_exists
+
+- name: "Creating temp directory"
+  become: True
+  file:
+    path: /opt/Anaconda3
+    state: directory
+    mode: 755
+    recurse: yes
+  when: conda_exists.stat.exists == False
+
+- name: "Downloading Anaconda3"
+  get_url:
+    use_proxy: yes
+    url: https://repo.anaconda.com/archive/Anaconda3-2020.11-MacOSX-x86_64.sh
+    dest: /tmp/install-Anaconda3.sh
+    mode: 0550
+  when: conda_exists.stat.exists == False
+
+- name: "Installing Anaconda3"
+  become: True
+  shell: /tmp/install-Anaconda3.sh -u -b -p /opt/Anaconda3
+  when: conda_exists.stat.exists == False
+
+- name: "Read permission for all"
+  become: True
+  file:
+    path: /opt/Anaconda3
+    mode: +r
+    recurse: yes
+  when: conda_exists.stat.exists == False
+
+- name: "Execution permission for all"
+  become: True
+  file:
+    path: /opt/Anaconda3/bin
+    mode: +x
+    recurse: yes
+  when: conda_exists.stat.exists == False
+
+- name: "Installing conda-build"
+  become: True
+  command: conda install -y conda-build
+  environment:
+    PATH: "{{ ansible_env.PATH }}:/opt/Anaconda3/bin"
+  when: conda_exists.stat.exists == False
+
+- name: "Adding conda-forge"
+  command: conda config --add channels conda-forge
+  environment:
+    PATH: "{{ ansible_env.PATH }}:/opt/Anaconda3/bin"
+  when: conda_exists.stat.exists == False

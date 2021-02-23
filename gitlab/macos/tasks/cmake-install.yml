@@ -1,0 +1,39 @@
+---
+- name: "Verifying if CMake exist"
+  stat: path=/Applications/CMake.app
+  register: cmake_exists
+
+- name: "Creating temp directory"
+  command: mkdir -p ./tmp/
+  when: cmake_exists.stat.exists == False
+
+- name: "Downloading CMake"
+  get_url: url={{ dmgURL }} dest=./tmp/CMake.dmg use_proxy=yes
+  when: cmake_exists.stat.exists == False
+
+- name: "Converting .dmg to cdr"
+  command: hdiutil convert -quiet ./tmp/CMake.dmg -format UDTO -o  ./tmp/CMake.cdr
+  when: cmake_exists.stat.exists == False
+
+- name: "Mounting CMake to the disk"
+  command: hdiutil attach ./tmp/CMake.cdr -quiet -nobrowse -noverify -noautoopen -mountpoint ./tmp/CMake
+  when: cmake_exists.stat.exists == False
+
+- name: "Copying CMake to the Application folder"
+  shell: cp -aR ./tmp/CMake/*.app /Applications/CMake.app
+  when: cmake_exists.stat.exists == False
+
+- name: "Detaching CMake disk"
+  command: hdiutil detach ./tmp/CMake/
+  when: cmake_exists.stat.exists == False
+
+- name: "Clean up"
+  command: rm -R ./tmp/
+  when: cmake_exists.stat.exists == False
+
+- name: "Creating symbolic link for cmake"
+  file:
+    src: /Applications/CMake.app/Contents/bin/cmake
+    dest: /usr/local/bin/cmake
+    state: link
+  when: cmake_exists.stat.exists == False

@@ -1,0 +1,15 @@
+Host 192.168.*.*
+  ProxyCommand ssh -W %h:%p ess
+  IdentityFile ~/.ssh/***
+  User ***
+  ControlMaster auto
+  ControlPath ~/.ssh/mac-%r@%h:%p
+  ControlPersist 1h
+
+Host ess
+  Hostname ssh0.esss.dk
+  User ***
+  IdentityFile ~/.ssh/***
+  ControlMaster auto
+  ControlPath ~/.ssh/ansible-%r@%h:%p
+  ControlPersist 1h
