@@ -1,4 +1,4 @@
-- name: Install depenedencies for testing
+- name: Install dependencies for testing
   pip:
     executable: pip3
     name:
@@ -7,7 +7,7 @@
       - mypy
   become: True
 
-- name: Install depenedencies for icet
+- name: Install dependencies for icet
   pip:
     executable: pip3
     name:
@@ -20,7 +20,7 @@
       - xdoctest==0.12.0
   become: True
 
-- name: Install depenedencies for building documentation
+- name: Install dependencies for building documentation
   pip:
     executable: pip3
     name:
@@ -32,7 +32,7 @@
       - sphinxcontrib-bibtex==1.0.0
   become: True
 
-- name: Install depenedencies for PyPi
+- name: Install dependencies for PyPi
   pip:
     executable: pip3
     name:
