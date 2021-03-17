@@ -3,7 +3,7 @@ from pathlib import Path
 
 file_path = f'{Path.home()}/Library/LaunchAgents/gitlab-runner.plist'
 
-file_object = open(file_path, "r")
+file_object = open(file_path, 'r')
 content = file_object.readlines()
 file_object.close()
 
@@ -13,7 +13,7 @@ port = str(sys.argv[2])
 i = 0
 
 for line in content:
-    if line.find("EnvironmentVariables") > 0:
+    if line.find('EnvironmentVariables') > 0:
         indent_ends = content[i + 2].find('<')
         indents = content[i + 2][:indent_ends]
         content.insert(i + 2, f'{indents}<key>HTTP_PROXY</key>\n')
@@ -23,7 +23,7 @@ for line in content:
         break
     i += 1
 
-file_object = open(file_path, "w")
-contents = "".join(content)
+file_object = open(file_path, 'w')
+contents = ''.join(content)
 file_object.write(contents)
 file_object.close()

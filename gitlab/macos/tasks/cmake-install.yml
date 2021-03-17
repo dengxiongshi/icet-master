@@ -11,7 +11,7 @@
   get_url: url={{ dmgURL }} dest=./tmp/CMake.dmg use_proxy=yes
   when: cmake_exists.stat.exists == False
 
-- name: "Converting .dmg to cdr"
+- name: "Converting dmg to cdr"
   command: hdiutil convert -quiet ./tmp/CMake.dmg -format UDTO -o  ./tmp/CMake.cdr
   when: cmake_exists.stat.exists == False
 
@@ -27,7 +27,7 @@
   command: hdiutil detach ./tmp/CMake/
   when: cmake_exists.stat.exists == False
 
-- name: "Clean up"
+- name: "Cleaning up"
   command: rm -R ./tmp/
   when: cmake_exists.stat.exists == False
 

@@ -1,5 +1,5 @@
 ---
-- name: "Verifying if GitLab runner exist"
+- name: "Verifying if GitLab runner exists"
   stat: path=/usr/local/bin/gitlab-runner
   register: runner_exists
 
