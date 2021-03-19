@@ -15,4 +15,5 @@
     - include: tasks/conda-install.yml
     - include: tasks/dependencies-install.yml
     - include: tasks/gitlab-agent-install.yml
+#      Install cmake. For future compilation stage.
 #    - include: tasks/cmake-install.yml dmgURL=https://github.com/Kitware/CMake/releases/download/v3.19.2/cmake-3.19.2-macos-universal.dmg
