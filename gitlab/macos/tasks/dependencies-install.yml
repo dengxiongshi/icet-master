@@ -1,40 +1,38 @@
 - name: Install dependencies for testing
   pip:
-    executable: pip3
+    executable: /usr/local/bin/pip3.9
     name:
       - coverage==5.1
       - flake8==3.7.9
-      - mypy
   become: True
 
 - name: Install dependencies for icet
   pip:
-    executable: pip3
+    executable: /usr/local/bin/pip3.9
     name:
-      - ase==3.19.1
+      - ase>=3.19.1,<4.0
       - mip==1.9.4
       - numpy==1.18.4
-      - pandas==1.0.3
-      - scikit-learn==0.22.2.post1
-      - scipy==1.4.1
+      - pandas==1.2.0
+      - scikit-learn==0.24.1
+      - scipy==1.6.1
+      - spglib==1.15.1
       - xdoctest==0.12.0
   become: True
 
 - name: Install dependencies for building documentation
   pip:
-    executable: pip3
+    executable: /usr/local/bin/pip3.9
     name:
       - breathe==4.18.0
-      - cloud_sptheme
       - sphinx==3.0.3
       - sphinx-rtd-theme==0.4.3
-      - sphinx_sitemap
       - sphinxcontrib-bibtex==1.0.0
   become: True
 
 - name: Install dependencies for PyPi
   pip:
-    executable: pip3
+    executable: /usr/local/bin/pip3.9
     name:
       - twine
   become: True
