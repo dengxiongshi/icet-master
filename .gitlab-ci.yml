@@ -30,7 +30,8 @@ tests:
   tags:
     - macos
   script:
-    - xdoctest icet
+    - printenv
+#    - xdoctest icet
     - xdoctest mchammer
     - coverage run tests/main.py
     - coverage report -m
