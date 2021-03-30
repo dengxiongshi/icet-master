@@ -1,30 +1,40 @@
 image: registry.gitlab.com/materials-modeling/icet:latest
 
+stages:
+  - build
+  - test
+  - deploy
+  - pypi
+  - conda
 
 before_script:
   - INSTDIR=$PWD/opt/lib/python
   - export PYTHONPATH=$INSTDIR:$PYTHONPATH
 
-
-build_linux:
+.build:
   stage: build
-  tags:
-    - linux
   script:
     - mkdir -p $INSTDIR
     - python3 ./setup.py install --home=$PWD/opt
+    - python3 setup.py sdist
   artifacts:
     expire_in: 14 days
     paths:
       - opt/
+      - dist/
 
-
-tests:
-  stage: test
+build:linux:
+  extends: .build
   tags:
     - linux
-  dependencies:
-    - build_linux
+
+build:macos:
+  extends: .build
+  tags:
+    - macos
+
+.tests:
+  stage: test
   script:
     - xdoctest icet
     - xdoctest mchammer
@@ -36,7 +46,23 @@ tests:
     expire_in: 14 days
     paths:
       - htmlcov/
+      - opt/
+      - dist/
 
+
+test:linux:
+  extends: .tests
+  needs:
+    - build:linux
+  tags:
+    - linux
+
+test:macos:
+  extends: .tests
+  needs:
+    - build:macos
+  tags:
+    - macos
 
 test_benchmarks_examples:
   stage: test
@@ -45,7 +71,7 @@ test_benchmarks_examples:
   tags:
     - linux
   dependencies:
-    - build_linux
+    - build:linux
   script:
     - for f in benchmark/*.py; do python3 -u "$f"; done
     - pwd=`pwd`
@@ -73,7 +99,7 @@ style_check:
 test_documentation:
   stage: test
   dependencies:
-    - build_linux
+    - build:linux
   script:
     - mkdir public
     # C++ documentation (doxygen)
@@ -96,8 +122,8 @@ test_documentation:
 pages:
   stage: deploy
   dependencies:
-    - build_linux
-    - tests
+    - build:linux
+    - test:linux
   script:
     # prepare homepage
     - mkdir -p public/dev
@@ -152,3 +178,53 @@ pages:
       - public
   only:
     - master
+
+pypi:
+  stage: pypi
+  image: registry.gitlab.com/ssavruk/icet/cicd_publish:0.1.0
+  only:
+    - tags
+  needs:
+    - test:linux
+  script:
+    - python3 -m twine upload dist/*
+
+conda:linux:
+  stage: conda
+  dependencies: []
+  variables:
+    GIT_STRATEGY: none
+  image: registry.gitlab.com/ssavruk/icet/cicd_conda:0.1.6
+  tags:
+    - linux
+  only:
+    - tags
+  script:
+    - BUILD_PATH=/opt/conda/conda-bld/linux-64
+    - export PATH=/opt/conda/bin:/opt/conda/bin:/opt/conda/condabin:$PATH
+    - rm -rf ./icet
+    - echo yes | anaconda login --username $CONDA_USER --password $CONDA_PASSWORD
+    - conda skeleton pypi icet --python 3.7
+    - conda-build --python 3.7 icet
+    - FILE_NAME=$(ls $BUILD_PATH | grep tar.bz2)
+    - anaconda upload -u materials-modeling $BUILD_PATH/$FILE_NAME
+
+conda:macos:
+  stage: conda
+  dependencies: []
+  variables:
+    GIT_STRATEGY: none
+  image: registry.gitlab.com/ssavruk/icet/cicd_conda:0.1.6
+  tags:
+    - macos
+  only:
+    - tags
+  script:
+    - BUILD_PATH=~/conda-bld/osx-64
+    - rm -rf ./icet
+    - rm -rf ~/conda-bld/
+    - echo yes | anaconda login --username $CONDA_USER --password $CONDA_PASSWORD
+    - conda skeleton pypi icet --python 3.7
+    - conda-build --python 3.7 icet
+    - FILE_NAME=$(ls $BUILD_PATH | grep tar.bz2)
+    - anaconda upload -u materials-modeling $BUILD_PATH/$FILE_NAME

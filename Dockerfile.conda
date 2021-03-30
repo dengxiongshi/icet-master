@@ -1,0 +1,29 @@
+FROM ubuntu:20.04
+
+RUN apt update && \
+    apt install -yq \
+        build-essential \
+        wget
+
+RUN apt-get install -yq \
+        libgl1-mesa-glx \
+        libegl1-mesa \
+        libxrandr2 \
+        libxrandr2 \
+        libxss1 \
+        libxcursor1 \
+        libxcomposite1 \
+        libasound2 \
+        libxi6 \
+        libxtst6
+
+RUN wget https://repo.anaconda.com/archive/Anaconda3-2020.11-Linux-x86_64.sh -O ~/miniconda.sh
+RUN /bin/bash ~/miniconda.sh -b -p /opt/conda
+RUN /opt/conda/bin/activate && \
+    /opt/conda/bin/conda init && \
+    /opt/conda/bin/conda install conda-build -y && \
+    /opt/conda/bin/conda config --add channels conda-forge && \
+    rm ~/miniconda.sh && \
+    ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
+    echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bash_profile && \
+    echo "conda activate base" >> ~/.bash_profile
